@@ -1,4 +1,4 @@
-﻿# ============================================================
+# ============================================================
 # VoiceOverApp – Git Ignore
 # ============================================================
 
@@ -23,9 +23,9 @@ env/
 .mypy_cache/
 .ruff_cache/
 
-# Cache / Temp
+# Cache / Temp (Laufzeit-Cache, NICHT app/cache/ Quellcode)
 .cache/
-cache/
+/project/cache/
 caches/
 tmp/
 temp/

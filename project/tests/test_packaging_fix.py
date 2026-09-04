@@ -211,8 +211,8 @@ def test_readme_describes_correct_start():
 
 def test_final_manifest_contents():
     src = (APP_ROOT / "FINAL_APP_MANIFEST.txt").read_text(encoding="utf-8")
-    for key in ("VERSION=2.0.0", "DESKTOP_GUI=true", "CLI=true",
-                "PDF_IMPORT=true", "VOICE_COUNT=6", "LANGUAGES=de,en",
+    for key in ("VERSION=2.1.0", "DESKTOP_GUI=true", "CLI=true",
+                "PDF_IMPORT=true", "VOICE_COUNT=8", "LANGUAGES=de,en",
                 "VD_E_LOCKED=true", f"VD_E_SHA256={VD_E_SHA}"):
         assert key in src, key
 
