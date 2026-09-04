@@ -1,0 +1,1 @@
+C:\Users\johan\AppData\Local\Programs\Python\Python312\python.exe: can't open file 'C:\\Users\\johan\\OneDrive\\Desktop\\fertige': [Errno 2] No such file or directory

@@ -1,0 +1,89 @@
+{
+  "label": "baseline",
+  "n": 0,
+  "n_failed": 12,
+  "german_overall": 0.0,
+  "naturalness": 0.0,
+  "prosody_de": 0.0,
+  "rhythm": 0.0,
+  "pronunciation": 0.0,
+  "critical_count": 0,
+  "results": [
+    {
+      "id": "GERMAN-01",
+      "error": "Error no file named pytorch_model.bin, model.safetensors, tf_model.h5, model.ckpt.index or flax_model.msgpack found in directory C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\Apps\\VoiceoverAPPnew\\VoiceOverApp_2.0.0_GUI\\models\\Qwen3-TTS-12Hz-1.7B-CustomVoice.",
+      "german": null
+    },
+    {
+      "id": "GERMAN-02",
+      "error": "Error no file named pytorch_model.bin, model.safetensors, tf_model.h5, model.ckpt.index or flax_model.msgpack found in directory C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\Apps\\VoiceoverAPPnew\\VoiceOverApp_2.0.0_GUI\\models\\Qwen3-TTS-12Hz-1.7B-CustomVoice.",
+      "german": null
+    },
+    {
+      "id": "GERMAN-03",
+      "error": "Error no file named pytorch_model.bin, model.safetensors, tf_model.h5, model.ckpt.index or flax_model.msgpack found in directory C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\Apps\\VoiceoverAPPnew\\VoiceOverApp_2.0.0_GUI\\models\\Qwen3-TTS-12Hz-1.7B-CustomVoice.",
+      "german": null
+    },
+    {
+      "id": "GERMAN-04",
+      "error": "Error no file named pytorch_model.bin, model.safetensors, tf_model.h5, model.ckpt.index or flax_model.msgpack found in directory C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\Apps\\VoiceoverAPPnew\\VoiceOverApp_2.0.0_GUI\\models\\Qwen3-TTS-12Hz-1.7B-CustomVoice.",
+      "german": null
+    },
+    {
+      "id": "GERMAN-05",
+      "error": "Error no file named pytorch_model.bin, model.safetensors, tf_model.h5, model.ckpt.index or flax_model.msgpack found in directory C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\Apps\\VoiceoverAPPnew\\VoiceOverApp_2.0.0_GUI\\models\\Qwen3-TTS-12Hz-1.7B-CustomVoice.",
+      "german": null
+    },
+    {
+      "id": "GERMAN-06",
+      "error": "Error no file named pytorch_model.bin, model.safetensors, tf_model.h5, model.ckpt.index or flax_model.msgpack found in directory C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\Apps\\VoiceoverAPPnew\\VoiceOverApp_2.0.0_GUI\\models\\Qwen3-TTS-12Hz-1.7B-CustomVoice.",
+      "german": null
+    },
+    {
+      "id": "GERMAN-07",
+      "error": "Error no file named pytorch_model.bin, model.safetensors, tf_model.h5, model.ckpt.index or flax_model.msgpack found in directory C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\Apps\\VoiceoverAPPnew\\VoiceOverApp_2.0.0_GUI\\models\\Qwen3-TTS-12Hz-1.7B-CustomVoice.",
+      "german": null
+    },
+    {
+      "id": "GERMAN-08",
+      "error": "Error no file named pytorch_model.bin, model.safetensors, tf_model.h5, model.ckpt.index or flax_model.msgpack found in directory C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\Apps\\VoiceoverAPPnew\\VoiceOverApp_2.0.0_GUI\\models\\Qwen3-TTS-12Hz-1.7B-CustomVoice.",
+      "german": null
+    },
+    {
+      "id": "GERMAN-09",
+      "error": "Error no file named pytorch_model.bin, model.safetensors, tf_model.h5, model.ckpt.index or flax_model.msgpack found in directory C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\Apps\\VoiceoverAPPnew\\VoiceOverApp_2.0.0_GUI\\models\\Qwen3-TTS-12Hz-1.7B-CustomVoice.",
+      "german": null
+    },
+    {
+      "id": "GERMAN-10",
+      "error": "Error no file named pytorch_model.bin, model.safetensors, tf_model.h5, model.ckpt.index or flax_model.msgpack found in directory C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\Apps\\VoiceoverAPPnew\\VoiceOverApp_2.0.0_GUI\\models\\Qwen3-TTS-12Hz-1.7B-CustomVoice.",
+      "german": null
+    },
+    {
+      "id": "GERMAN-11",
+      "error": "Error no file named pytorch_model.bin, model.safetensors, tf_model.h5, model.ckpt.index or flax_model.msgpack found in directory C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\Apps\\VoiceoverAPPnew\\VoiceOverApp_2.0.0_GUI\\models\\Qwen3-TTS-12Hz-1.7B-CustomVoice.",
+      "german": null
+    },
+    {
+      "id": "GERMAN-12",
+      "error": "Error no file named pytorch_model.bin, model.safetensors, tf_model.h5, model.ckpt.index or flax_model.msgpack found in directory C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\Apps\\VoiceoverAPPnew\\VoiceOverApp_2.0.0_GUI\\models\\Qwen3-TTS-12Hz-1.7B-CustomVoice.",
+      "german": null
+    }
+  ],
+  "params": {
+    "instruct_variant": "de_doc_classic",
+    "sampling": "balanced",
+    "segment_target_chars": 420,
+    "speaker": "Ryan",
+    "seed_base": 7301
+  },
+  "created": "2026-09-03 17:47:35",
+  "engine": {
+    "engine": "qwen3-tts-customvoice",
+    "engine_version": "qwen-tts-0.1.1+app1",
+    "model_size": "1.7B",
+    "repo": "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+    "loaded": false,
+    "hardware_mode": "gpu"
+  }
+}

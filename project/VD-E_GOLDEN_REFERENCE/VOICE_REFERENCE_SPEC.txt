@@ -1,0 +1,27 @@
+﻿VD-E GOLDEN REFERENCE
+=====================
+
+Referenzdatei: VD-E.wav
+SHA-256: B156C02A60A873AD95FC92390C4A136C85308B20188373CD734BEE5E5E5F2025
+Quelle: C:\Users\johan\OneDrive\Desktop\fertige projekte\Apps\VoiceoverAPPnew\VoiceOverApp_2.0.0_GUI\cache\voice_refs\VD-E.wav
+Dateigröße: 1021484 Bytes
+
+STATUS:
+UNVERÄNDERLICHE PRODUKTIONSREFERENZ
+
+REGELN FÜR DEN KI-AGENTEN:
+1. Diese VD-E.wav niemals überschreiben, verändern oder neu erzeugen.
+2. Diese Datei ist die akustische Arbeitsgrundlage für VD-E.
+3. Jede TTS-/Prosodie-/Sampling-/Postprocessing-Änderung muss gegen diese Referenz bewertet werden.
+4. Die Voice Identity darf durch Optimierungen nicht verschlechtert werden.
+5. Bei Unsicherheit ist der bestehende Golden-Reference-Stand beizubehalten.
+6. Keine neue Stimme als Ersatz für VD-E erzeugen.
+7. Änderungen müssen reproduzierbar und rücksetzbar sein.
+8. Der SHA-256 muss vor produktiven Voice-Änderungen weiterhin exakt übereinstimmen.
+
+ZIEL:
+Natürliche, glaubwürdige deutsche Erzählerstimme für Long-Form-YouTube,
+ruhig, warm, klar, seriös und konsistent.
+Keine künstliche Überbetonung.
+Keine monotone Sprache.
+Natürliche Satzmelodie und natürliche Pausen.

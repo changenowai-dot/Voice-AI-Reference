@@ -1,0 +1,58 @@
+﻿{
+  "ui": {
+    "language": "de",
+    "port": 8750,
+    "open_browser": true
+  },
+  "language": "German",
+  "voice_profile": "default_best_narrator",
+  "preset": "deep_documentary",
+  "german": {
+    "instruct_variant": "de_doc_native",
+    "min_german_score": 75.0,
+    "best_speaker": null,
+    "engine_mode": "customvoice",
+    "voicedesign": null,
+    "tech_germanization": true,
+    "variation": {
+      "enabled": null,
+      "strength": "subtle"
+    }
+  },
+  "voices": {
+    "speaker_map": {}
+  },
+  "speed": 1.0,
+  "emotion": "AUTO",
+  "intensity": "AUTO",
+  "volume_db": 0.0,
+  "pause_style": "auto",
+  "pause_strategy": "classic",
+  "advanced": {
+    "prefer_model_size": "auto",
+    "device": "auto",
+    "batch_size": "auto",
+    "max_workers": 1,
+    "segment_target_chars": 420,
+    "segment_max_chars": 700,
+    "segment_min_chars": 120,
+    "attn_implementation": "sdpa",
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_k": 50,
+    "top_p": 0.9,
+    "repetition_penalty": 1.05,
+    "qc_enabled": true,
+    "qc_min_score": 78,
+    "qc_max_attempts": 3,
+    "target_lufs": -14.0,
+    "true_peak_dbtp": -1.5,
+    "wav_bit_depth": 24,
+    "wav_sample_rate": 48000,
+    "mp3_bitrate": "320k",
+    "cache_enabled": true,
+    "log_text_content": false
+  }
+}
+
+

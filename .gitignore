@@ -1,0 +1,90 @@
+﻿# ============================================================
+# VoiceOverApp – Git Ignore
+# ============================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+.vs/
+
+# Python tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Cache / Temp
+.cache/
+cache/
+caches/
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Logs
+*.log
+
+# Build
+build/
+dist/
+
+# Node
+node_modules/
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Secrets / local configuration
+.env
+.env.*
+!.env.example
+
+# Local credentials
+credentials.json
+service_account.json
+token.json
+
+# Local model/cache directories
+models/
+model_cache/
+hf_cache/
+huggingface/
+torch_cache/
+
+# Generated audio
+generated_audio/
+output/
+outputs/
+renders/
+rendered/
+audio_cache/
+
+# Large intermediate data
+*.bak
+*.backup
+
+# Local project state
+.local/
+.local_state/
+
+# Large binary developer tools
+project/tools/*.whl
+
+# Large archives / local installers
+project/tools/*.zip
+
+# Local generated binaries
+project/tools/*.exe

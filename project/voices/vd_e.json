@@ -1,0 +1,42 @@
+{
+  "voice_id": "vd_e",
+  "display_name": "VD-E",
+  "gender": "male",
+  "provider": "qwen3-tts",
+  "model": "Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone)",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "German (Produktion)",
+  "native_status": "recommended",
+  "category": "narrator",
+  "description": "tief, ruhig, seriös – professioneller Long-Form-Narrator",
+  "backend_mode": "clone",
+  "speaker_name": null,
+  "reference_path": "cache/voice_refs/VD-E.wav",
+  "production_locked": true,
+  "recommended": true,
+  "default": true,
+  "per_language": {
+    "German": {
+      "native_status": "recommended",
+      "rank": 0,
+      "recommended": true,
+      "default": true,
+      "description": "tief, ruhig, seriös"
+    },
+    "English": {
+      "native_status": "cross_language",
+      "rank": 35,
+      "recommended": false,
+      "default": false,
+      "description": "tief, ruhig, seriós"
+    }
+  },
+  "settings": {
+    "seed": 52001,
+    "variant": "BASE",
+    "cache_version": "q3p-v2-integrity"
+  }
+}

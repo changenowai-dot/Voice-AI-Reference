@@ -1,0 +1,16 @@
+2026-09-03 18:33:10 | INFO    | voiceover.main         | VoiceOverApp 2.1.0 startet (Python 3.12.10)
+2026-09-03 18:33:12 | INFO    | voiceover.hardware     | Hardware: AMD64 Family 25 Model 33 Stepping 2, AuthenticAMD @ 3401.0 GHz | 8C/16T | RAM 34.3 GB | GPU NVIDIA GeForce RTX 5060 (8.55 GB) | Torch 2.11.0+cu128 cu12.8 | Modus: gpu
+Traceback (most recent call last):
+  File "C:\Users\johan\OneDrive\Desktop\fertige projekte\Apps\VoiceoverAPPnew\VoiceOverApp_2.0.0_GUI\app\main.py", line 404, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "C:\Users\johan\OneDrive\Desktop\fertige projekte\Apps\VoiceoverAPPnew\VoiceOverApp_2.0.0_GUI\app\main.py", line 355, in main
+    return cmd_headless(args)
+           ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\johan\OneDrive\Desktop\fertige projekte\Apps\VoiceoverAPPnew\VoiceOverApp_2.0.0_GUI\app\main.py", line 53, in cmd_headless
+    engine, hw = _make_engine(args.engine, cfg)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\johan\OneDrive\Desktop\fertige projekte\Apps\VoiceoverAPPnew\VoiceOverApp_2.0.0_GUI\app\main.py", line 40, in _make_engine
+    eng = QwenTTSEngine(hw=hw, model_size=size,
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: QwenTTSEngine.__init__() got an unexpected keyword argument 'hw'

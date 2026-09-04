@@ -1,0 +1,1 @@
+﻿Dies ist der kontrollierte SDPA-Kontrolllauf der Produktionsstimme VD-E. Die Stimme, die Referenzdatei und die Produktionsparameter bleiben unverändert. Dieser Lauf dient ausschließlich dazu zu bestätigen, dass die reparierte Qwen-Engine wieder vollständig funktioniert.

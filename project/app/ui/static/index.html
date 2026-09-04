@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VoiceOverApp – Qwen3-TTS Long-Form Studio</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+  <div class="brand">
+    <span class="logo">●</span>
+    <div>
+      <h1>VoiceOverApp</h1>
+      <p>Lokales Long-Form-Voice-Over mit Qwen3-TTS</p>
+    </div>
+  </div>
+  <div id="hdr-status" class="hdr-status">
+    <span id="hw-badge" class="badge">Hardware …</span>
+    <span id="engine-badge" class="badge">Engine –</span>
+    <span id="cache-badge" class="badge">Cache –</span>
+  </div>
+</header>
+
+<main>
+  <!-- ================= Setup ================= -->
+  <section class="card" id="card-setup">
+    <h2>1 · Setup</h2>
+    <div class="grid">
+      <label>Sprache
+        <select id="in-language">
+          <option value="German">Deutsch</option>
+          <option value="English">Englisch</option>
+        </select>
+      </label>
+      <label>Stimme
+        <select id="in-voice"></select>
+      </label>
+      <label>Preset
+        <select id="in-preset"></select>
+      </label>
+      <label>Tempo <span id="in-speed-val" class="mono">1.00×</span>
+        <input type="range" id="in-speed" min="0.80" max="1.20" step="0.01" value="1.00">
+      </label>
+    </div>
+    <p class="hint" id="preset-desc"></p>
+    <div class="row">
+      <button id="btn-start" class="primary big">▶ Starten</button>
+      <button id="btn-stop" class="danger" disabled>■ Abbrechen</button>
+    </div>
+  </section>
+
+  <!-- ================= Fortschritt ================= -->
+  <section class="card" id="card-progress">
+    <h2>2 · Fortschritt</h2>
+    <div class="progress-lines mono" id="progress-lines">
+      <div>Bereit. Lege Textdateien in den Ordner <b>input/</b> oder ziehe sie hierher.</div>
+    </div>
+    <div class="bar"><div id="bar-overall"></div></div>
+    <div class="bar small"><div id="bar-tts"></div></div>
+    <div class="legend">
+      <span>Gesamt <b id="p-overall">0 %</b></span>
+      <span>TTS <b id="p-tts">0 %</b></span>
+      <span>QC <b id="p-qc">0 %</b></span>
+    </div>
+    <div id="events" class="events mono"></div>
+  </section>
+
+  <!-- ================= Dateien ================= -->
+  <section class="card" id="card-files">
+    <h2>3 · Dateien <span class="sub">(input/ → output/)</span></h2>
+    <div id="dropzone" class="dropzone">
+      <p><b>Drag &amp; Drop</b> — .txt-Dateien hierher ziehen<br>
+      <span class="sub">oder per Klick auswählen</span></p>
+      <input type="file" id="file-input" multiple accept=".txt" hidden>
+    </div>
+    <div class="cols">
+      <div><h3>Input</h3><ul id="list-input" class="filelist"></ul></div>
+      <div><h3>Output</h3><ul id="list-output" class="filelist"></ul></div>
+    </div>
+  </section>
+
+  <!-- ================= Erweitert ================= -->
+  <section class="card">
+    <h2 id="adv-toggle" class="toggle">4 · Erweiterte Einstellungen ▸</h2>
+    <div id="adv-body" class="hidden">
+      <div class="grid">
+        <label>Emotion
+          <select id="in-emotion">
+            <option value="AUTO">AUTO</option>
+            <option value="neutral">Neutral</option>
+            <option value="calm">Ruhig</option>
+            <option value="warm">Warm</option>
+            <option value="serious">Ernst</option>
+            <option value="somber">Düster</option>
+            <option value="mysterious">Mysteriös</option>
+            <option value="tense">Gespannt</option>
+            <option value="hopeful">Hoffnungsvoll</option>
+          </select>
+        </label>
+        <label>Intensität
+          <select id="in-intensity">
+            <option value="AUTO">AUTO</option>
+            <option value="1">1 (sehr dezent)</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5 (stark)</option>
+          </select>
+        </label>
+        <label>Pauserhythmus
+          <select id="in-pause">
+            <option value="auto">Automatisch</option>
+            <option value="tight">Straff</option>
+            <option value="relaxed">Entspannt</option>
+          </select>
+        </label>
+        <label>Lautstärke <span id="in-vol-val" class="mono">0 dB</span>
+          <input type="range" id="in-vol" min="-6" max="6" step="0.5" value="0">
+        </label>
+        <label>Modell
+          <select id="in-model">
+            <option value="auto">Automatisch (empfohlen)</option>
+            <option value="1.7B">1.7B (beste Qualität)</option>
+            <option value="0.6B">0.6B (sparsam)</option>
+          </select>
+        </label>
+        <label>Audio-Qualität
+          <select id="in-quality">
+            <option value="hi">WAV 24 bit / MP3 320k</option>
+            <option value="std">WAV 16 bit / MP3 192k</option>
+          </select>
+        </label>
+      </div>
+
+      <h3>System</h3>
+      <div class="row">
+        <button id="btn-sysbench">🔍 Systemtest (Benchmark)</button>
+        <button id="btn-voicebench">🎙 Stimmen-Benchmark (alle)</button>
+        <button id="btn-hwrefresh">↻ Hardware neu erkennen</button>
+      </div>
+
+      <h3>Deutsch-Optimierung (Phase 1)</h3>
+      <div class="row">
+        <button id="btn-de-baseline">🇩🇪 Deutsche Baseline erzeugen</button>
+        <button id="btn-de-ab">🇩🇪 A/B-Optimierung starten</button>
+        <button id="btn-de-speakers">🇩🇪 Deutsch-Stimmen bestimmen</button>
+      </div>
+      <p class="hint">Baseline = unveränderbarer Referenz-Vergleich (12 deutsche Testtexte). A/B testet Instruct-Varianten, Sampling und Segmentgröße gegen die Baseline und übernimmt den Gewinner. Der Stimmen-Test ermittelt DEFAULT BEST GERMAN NARRATOR aus deutschen Messungen.</p>
+      <pre id="hw-info" class="mono pre"></pre>
+
+      <h3>Aussprache-Wörterbuch <span class="sub">(pronunciation/pronunciation.json)</span></h3>
+      <div class="row">
+        <input id="pron-term" placeholder="Begriff (z. B. Nietzsche)">
+        <input id="pron-value" placeholder="Aussprache (z. B. Nee-tsche)">
+        <select id="pron-lang">
+          <option value="both">beide Sprachen</option>
+          <option value="de">nur Deutsch</option>
+          <option value="en">nur Englisch</option>
+        </select>
+        <button id="pron-add">Hinzufügen</button>
+      </div>
+      <table id="pron-table" class="table">
+        <thead><tr><th>Begriff</th><th>Aussprache</th><th>Quelle</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+
+      <h3>Cache &amp; Resume</h3>
+      <div class="row">
+        <button id="btn-cache-failed">Fehlgeschlagene Segmente löschen</button>
+        <button id="btn-cache-all" class="danger">CLEAR ALL (alles löschen)</button>
+      </div>
+      <p class="hint">Fertige Segmente werden wiederverwendet (Resume). Ein Abbruch setzt beim nächsten Start nahtlos fort.</p>
+
+      <div id="bench-audio" class="hidden">
+        <h3>Benchmark-Hörproben</h3>
+        <div id="bench-files" class="cols"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Phase 2 ================= -->
+  <section class="card" id="card-phase2">
+    <h2>5 · Phase 2 – Voice Studio (Blindvergleich)</h2>
+    <p class="hint">Vergleicht deine aktuelle Phase-1-Stimme gegen VoiceDesign-Kandidaten mit dem Kybalion-Text. Die Proben sind <b>neutral beschriftet</b> (A, B, C …) – höre sie an und wähle deinen Favoriten. Zuordnung und Scores werden erst <b>nach</b> deiner Auswahl enthüllt. Deine Wahl hat Vorrang vor dem automatischen Score.</p>
+    <div class="row">
+      <button id="btn-p2-run" class="primary">▶ Phase-2-Vergleich starten</button>
+      <button id="btn-p2-quick">Schnelltest (3 VoiceDesign)</button>
+      <button id="btn-p2-pauses">Pausenstrategien testen</button>
+    </div>
+    <div id="p2-status" class="hint mono"></div>
+    <div id="p2-blind" class="hidden">
+      <h3>Blindproben anhören &amp; wählen</h3>
+      <div id="p2-samples" class="cols"></div>
+      <div class="row">
+        <label>Mein Gewinner
+          <select id="p2-pick"></select>
+        </label>
+        <button id="btn-p2-pick" class="primary">Auswahl speichern</button>
+        <button id="btn-p2-apply" class="hidden">Auswahl als Produktionsstimme übernehmen</button>
+      </div>
+    </div>
+    <div id="p2-scores" class="hidden">
+      <h3>Ergebnisse (nach Auswahl enthüllt)</h3>
+      <div id="p2-reveal" class="mono pre"></div>
+      <table id="p2-table" class="table">
+        <thead><tr><th>Sample</th><th>Kandidat</th><th>Typ</th><th>DE-Score</th><th>Natürlich</th><th>Melodie</th><th>Konsistenz</th><th>F0</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="hint" id="p2-rec"></p>
+    </div>
+  </section>
+
+  <!-- ================= Phase 3 ================= -->
+  <section class="card" id="card-phase3">
+    <h2>6 · Phase 3 – VD-E verfeinern (referenz-erhaltend)</h2>
+    <p class="hint">Deine gewählte VD-E-Stimme bleibt <b>gesperrt und unverändert</b>. Diese Optimierung vergleicht nur: Fachwort-Aussprache (Theorie, Quantentheorie, Kybalion …), subtile inhaltliche Emotion und natürliche Variation. Der <b>Voice-Guard</b> prüft, dass jede Variante wie dieselbe Stimme klingt.</p>
+    <div class="row">
+      <button id="btn-p3-run" class="primary">▶ Phase-3-Vergleich starten</button>
+      <button id="btn-p3-quick">Schnelltest</button>
+    </div>
+    <div id="p3-status" class="hint mono"></div>
+    <div id="p3-blind" class="hidden">
+      <h3>Blindproben (VD-E, verschiedene Optimierungen)</h3>
+      <div id="p3-samples" class="cols"></div>
+      <div class="row">
+        <label>Mein Gewinner
+          <select id="p3-pick"></select>
+        </label>
+        <button id="btn-p3-pick" class="primary">Auswahl speichern</button>
+        <button id="btn-p3-apply" class="hidden">Übernehmen (nur Schalter, Stimme bleibt VD-E)</button>
+      </div>
+    </div>
+    <div id="p3-scores" class="hidden">
+      <h3>Ergebnisse (nach Auswahl enthüllt)</h3>
+      <table class="table">
+        <thead><tr><th>Sample</th><th>Variante</th><th>Fachwörter</th><th>Variation</th><th>Composite</th><th>Voice-Guard</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span>VoiceOverApp 1.0 · Qwen3-TTS (Apache-2.0) · läuft vollständig lokal</span>
+</footer>
+
+<script src="/app.js"></script>
+</body>
+</html>

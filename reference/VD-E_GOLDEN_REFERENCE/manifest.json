@@ -1,0 +1,8 @@
+{
+    "name":  "VD-E_GOLDEN_REFERENCE",
+    "source":  "C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\Apps\\VoiceoverAPPnew\\VoiceOverApp_2.0.0_GUI\\cache\\voice_refs\\VD-E.wav",
+    "reference_file":  "VD-E.wav",
+    "sha256":  "B156C02A60A873AD95FC92390C4A136C85308B20188373CD734BEE5E5E5F2025",
+    "locked":  true,
+    "expected_sha256":  "B156C02A60A873AD95FC92390C4A136C85308B20188373CD734BEE5E5E5F2025"
+}

@@ -1,0 +1,13 @@
+# VoiceOverApp - Python-Abhängigkeiten
+# PyTorch/torchaudio werden von install.ps1 mit dem passenden CUDA-Index
+# (cu128 für RTX 50xx) installiert und sind hier absichtlich NICHT
+# aufgeführt, damit pip die CUDA-Variante nicht überschreibt.
+qwen-tts==0.1.1
+numpy
+soundfile
+librosa
+psutil
+huggingface_hub
+# Desktop-App (Phase: GUI-Packaging)
+pypdf>=4.0
+windnd>=1.0.4 ; sys_platform == "win32"

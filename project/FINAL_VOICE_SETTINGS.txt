@@ -1,0 +1,51 @@
+================================================================
+ FINAL_VOICE_SETTINGS – UNVERÄNDERLICHES VD-E-PRODUKTIONSPROFIL
+================================================================
+
+Stimme:            VD-E  (Human-Preferred Reference / "Sample I")
+Status:            LOCKED PRODUCTION – darf nicht verändert werden
+
+Verfahren:         VoiceDesign -> Base Clone
+Modell (Synthese): Qwen3-TTS-12Hz-1.7B-Base (CUDA, RTX 5060, 8 GB VRAM)
+Referenzdatei:     cache\voice_refs\VD-E.wav
+Referenz-SHA256:   B156C02A60A873AD95FC92390C4A136C85308B20188373CD734BEE5E5E5F2025
+                  (Identity-Lock prüft diesen Hash bei jedem Start,
+                   vor jedem Lauf und nach jedem Backend-Lauf)
+
+----------------------------------------------------------------
+ GESPERRTE PRODUKTIONSEINSTELLUNGEN (nicht über die GUI änderbar)
+----------------------------------------------------------------
+Mode:                        VoiceDesign -> Base Clone
+Variant:                     BASE
+Seed:                        52001
+automatic_voice_switch:      false
+automatic_voice_fallback:    false
+automatic_voice_regeneration:false   (Regeneration behält die Stimme)
+Pronunciation-Unterstützung: aktiv   (Wörterbuch + Regeln)
+Prosody-Unterstützung:       aktiv   (Pausen, Rollen, Melodie)
+Expressive Sampling:         aktiv   (Set "expressive",
+                                      do_sample=true)
+Persistentes Aussprache-     aktiv
+wörterbuch:
+Cache-Version:               q3p-v2-integrity
+Max-Token-Headroom:          5.0 Sekunden
+
+----------------------------------------------------------------
+ SCHUTZREGELN
+----------------------------------------------------------------
+1. VD-E wird NIE neu generiert, neu designt, neu geklont oder
+   neu optimiert.
+2. Hash-Abweichung => VD-E deaktiviert + Warnung; keine Reparatur,
+   kein Überschreiben.
+3. GUI bietet nur: Sprache, Stimme, Geschwindigkeit, Format,
+   Ordner, Lautstärke – keine Produktionsparameter.
+4. Jede Änderung an TTS-Parametern erfordert neue Cache-Version;
+   alter Cache wird nie stillschweigend weiterverwendet.
+5. Kritische QC-Ergebnisse und Split-Fallbacks werden vor der
+   Übernahme erneut geprüft (Final-QC-Gate).
+6. Keine anderen Stimmen werden als Ersatz verwendet, wenn VD-E
+   oder ein Sprecher nicht verfügbar ist.
+
+================================================================
+ VoiceOverApp 2.0.0 – Produktionsstand 2026-09-02
+================================================================

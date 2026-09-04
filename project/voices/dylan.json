@@ -1,0 +1,38 @@
+{
+  "voice_id": "dylan",
+  "display_name": "Dylan",
+  "gender": "male",
+  "provider": "qwen3-tts",
+  "model": "Qwen3-TTS-12Hz-1.7B-CustomVoice",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "Chinese (Beijing)",
+  "native_status": "cross_language",
+  "category": "narrator",
+  "description": "klar, natürlich, jünger, ruhiger Erzähler",
+  "backend_mode": "customvoice",
+  "speaker_name": "Dylan",
+  "reference_path": null,
+  "production_locked": false,
+  "recommended": false,
+  "default": false,
+  "per_language": {
+    "German": {
+      "native_status": "cross_language",
+      "rank": 30,
+      "recommended": false,
+      "default": false,
+      "description": "klar, natürlich, jünger"
+    },
+    "English": {
+      "native_status": "cross_language",
+      "rank": 40,
+      "recommended": false,
+      "default": false,
+      "description": "klar, natürlich"
+    }
+  },
+  "settings": {}
+}

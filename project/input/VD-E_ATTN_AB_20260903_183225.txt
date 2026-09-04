@@ -1,0 +1,1 @@
+﻿Dies ist ein kontrollierter Vergleichstest der Produktionsstimme VD-E. Wir prüfen dabei ausschließlich das Attention-Backend und verändern die Stimme, die Referenz und die Sprachparameter nicht. Entscheidend sind Natürlichkeit, Sprachfluss, Aussprache, Stabilität und die subjektive Klangqualität.

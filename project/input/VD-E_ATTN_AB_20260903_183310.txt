@@ -1,0 +1,1 @@
+﻿Dies ist ein kontrollierter Vergleich der Produktionsstimme VD-E. Wir prüfen ausschließlich das Attention-Backend. Stimme, Referenz, Sprache, Sampling und Produktionsparameter bleiben identisch. Wir achten besonders auf Natürlichkeit, Tiefe, Sprachfluss, Aussprache, Pausen, Stabilität und mögliche Artefakte.
