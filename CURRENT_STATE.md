@@ -1,264 +1,252 @@
 # CURRENT STATE — VoiceOverApp Voice-AI-Reference
 
-**Datum:** 2026-09-04  
+**Datum:** 2026-09-05  
 **Version:** 2.1.0  
-**Commit-Basis:** `0ef7279` (Initial VoiceOverApp project and Golden Reference)  
-**Branch:** `arena/01a06e55-voice-ai-reference`
+**Commit-Basis:** `dfee2ed` (Phase 4: Benchmark-Infrastruktur)  
+**Branch:** `arena/01a06e55-voice-ai-reference`  
 
 ---
 
-## 1. Projektüberblick
+## STATUS-ÜBERSICHT
 
-VoiceOverApp ist ein lokales Long-Form-Voice-Over-System auf Basis von
-Qwen3-TTS (1.7B-CustomVoice + Base für VD-E-Clone). Ziel: professionelle
-deutsche Voice-Overs für YouTube (Dokumentationen, Essays, Wissensvideos,
-Hörbuch-Erzählungen) — vollständig lokal, ohne API-Keys.
+| Kategorie | Status | Details |
+|-----------|--------|---------|
+| Repository-Code | ✅ Stabil | 173/179 Tests bestanden (96.6%) |
+| Golden Reference | ✅ Geschützt | SHA-256: B156C02A...5F2025 verifiziert |
+| Benchmark-Infrastruktur | ✅ Fertig | Skripte erstellt und verifiziert |
+| Cache-Rekonstruktion | ✅ Implementiert | CacheManager vollständig API-konform |
+| Version | ✅ Konsistent | 2.1.0 überall |
+| **Echte Audio-Synthese** | ⏳ **NICHT AUSGEFÜHRT** | **Zielhardware erforderlich** |
+| **Akustische Bewertung** | ⏳ **NICHT AUSGEFÜHRT** | **Zielhardware erforderlich** |
+| **Long-Form-Stabilität** | ⏳ **NICHT AUSGEFÜHRT** | **Zielhardware erforderlich** |
+| **A/B-Sieger bestimmt** | ⏳ **NICHT AUSGEFÜHRT** | **Zielhardware erforderlich** |
 
-**Komplette Pipeline:**
-```
-Text → Analyse → Normalisierung → Aussprache → Segmentierung →
-Qwen3-TTS → QC → Regeneration → Assembly → Mastering → WAV+MP3
-```
+### Drei-Zustands-Prinzip
 
----
-
-## 2. Architektur-Überblick
-
-### Einstiegspunkte
-| Startpunkt | Zweck |
-|---|---|
-| `VoiceOverApp.bat` / `desktop.py` | Desktop-GUI (Tkinter) |
-| `START.ps1` | Desktop-GUI + Install-Fallback |
-| `app/main.py --headless` | CLI Pipeline |
-| `app/main.py --webserver` | Web-UI (dev only) |
-
-### Kernmodule (`project/app/`)
-| Modul | Funktion |
-|---|---|
-| `config.py` | Konfiguration (Defaults, Merge, YAML/JSON) |
-| `paths.py` | Zentrale Pfadverwaltung |
-| `main.py` | CLI-Einstiegspunkt |
-| `project/pipeline.py` | **Haupt-Pipeline** (Analyse→Mastering) |
-| `project/state.py` | Projekt-State für Resume |
-| `tts/qwen_engine.py` | Qwen3-TTS CustomVoice-Engine |
-| `tts/voice_studio.py` | VoiceDesign + Clone-Pipeline |
-| `tts/model_pool.py` | Modell-Pool (CustomVoice/Base/0.6B) |
-| `tts/sampler.py` | Sampling-Parameter-Sets |
-| `tts/engine_base.py` | Engine-Basisklasse + SynthesisRequest/Result |
-| `tts/test_double.py` | Deterministischer Test-Double (keine GPU) |
-| `segmentation/__init__.py` | Intelligente Long-Form-Segmentierung |
-| `prosody/german.py` | Deutsche Satzrollen, Pausen-Basen, Hinweise |
-| `prosody/instruct.py` | Instruct-Builder (Varianten, Emotion) |
-| `prosody/pauses.py` | Kontextabhängige Pausen (classic/semantic/flow) |
-| `prosody/presets.py` | Presets (Deep Documentary, etc.) |
-| `prosody/variation.py` | Sampling-Variation, Emotion, Betonung |
-| `pronunciation/` | Wörterbuch + Regeln (DE/EN, Namen, Fremdwörter) |
-| `quality/qc.py` | Segment-QC (Score, Issues) |
-| `quality/final_gate.py` | Final-QC-Gate (harte Integritätsprüfung) |
-| `quality/regeneration.py` | Best-of-N Regeneration |
-| `quality/german_score.py` | GermanNaturalnessScore |
-| `quality/metrics.py` | Audio-Metriken |
-| `audio/assemble.py` | Segment-Zusammenfügung (Streaming) |
-| `audio/concat.py` | FullScript-Konkatenation aus Parts |
-| `audio/master.py` | YouTube-Mastering (LUFS, TruePeak) |
-| `audio/ebu_r128.py` | EBU R128 Lautheitsmessung |
-| `audio/ffmpeg.py` | FFmpeg-Wrapper |
-| `audio/io.py` | WAV Read/Write/Resample |
-| `cache/manager.py` | **Segment-Cache** (persistent, invalidierbar) |
-| `batch/runner.py` | Batch-Verarbeitung |
-| `jobs/runner.py` | Job-Runner (JSONL, PID-Sperre) |
-| `hardware/detector.py` | Hardware-Erkennung (GPU/CPU/VRAM/RAM) |
-| `hardware/monitor.py` | VRAM-Guard |
-| `gui/app.py` | Desktop-GUI (Tkinter) |
-| `gui/backend.py` | Backend-Subprocess |
-| `ui/server.py` | Web-UI-Server |
-| `voices/registry.py` | Voice-Registry (Native-Language-Logik) |
-| `voices/profiles.py` | Voice-Profile |
-| `security/identity_lock.py` | VD-E-Identitäts-Lock (SHA-256) |
-| `text/normalize.py` | Text-Normalisierung (Zahlen, Datum, etc.) |
-| `text/analyze.py` | Text-Analyse (Blöcke, Sätze) |
-| `text/numbers.py` | Zahlen-Konvertierung |
-| `text/langdetect.py` | Sprach-Plausibilität |
-| `text/pdf_import.py` | PDF-Import |
+**A = REPOSITORY VERIFIED** (in dieser Sandbox verifiziert)  
+**B = TARGET HARDWARE REQUIRED** (auf dem Benutzer-PC auszuführen)  
+**C = TARGET HARDWARE VERIFIED** (auf echter Hardware bestätigt)  
 
 ---
 
-## 3. TTS-Engine & Modelle
+## STATE A: REPOSITORY VERIFIED
 
-### Produktiv-Engine
-- **Qwen3-TTS-12Hz-1.7B-CustomVoice** (Hauptmodell)
-- **Qwen3-TTS-12Hz-1.7B-Base** (für VD-E-Clone)
-- **Qwen3-TTS-Tokenizer-12Hz** (gemeinsam)
-- 0.6B als CPU-/Notfallvariante
+### Implementierte und getestete Komponenten
 
-### Attention-Implementierung
-- **SDPA** (Standard, stabil)
-- Flash Attention 2 (experimentell, Windows-Risiko dokumentiert)
-- Benchmark-Ergebnisse in `benchmark/ATTENTION_AB_20260903/`
+| Komponente | Status | Test-Abdeckung |
+|------------|--------|----------------|
+| `app/cache/manager.py` | ✅ Implementiert | Unit-Tests bestanden |
+| `segment_cache_key()` | ✅ Implementiert | Hash-Determinismus verifiziert |
+| `CacheManager.put/get/has` | ✅ Implementiert | Read/Write-Roundtrip getestet |
+| `CacheManager.clear_failed` | ✅ Implementiert | Funktioniert |
+| `CacheManager.clear_project` | ✅ Implementiert | Funktioniert |
+| `CacheManager.clear_all` | ✅ Implementiert | Funktioniert |
+| `CacheManager.stats` | ✅ Implementiert | Statistiken korrekt |
+| `concat.py` (soundfile bug) | ✅ Behoben | `out.sampler`-Fehler entfernt |
+| `versions.json` | ✅ Konsistent | 2.1.0 |
+| `install.ps1` | ✅ Konsistent | 2.1.0 |
+| `FINAL_APP_MANIFEST.txt` | ✅ Konsistent | 2.1.0 |
+| `app/__init__.py` | ✅ Konsistent | 2.1.0 |
+| Pipeline-Import | ✅ Funktioniert | Keine Import-Fehler |
+| Golden Reference Hash | ✅ Verifiziert | SHA-256 identisch |
+| Baseline-Text | ✅ Erstellt | 2839 Zeichen, alle phonetischen Fälle |
+| Benchmark-Skripte | ✅ Erstellt | phase4_*.py erstellt |
+| Target-Runner | ✅ Erstellt | run_phase4_target.ps1 |
 
-### Sampling-Parameter (Produktion)
-- Set: "balanced" (default), "expressive" (VD-E-Produktion)
-- temperature=0.7, top_k=50, top_p=0.90, repetition_penalty=1.05
-- PARAM_SET_VERSION = "q3p-v2-integrity"
+### Teststatus: 173/179 (96.6%)
 
----
+| Kategorie | Anzahl | Status |
+|-----------|--------|--------|
+| Bestanden | 173 | ✅ |
+| Fehlgeschlagen | 6 | Alle tkinter-bedingt (Sandbox hat kein GUI) |
 
-## 4. VD-E Golden Reference
+### Verbleibende 6 Testfehler
 
-| Eigenschaft | Wert |
-|---|---|
-| Datei | `reference/VD-E_GOLDEN_REFERENCE/VD-E.wav` |
-| SHA-256 | `B156C02A60A873AD95FC92390C4A136C85308B20188373CD734BEE5E5E5F2025` |
-| Status | LOCKED — unveränderlich |
-| Verfahren | VoiceDesign → Base Clone |
-| Seed | 52001 |
-| Identitätsschutz | Identity-Lock prüft Hash bei Start/Lauf/Nach-Lauf |
+**Alle sind tkinter-/GUI-abhängig:**
+1. `test_gui_helpers_and_event_parsing`
+2. `test_gui_module_importable_headless`
+3. `test_backend_frozen_uses_backend_exe`
+4. `test_customvoice_voices_available_in_gui_lists`
+5. `test_no_false_native_claims`
+6. `test_status_and_description_separate`
 
-**Zweitere Golden Reference Kopien:**
-- `project/VD-E_GOLDEN_REFERENCE/` (Arbeitskopie)
-- `project/benchmark/APPROVED_STATE_ATTENTION_20260903/VD-E.wav`
-- `project/benchmark/PROTECT_VD_E_20260903_181533/VD-E.wav`
-
----
-
-## 5. Stimmen-Architektur
-
-### Deutsch (DE)
-| Stimme | Status | Beschreibung |
-|---|---|---|
-| **VD-E** | **EMPFOHLEN · DEFAULT · LOCKED** | tief, ruhig, seriös |
-| Uncle_Fu | CROSS-LANGUAGE | tief, warm, mellow, reif |
-| Dylan | CROSS-LANGUAGE | klar, natürlich, jünger |
-| Serena | CROSS-LANGUAGE | warm, sanft, ruhig |
-| Vivian | CROSS-LANGUAGE | hell, klar, jung |
-| Sohee | CROSS-LANGUAGE | warm, emotional, reich |
-
-### Englisch (EN)
-| Stimme | Status |
-|---|---|
-| **Ryan** | NATIV · EMPFOHLEN |
-| Aiden | NATIV · EMPFOHLEN |
-| Uncle_Fu | FALLBACK |
-| Serena/Vivian/Sohee | CROSS-LANGUAGE |
+**Bewertung:**
+- Kein echter Produktfehler
+- Sandbox hat kein tkinter (headless Linux-Container)
+- Auf echter Windows-Hardware ausführbar
+- Nicht als "irrelevant" abtun — auf Zielhardware erneut testen
 
 ---
 
-## 6. Segmentierung
+## STATE B: TARGET HARDWARE REQUIRED
 
-- Ziel: 420 Zeichen pro Segment
-- Max: 700 Zeichen
-- Min: 120 Zeichen
-- Grenzen: Satz → Absatz → Kapitel → Nebensatz (Komma/Semikolon/Gedankenstrich)
-- Niemals mitten im Wort
-- Niemals zeitbasiert (nur Marker `+++++` für manuellen Split)
+### Auf echter Hardware (RTX 5060) auszuführen:
 
----
+| Aufgabe | Skript | Status |
+|---------|--------|--------|
+| Environment-Check | `phase4_env_check.py` | ✅ Erstellt, ⏳ Ausstehend |
+| Runtime Voice Reference | Kopierschritt | ✅ Vorbereitet, ⏳ Ausstehend |
+| Baseline-Audio | `phase4_benchmark.py` | ✅ Erstellt, ⏳ Ausstehend |
+| A/B-Test (5 Varianten) | `phase4_benchmark.py` | ✅ Erstellt, ⏳ Ausstehend |
+| Variante D (große Blöcke) | `phase4_benchmark.py` | ✅ Erstellt, ⏳ Ausstehend |
+| Long-Form-Test | `phase4_longform.py` | ✅ Erstellt, ⏳ Ausstehend |
+| Audio-Metriken | Automatisch | ⏳ Ausstehend |
+| Akustische Bewertung | Manuell | ⏳ Ausstehend |
+| Produktions-Entscheidung | Manuell | ⏳ Ausstehend |
 
-## 7. Audio-Ausgabe
-
-| Format | Spezifikation |
-|---|---|
-| WAV Master | 48 kHz / 24 Bit, -14 LUFS / -1.5 dBTP |
-| MP3 | 320 kbps (YouTube-tauglich) |
-
-### Mastering-Pfad
-1. ffmpeg 2-Pass loudnorm (bevorzugt)
-2. numpy-Fallback (R128-Messung + Gain + Peak-Limiter)
-
----
-
-## 8. Quality Control
-
-- **SegmentQC**: Score aus Naturalness, Pronunciation, Prosody, Consistency, Integrity
-- **GermanNaturalnessScore**: Separater DE-spezifischer Score
-- **Final-QC-Gate**: Harte Integritätsprüfung vor Cache-Übernahme
-- **Regeneration**: Bis zu 3 Versuche mit klassifizierter Parameter-Strategie
-- **Min-Score**: 78 (QC) / 60 (Final-Gate)
-
----
-
-## 9. Cache & Resume
-
-- **Cache-Version**: `q3p-v2-integrity`
-- **Cache-Struktur**: `cache/audio/<key>.wav` + `cache/metadata/<key>.json`
-- **Cache-Key**: SHA-256 aus (Version, Engine, Modell, Speaker, Instruct, Sprache, Text, Sampling, Param-Version)
-- **Invalidierung**: Automatisch bei Parameteränderung (neuer Key)
-- **Resume**: Projekt-State in `cache/projects`, abgebrochene Jobs setzen nur fehlende Segmente fort
-
----
-
-## 10. Teststand (Sandbox, 2026-09-04)
-
-### Reparierte kritische Probleme
-1. **`app/cache/` Modul fehlte komplett** → neu erstellt (cache/__init__.py, cache/manager.py)
-   - CacheManager mit put/get/has/clear_segment/clear_failed/clear_all/stats
-   - segment_cache_key mit SHA-256-Hashing
-   - WAV-Read/Write (float32, int16, int24, int32)
-   - Atomares Schreiben (tmp + rename)
-2. **`concat.py` Bug**: `out.sampler` (nicht-existentes Attribut) → entfernt
-3. **`test_packaging_fix.py`**: Veraltete Version-Assertion (2.0.0 → 2.1.0, 6 → 8 Stimmen)
-
-### Testergebnis
-```
-172/179 bestanden (96.1%)
-```
-
-### Verbleibende 7 Fehler (alle Sandbox-bedingt)
-- 6× `No module named 'tkinter'` — Headless-Umgebung ohne GUI-Bibliothek
-- 0× Code-Bugs
-
-### Auf Zielhardware ausstehend
-- Echte Qwen3-TTS-Synthese (GPU, RTX 5060)
-- Akustische Bewertung gegen Golden Reference
-- Long-Form-Stabilität (30-120 min)
-- VRAM-/RAM-Verifikation
-
----
-
-## 11. Hardware-Ziel
+### Zielhardware-Spezifikation
 
 | Komponente | Wert |
-|---|---|
+|------------|------|
 | CPU | AMD Ryzen 7 5700X |
 | RAM | 32 GB |
 | GPU | NVIDIA GeForce RTX 5060 |
 | VRAM | 8 GB |
-| OS | Windows 10 Home / x64 |
+| OS | Windows 10 x64 |
+
+### Bekannte, ungetestete Risiken
+
+| Risiko | Wahrscheinlichkeit | Auswirkung |
+|--------|-------------------|------------|
+| VRAM-OOM bei 1.7B+großen Segmenten | Mittel | Fallback auf kleinere Segmente |
+| Modell-Ladung dauert lange | Sicher | ~30-60s pro Modell-Ladung |
+| CUDA-Kompatibilität mit RTX 5060 | Niedrig | Blackwell-Architektur, cu128 erforderlich |
+| FFmpeg fehlt auf Windows | Mittel | MP3 + Mastering betroffen |
+| tkinter-GUI startet nicht | Niedrig | Auf Windows sollte es funktionieren |
 
 ---
 
-## 12. Bekannte Einschränkungen
+## STATE C: TARGET HARDWARE VERIFIED
 
-1. **Keine echte Audioqualität in der Sandbox verifiziert** — GPU-Tests ausstehend
-2. **tkinter-Tests** laufen nur auf dem Zielsystem mit GUI
-3. **Quality Score ist Vergleichsmaßstab**, keine absolute Natürlichkeitsmessung
-4. **Spracherkennung (ASR)** bewusst nicht eingebaut (QC nutzt Dauerplausibilität als Proxy)
+**Aktuell: KEINE Einträge.**
+
+Nach Ausführung auf RTX 5060 werden hier die echten Ergebnisse dokumentiert:
+- Tatsächliche VRAM-Werte
+- Tatsächliche Laufzeiten
+- Tatsächliche Audio-Metriken
+- Tatsächliche akustische Bewertungen
+- Tatsächliche Long-Form-Stabilität
 
 ---
 
-## 13. Nächste Prioritäten (Optimierungsplan)
+## Produktionskonfiguration (aus Code)
 
-### A. Segmentierungs-Strategie evaluieren (§40)
-- Variante A: vollständige lange Generierung
-- Variante B: große semantische Segmente
-- Variante C: kleine Segmente
-- Variante D: Hybrid
-- Variante E: Generierung mit Kontextfenster/Overlap
-- **Bewertung**: Voice consistency, Prosody, Übergänge, VRAM, Stabilität
+| Parameter | Wert | Quelle |
+|-----------|------|--------|
+| Voice-ID | `vd_e` | `config/production.json` |
+| Backend | `clone` (VoiceDesign → Base) | `config/production.json` |
+| Modell | `Qwen3-TTS-12Hz-1.7B-Base` | `config/production.json` |
+| Seed | 52001 | `config/production.json` |
+| Sampling | `expressive` | `config/production.json` |
+| Attention | `sdpa` | `config/config.py` |
+| Instruct | `de_doc_native` | `config/config.py` |
+| Prosody | `classic` | `config/config.py` |
+| Segment Target | 420 Zeichen | `config/config.py` |
+| Segment Max | 700 Zeichen | `config/config.py` |
+| Segment Min | 120 Zeichen | `config/config.py` |
+| Cache-Version | `q3p-v2-integrity` | `config/production.json` |
+| Referenzdatei | `cache/voice_refs/VD-E.wav` | `config/production.json` |
+| Referenz-SHA256 | `B156C02A...5F2025` | `config/production.json` |
+| Status | **LOCKED** | `config/production.json` |
 
-### B. Long-Form-Konsistenz (§70)
-- Voice consistency über 30-120 Minuten
-- Tonalität, Lautheit, Geschwindigkeit, Artikulation
+---
 
-### C. Quality Gate erweitern
-- Mehr Varianten pro Segment
-- Bessere akustische Metriken
+## Golden Reference
 
-### D. Performance-Optimierung (wenn Qualität gleich bleibt)
-- Model Pool effizienter nutzen
-- Besseres Caching
-- Parallelisierung wo sinnvoll
+```
+Datei: reference/VD-E_GOLDEN_REFERENCE/VD-E.wav
+SHA-256: B156C02A60A873AD95FC92390C4A136C85308B20188373CD734BEE5E5E5F2025
+Status: LOCKED — unveränderlich
+Zusätzliche Kopien:
+  - project/VD-E_GOLDEN_REFERENCE/VD-E.wav
+  - project/benchmark/APPROVED_STATE_ATTENTION_20260903/VD-E.wav
+  - project/benchmark/PROTECT_VD_E_20260903_181533/VD-E.wav
+```
 
-### E. Dokumentation aktualisieren
-- CURRENT_STATE.md (dieses Dokument)
-- REPOSITORY_INVENTORY.txt nach Änderungen
+---
+
+## Benchmark-Ausführung auf Zielhardware
+
+### Schneller Start
+
+```powershell
+# Alles automatisch:
+.\run_phase4_target.ps1
+
+# Nur Long-Form (nach A/B-Test):
+.\run_phase4_longform.ps1 -Winner D -MaxMinutes 60
+```
+
+### Manuelle Schritte
+
+```powershell
+# 1. Umgebung prüfen
+python benchmark/phase4_env_check.py
+
+# 2. Benchmark ausführen
+python benchmark/phase4_benchmark.py
+
+# 3. Audio anhören + AUDIO_REVIEW.md ausfüllen
+
+# 4. Long-Form testen
+python benchmark/phase4_longform.py --winner D --max-minutes 60
+```
+
+### Erwartete Output-Struktur
+
+```
+results/phase4/<timestamp>/
+├── environment.json
+├── env_check_output.txt
+├── benchmark_output.txt
+├── PHASE4_REAL_AUDIO_REPORT.md
+├── PHASE4_REAL_AUDIO_REPORT.json
+└── AUDIO_REVIEW.md (manuell ausfüllen)
+
+output/
+├── phase4_baseline/
+│   └── phase4_baseline.wav
+├── phase4_A/
+├── phase4_B/
+├── phase4_C/
+├── phase4_D/
+└── phase4_E/
+```
+
+---
+
+## Release-Gate Status
+
+| Kriterium | Status |
+|-----------|--------|
+| Golden Reference geschützt | ✅ Ja |
+| Code stabil | ✅ Ja (173/179 Tests) |
+| Tests bestanden | ✅ Ja (6 GUI-Tests ausstehend) |
+| Windows GUI getestet | ⏳ Ausstehend |
+| TTS real getestet | ⏳ Ausstehend |
+| VD-E real getestet | ⏳ Ausstehend |
+| A/B durchgeführt | ⏳ Ausstehend |
+| Gewinner bestimmt | ⏳ Ausstehend |
+| Long-Form getestet | ⏳ Ausstehend |
+| Batch getestet | ⏳ Ausstehend |
+| Resume getestet | ⏳ Ausstehend |
+| Cache getestet | ✅ Ja (Repository-Tests) |
+| Audio Mastering getestet | ✅ Ja (Repository-Tests) |
+| Keine Voice Regression | ⏳ Ausstehend |
+| Packaging getestet | ⏳ Ausstehend |
+
+**Gesamtstatus: NICHT FÜR RELEASE BEREIT**
+
+---
+
+## Nächster Entwicklungsschritt
+
+1. Benutzer führt `run_phase4_target.ps1` auf RTX 5060 aus
+2. Benutzer liefert `results/phase4/<timestamp>/` zurück
+3. Agent analysiert echte Ergebnisse
+4. Agent bestimmt Gewinner
+5. Agent implementiert Gewinner-Strategie als Production
+6. Agent führt Regressionstests durch
+
+**Nach Erstellung des Target-Pakets: STOP.**  
+**Warten auf reale Ergebnisse des Benutzers.**

@@ -1,43 +1,32 @@
-# Phase 4: Real RTX 5060 Audio Benchmark Report
+# PHASE 4 — Real RTX 5060 Audio Benchmark Report
 
-**Status:** VORBEREITUNG ABGESCHLOSSEN — BEREIT FÜR AUSFÜHRUNG AUF RTX 5060  
-**Datum:** 2026-09-04  
-**Commit:** e81bb32 (Phase 3 final)  
-
----
-
-## 1. Zusammenfassung
-
-Phase 4 hat die vollständige Infrastruktur für den echten Audio-Benchmark auf der RTX 5060 erstellt. Die Sandbox-Umgebung verfügt über **keine GPU** und kann daher keine echte Audio-Synthese durchführen.
-
-**Status der Vorbereitung:**
-- ✅ Git-Zustand gesichert (Commit e81bb32)
-- ✅ Golden Reference verifiziert (SHA-256: B156C02A...5F2025 ✓)
-- ✅ Runtime Voice Reference dokumentiert
-- ✅ Umgebung-Check-Skript erstellt
-- ✅ Benchmark-Skript erstellt (Baseline + A/B-Test)
-- ✅ Long-Form-Test-Skript erstellt
-- ✅ Baseline-Text erstellt (2839 Zeichen, alle phonetischen Fälle)
-- ✅ 5 Segmentierungs-Varianten definiert
-- ✅ Variante D (große Blöcke + Schneiden) implementiert
-- ✅ Metrik-Erfassung vorbereitet
-- ✅ Report-Struktur erstellt
-
-**Ausstehend auf RTX 5060:**
-- ⏳ Umgebung-Check ausführen
-- ⏳ Runtime Voice Reference kopieren
-- ⏳ Baseline-Audio erzeugen
-- ⏳ Golden Reference Vergleich
-- ⏳ A/B-Test (5 Varianten)
-- ⏳ Akustische Bewertung
-- ⏳ Long-Form-Test (5, 10, 30, 60, 120 Minuten)
-- ⏳ Produktions-Entscheidung
+**Status:** ⏳ TARGET HARDWARE EXECUTION REQUIRED  
+**Repository-Zustand:** ✅ VOLLSTÄNDIG VORBEREITET  
+**Datum:** 2026-09-05  
+**Commit:** `dfee2ed` (Branch: `arena/01a06e55-voice-ai-reference`)  
 
 ---
 
-## 2. Hardware
+## WICHTIGER STATUS-HINWEIS
 
-### Zielhardware (erforderlich)
+Dieser Report dokumentiert den **VORBEREITUNGSZUSTAND** des Phase-4-Benchmarks.
+
+| Kategorie | Status |
+|-----------|--------|
+| **A: Repository Verified** | ✅ Benchmark-Infrastruktur erstellt und getestet |
+| **B: Target Hardware Required** | ⏳ AUSSTEHEND — Auf RTX 5060 auszuführen |
+| **C: Target Hardware Verified** | ⏳ AUSSTEHEND — Keine echten Ergebnisse vorhanden |
+
+**Phase 4 ist NICHT abgeschlossen.**  
+**Echte Audio-Ergebnisse liegen noch nicht vor.**  
+**Alle Audio-bezogenen Aussagen sind VORBEREITET, NICHT VERIFIZIERT.**
+
+---
+
+## 1. Hardware
+
+### Zielhardware (erforderlich für Ausführung)
+
 | Komponente | Spezifikation |
 |------------|---------------|
 | CPU | AMD Ryzen 7 5700X |
@@ -46,46 +35,41 @@ Phase 4 hat die vollständige Infrastruktur für den echten Audio-Benchmark auf 
 | VRAM | 8 GB |
 | OS | Windows 10 x64 |
 
-### Sandbox-Umgebung (aktuell)
+### Benchmark-Umgebung (aktuell)
+
 | Komponente | Status |
 |------------|--------|
-| CPU | Cloud-CPU (keine RTX 5060) |
-| RAM | ~2 GB |
-| GPU | ❌ NICHT VORHANDEN |
-| PyTorch | ❌ Nicht installiert |
-| CUDA | ❌ Nicht vorhanden |
-| qwen-tts | ❌ Nicht installiert |
-| FFmpeg | ✅ Verfügbar |
-
-**WICHTIG:** Echte Audio-Synthese ist in dieser Sandbox **NICHT MÖGLICH**.
+| Sandbox-CPU | Cloud (keine RTX 5060) |
+| Sandbox-RAM | ~2 GB |
+| Sandbox-GPU | ❌ NICHT VORHANDEN |
+| Echte Audio-Synthese | ❌ NICHT MÖGLICH |
 
 ---
 
-## 3. Software
+## 2. Software
 
 ### Erforderliche Versionen (auf RTX 5060)
-| Komponente | Version |
-|------------|---------|
-| Python | 3.10 - 3.13 |
-| PyTorch | >= 2.11.0+cu128 |
-| CUDA | 12.8 |
-| qwen-tts | 0.1.1 |
-| transformers | >= 4.57.3 |
-| FFmpeg | Verfügbar |
-| numpy | >= 1.24.0 |
-| soundfile | >= 0.12.0 |
 
-### Überprüfungs-Skript
+| Komponente | Version | Prüf-Skript |
+|------------|---------|-------------|
+| Python | 3.10 - 3.13 | `phase4_env_check.py` |
+| PyTorch | >= 2.11.0+cu128 | `phase4_env_check.py` |
+| CUDA | 12.8 | `phase4_env_check.py` |
+| qwen-tts | 0.1.1 | `phase4_env_check.py` |
+| transformers | >= 4.57.3 | `phase4_env_check.py` |
+| FFmpeg | Verfügbar | `phase4_env_check.py` |
+
+### Prüf-Skript
+
 ```powershell
-cd project
 python benchmark/phase4_env_check.py
 ```
 
-Erstellt `benchmark/phase4_env_check.json` mit allen Check-Ergebnissen.
+Erstellt `benchmark/phase4_env_check.json` mit allen Ergebnissen.
 
 ---
 
-## 4. Modell & Voice
+## 3. Modell & Voice
 
 | Parameter | Wert |
 |-----------|------|
@@ -98,85 +82,70 @@ Erstellt `benchmark/phase4_env_check.json` mit allen Check-Ergebnissen.
 | **Instruct** | `de_doc_native` |
 | **Prosody** | `classic` |
 | **Cache-Version** | `q3p-v2-integrity` |
-| **Segment Target** | 420 Zeichen |
-| **Segment Max** | 700 Zeichen |
-| **Segment Min** | 120 Zeichen |
+| **Status** | **LOCKED** |
 
 ---
 
-## 5. Voice Reference
+## 4. Voice Reference
 
 ### Golden Reference
+
 ```
 Datei: reference/VD-E_GOLDEN_REFERENCE/VD-E.wav
 SHA-256: B156C02A60A873AD95FC92390C4A136C85308B20188373CD734BEE5E5E5F2025
-Status: ✓ VERIFIZIERT
+Status: ✅ VERIFIZIERT (Repository)
 ```
 
 ### Runtime Voice Reference
+
 ```
 Pfad: project/cache/voice_refs/VD-E.wav
-Status: ⏳ MUSS KOPIERT WERDEN
+Status: ⏳ Muss auf RTX 5060 kopiert werden
 ```
 
 **Setup-Schritt auf RTX 5060:**
 ```powershell
-# Golden Reference → Runtime kopieren
+.\run_phase4_target.ps1
+# Oder manuell:
 New-Item -ItemType Directory -Force -Path "cache\voice_refs"
 Copy-Item "reference\VD-E_GOLDEN_REFERENCE\VD-E.wav" "cache\voice_refs\VD-E.wav"
-
-# Hash verifizieren
-(Get-FileHash "cache\voice_refs\VD-E.wav" -Algorithm SHA256).Hash
-# Erwartet: B156C02A60A873AD95FC92390C4A136C85308B20188373CD734BEE5E5E5F2025
-```
-
-**Code-Pfad:**
-```
-production.json → reference_path: "cache/voice_refs/VD-E.wav"
-→ identity_lock.py prüft SHA-256
-→ qwen_engine.py VoiceCloneEngine lädt als Clone-Prompt
-→ Alle Segmente verwenden denselben Prompt → maximale Konsistenz
 ```
 
 ---
 
-## 6. Baseline-Text
+## 5. Baseline-Text
 
 **Länge:** 2839 Zeichen (~400 Wörter)  
-**Erwartete Dauer:** ~2-3 Minuten
+**Erwartete Dauer:** ~2-3 Minuten  
+**Status:** ✅ Erstellt (in `benchmark/phase4_benchmark.py::BASELINE_TEXT`)
 
 **Enthaltene phonetische Fälle:**
-- ✅ Normale deutsche Sätze
-- ✅ Lange Sätze (verschachtelte Nebensätze)
-- ✅ Nebensätze (Relativsätze, Konjunktionen)
-- ✅ Kommas (Aufzählungen, Einschübe)
-- ✅ Doppelpunkte
-- ✅ Semikolons
-- ✅ Gedankenstriche (—)
-- ✅ Aufzählungen (mit Semikolon getrennt)
-- ✅ Zahlen (86 Milliarden, 10^15, 10^18)
-- ✅ Jahreszahlen (4. Jahrhundert v. Chr., 1990, 1988)
-- ✅ Namen (Aristoteles, Tononi, Baars, Friston, Penrose, Hameroff, Cicero, Seneca, Newton, Einstein, Gutenberg)
-- ✅ Fremdwörter (fMRT, PET, EEG, Qualia, Phi)
-- ✅ Englische Begriffe (Integrated Information Theory, Predictive Coding, Global Workspace)
-- ✅ Technische Begriffe (Neuroinformatik, Synapsen, Supercomputer, Relativitätstheorie, Quantenmechanik)
-- ✅ Abkürzungen (NCC, IIT, KI, EEG)
-
-**Text-Thema:** Bewusstseinsforschung und Menschheitsgeschichte (passend für Dokumentationen, Essays, Wissensvideos)
+- Normale deutsche Sätze
+- Lange Sätze (verschachtelte Nebensätze)
+- Nebensätze (Relativsätze, Konjunktionen)
+- Kommas, Doppelpunkte, Semikolons, Gedankenstriche
+- Aufzählungen
+- Zahlen (86 Milliarden, 10^15, 10^18)
+- Jahreszahlen (4. Jahrhundert v. Chr., 1990, 1988)
+- Namen (Aristoteles, Tononi, Baars, Friston, Penrose, Hameroff)
+- Fremdwörter (fMRT, PET, EEG, Qualia, Phi)
+- Englische Begriffe (Integrated Information Theory, Predictive Coding)
+- Technische Begriffe (Neuroinformatik, Synapsen, Supercomputer)
+- Abkürzungen (NCC, IIT, KI, EEG)
 
 ---
 
-## 7. Segmentierungs-A/B-Test
+## 6. Segmentierungs-A/B-Test
 
 ### Varianten
 
-| Variante | Target | Min | Max | Strategie |
-|----------|--------|-----|-----|-----------|
-| **A** | 420 | 120 | 700 | Production-Standard (aktuell) |
-| **B** | 700 | 200 | 1000 | Größere semantische Segmente |
-| **C** | 1200 | 400 | 1800 | Sehr große Blöcke |
-| **D** | 1500 | 500 | 2500 | Große Blöcke + intelligentes Schneiden |
-| **E** | 1000 | 300 | 2000 | Hybrid (Absatz-basiert) |
+| Variante | Target | Min | Max | Strategie | Status |
+|----------|--------|-----|-----|-----------|--------|
+| **A** | 420 | 120 | 700 | Production-Standard | ⏳ Ausstehend |
+| **B** | 700 | 200 | 1000 | Größere Segmente | ⏳ Ausstehend |
+| **C** | 1200 | 400 | 1800 | Sehr große Blöcke | ⏳ Ausstehend |
+| **D** | 1500 | 500 | 2500 | Große Blöcke + Schneiden | ⏳ Ausstehend |
+| **E** | 1000 | 300 | 2000 | Hybrid (Absatz-basiert) | ⏳ Ausstehend |
 
 ### Variante D: Große Blöcke + Schneiden
 
@@ -187,97 +156,92 @@ production.json → reference_path: "cache/voice_refs/VD-E.wav"
 4. Zusammenfügen
 
 **Vorteil:** Weniger Segmentübergänge → potenziell bessere Kontinuität  
-**Nachteil:** Höherer VRAM-Verbrauch pro Segment
+**Nachteil:** Höherer VRAM-Verbrauch pro Segment  
+**Status:** ✅ Implementiert in `benchmark/phase4_benchmark.py::run_variant_d()`
 
 ---
 
-## 8. Metriken
+## 7. Metriken
 
 ### Objektive Metriken (automatisch gemessen)
 
 Für jede Variante:
-- **Sample Rate** (Hz)
-- **Channels** (mono/stereo)
-- **Duration** (Sekunden)
-- **Peak** (Amplitude, dB)
-- **RMS** (Effektivwert, dB)
-- **LUFS** (approximiert)
-- **Clipping** (ja/nein)
-- **File Size** (MB)
-- **QC-Score** (0-100)
-- **Laufzeit** (Sekunden)
-- **VRAM** (Peak, GB)
-- **RAM** (Peak, GB)
+- Sample Rate (Hz)
+- Channels (mono/stereo)
+- Duration (Sekunden)
+- Peak (Amplitude, dB)
+- RMS (Effektivwert, dB)
+- LUFS (approximiert)
+- Clipping (ja/nein)
+- File Size (MB)
+- QC-Score (0-100)
+- Laufzeit (Sekunden)
+- VRAM (Peak, GB)
+- RAM (Peak, GB)
+
+**Status:** ✅ Implementiert, ⏳ Ausstehend für echte Messung
 
 ### Voice-Consistency (automatisch gemessen)
 
 An 5 Punkten (0%, 25%, 50%, 75%, 100%):
-- **RMS** (dB)
-- **Peak** (Amplitude)
-- **Zero-Crossing-Rate** (Timbre-Indikator)
+- RMS (dB)
+- Peak (Amplitude)
+- Zero-Crossing-Rate (Timbre-Indikator)
 
 **Bewertung:**
 - std < 2.0 dB = sehr konsistent ✓
 - 2.0-2.5 dB = akzeptabel
 - > 2.5 dB = problematisch ❌
 
+**Status:** ✅ Implementiert, ⏳ Ausstehend für echte Messung
+
 ---
 
-## 9. Golden Reference Vergleich
+## 8. Golden Reference Vergleich
 
 **Vergleichsmetriken:**
 - Duration-Differenz
 - RMS-Differenz (dB)
 - Peak-Differenz
 
-**Hinweis:** Golden Reference ist Klangreferenz, kein identischer Audioclon. LUFS-Differenz < 2.0 ist akzeptabel.
+**Hinweis:** Golden Reference ist Klangreferenz, kein identischer Audioclon.
+
+**Status:** ✅ Implementiert, ⏳ Ausstehend für echten Vergleich
 
 ---
 
-## 10. Akustische Bewertung (MANUELL AUSZUFÜLLEN)
+## 9. Akustische Bewertung (MANUELL AUSZUFÜLLEN)
 
-Nach Ausführung auf RTX 5060 bitte jede Variante anhören und bewerten:
+**Status:** ⏳ Ausstehend — nach Ausführung auf RTX 5060
+
+Bitte jede Variante anhören und bewerten (0-10):
 
 | Kriterium | A | B | C | D | E | Baseline |
 |-----------|---|---|---|---|---|----------|
-| Voice Identity (0-10) | ? | ? | ? | ? | ? | ? |
-| Naturalness (0-10) | ? | ? | ? | ? | ? | ? |
-| Pronunciation (0-10) | ? | ? | ? | ? | ? | ? |
-| Prosody (0-10) | ? | ? | ? | ? | ? | ? |
-| Continuity (0-10) | ? | ? | ? | ? | ? | ? |
-| Long-Form Stability (0-10) | ? | ? | ? | ? | ? | ? |
-
-**Bewertungskriterien:**
-- **Voice Identity:** Klingt es wie VD-E?
-- **Naturalness:** Klingt es natürlich/menschlich?
-- **Pronunciation:** Sind Aussprache, Betonung, Pausen korrekt?
-- **Prosody:** Ist die Satzmelodie natürlich?
-- **Continuity:** Gibt es hörbare Segmentübergänge?
-- **Long-Form Stability:** Bleibt die Stimme über die gesamte Dauer konsistent?
+| Voice Identity | ? | ? | ? | ? | ? | ? |
+| Naturalness | ? | ? | ? | ? | ? | ? |
+| Pronunciation | ? | ? | ? | ? | ? | ? |
+| Prosody | ? | ? | ? | ? | ? | ? |
+| Continuity | ? | ? | ? | ? | ? | ? |
+| Long-Form Stability | ? | ? | ? | ? | ? | ? |
 
 ---
 
-## 11. Long-Form Test
+## 10. Long-Form Test
 
-**Skript:** `benchmark/phase4_longform.py`
+**Skript:** `benchmark/phase4_longform.py`  
+**Runner:** `run_phase4_longform.ps1`
 
 **Getestete Dauern:**
-- 5 Minuten
-- 10 Minuten
-- 30 Minuten
-- 60 Minuten (wenn VRAM/RAM reicht)
-- 120 Minuten (wenn stabil)
-
-**Prüfung an 10 Punkten (0%, 10%, 20%, ..., 100%):**
-- Timbre-Stabilität
-- Tempo-Stabilität
-- Lautheit-Konsistenz
-- Prosody-Konsistenz
-- Voice Identity
+- 5 Minuten ⏳ Ausstehend
+- 10 Minuten ⏳ Ausstehend
+- 30 Minuten ⏳ Ausstehend
+- 60 Minuten ⏳ Ausstehend
+- 120 Minuten ⏳ Ausstehend
 
 ---
 
-## 12. Produktions-Entscheidung
+## 11. Produktions-Entscheidung
 
 ### Gewinner-Tabelle (auszufüllen)
 
@@ -289,82 +253,83 @@ Nach Ausführung auf RTX 5060 bitte jede Variante anhören und bewerten:
 | D | ?/10 | ?/10 | ?/10 | ?/10 | ?/10 | ?s | ?GB | ?GB |
 | E | ?/10 | ?/10 | ?/10 | ?/10 | ?/10 | ?s | ?GB | ?GB |
 
-### Entscheidungsregel
-
-**Gewinner = Variante mit:**
-- Höchster Naturalness-Score
-- Höchster Continuity-Score
-- Keine Regression gegenüber Baseline
-- Akzeptable Performance
-
-**Priorität:**
-1. Voice Quality
-2. Voice Consistency
-3. Naturalness
-4. Pronunciation
-5. Prosody
-6. Continuity
-7. Stability
-8. Performance
+**Status:** ⏳ Ausstehend
 
 ---
 
-## 13. Golden Reference Regression Gate
+## 12. Golden Reference Regression Gate
 
-**Keine Variante darf Production werden, wenn:**
+**Regel:** Keine Variante darf Production werden, wenn:
 - ❌ Voice Identity schlechter als Baseline
 - ❌ Naturalness schlechter als Baseline
 - ❌ Continuity schlechter als Baseline
 - ❌ Pronunciation schlechter als Baseline
 
-**Production nur wenn:**
-- ✅ Voice ≥ Baseline
-- ✅ Naturalness ≥ Baseline
-- ✅ Continuity ≥ Baseline
-- ✅ Tests bestanden
-- ✅ Long-Form stabil
+**Status:** ✅ Regel definiert, ⏳ Ausstehend für Überprüfung
 
 ---
 
-## 14. Ausführung auf RTX 5060
+## 13. Ausführung auf RTX 5060
 
-### Schritt 1: Umgebung prüfen
+### Zentraler Runner (empfohlen)
+
 ```powershell
-cd VoiceOverApp
+.\run_phase4_target.ps1
+```
+
+Führt automatisch aus:
+1. Environment Check
+2. Golden Reference Check
+3. Runtime Voice Reference Setup
+4. Production Baseline
+5. A/B-Test (5 Varianten)
+6. Report-Generierung
+
+### Separate Long-Form-Ausführung
+
+```powershell
+.\run_phase4_longform.ps1 -Winner D -MaxMinutes 60
+```
+
+### Manuelle Ausführung
+
+```powershell
+# 1. Umgebung prüfen
 python benchmark/phase4_env_check.py
-```
 
-### Schritt 2: Runtime Voice Reference setup
-```powershell
-New-Item -ItemType Directory -Force -Path "cache\voice_refs"
-Copy-Item "reference\VD-E_GOLDEN_REFERENCE\VD-E.wav" "cache\voice_refs\VD-E.wav"
-(Get-FileHash "cache\voice_refs\VD-E.wav" -Algorithm SHA256).Hash
-```
-
-### Schritt 3: Baseline + A/B-Test
-```powershell
+# 2. Benchmark ausführen
 python benchmark/phase4_benchmark.py
-```
 
-**Erwartete Laufzeit:** 30-90 Minuten  
-**Output:**
-- `PHASE4_REAL_AUDIO_REPORT.md` (erweitert)
-- `PHASE4_REAL_AUDIO_REPORT.json`
-- `output/phase4_baseline/`
-- `output/phase4_A/` ... `output/phase4_E/`
+# 3. Audio anhören + AUDIO_REVIEW.md ausfüllen
 
-### Schritt 4: Long-Form-Test
-```powershell
+# 4. Long-Form testen
 python benchmark/phase4_longform.py --winner D --max-minutes 60
 ```
 
-**Output:**
-- `PHASE4_LONGFORM_REPORT.md`
-- `PHASE4_LONGFORM_REPORT.json`
-- `output/phase4_longform_5min/` ... `output/phase4_longform_120min/`
+---
 
-### Schritt 5: Akustische Bewertung
-Audio-Dateien anhören und Bewertungstabellen ausfüllen.
+## 14. Erwartete Output-Struktur
+
+Nach Ausführung auf RTX 5060:
+
+```
+results/phase4/<timestamp>/
+├── environment.json
+├── env_check_output.txt
+├── benchmark_output.txt
+├── PHASE4_REAL_AUDIO_REPORT.md (dieses Dokument, erweitert)
+├── PHASE4_REAL_AUDIO_REPORT.json
+└── AUDIO_REVIEW.md (manuell ausfüllen)
+
+output/
+├── phase4_baseline/
+│   └── phase4_baseline.wav
+├── phase4_A/
+├── phase4_B/
+├── phase4_C/
+├── phase4_D/
+└── phase4_E/
+```
 
 ---
 
@@ -372,42 +337,25 @@ Audio-Dateien anhören und Bewertungstabellen ausfüllen.
 
 ### Auf RTX 5060 ausführen:
 
-1. **Umgebung-Check:**
+1. **Zentrales Skript starten:**
    ```powershell
-   python benchmark/phase4_env_check.py
-   ```
-   → Alle Checks müssen bestanden werden.
-
-2. **Runtime Voice Reference kopieren:**
-   ```powershell
-   New-Item -ItemType Directory -Force -Path "cache\voice_refs"
-   Copy-Item "reference\VD-E_GOLDEN_REFERENCE\VD-E.wav" "cache\voice_refs\VD-E.wav"
+   .\run_phase4_target.ps1
    ```
 
-3. **Benchmark starten:**
+2. **Audio-Dateien anhören**
+
+3. **AUDIO_REVIEW.md ausfüllen**
+
+4. **Gewinner identifizieren**
+
+5. **Long-Form-Test durchführen:**
    ```powershell
-   python benchmark/phase4_benchmark.py
-   ```
-   → Erzeugt Baseline + 5 Varianten
-
-4. **Audio anhören:**
-   - `output/phase4_baseline/PHASE4_baseline.wav`
-   - `output/phase4_A/...` bis `output/phase4_E/...`
-
-5. **Bewertung ausfüllen:**
-   → Tabelle in `PHASE4_REAL_AUDIO_REPORT.md`
-
-6. **Gewinner identifizieren:**
-   → Variante mit bester Naturalness + Continuity
-
-7. **Long-Form-Test:**
-   ```powershell
-   python benchmark/phase4_longform.py --winner [A|B|C|D|E]
+   .\run_phase4_longform.ps1 -Winner [A|B|C|D|E] -MaxMinutes 60
    ```
 
-8. **Produktions-Entscheidung:**
-   → Wenn Gewinner besser als Baseline → Production
-   → Wenn nicht → Weiter optimieren oder Baseline beibehalten
+6. **Ergebnisse zurückliefern:**
+   - `results/phase4/<timestamp>/`
+   - `output/phase4_*/`
 
 ---
 
@@ -420,35 +368,31 @@ Audio-Dateien anhören und Bewertungstabellen ausfüllen.
 **DAS ZIEL IST:**  
 **DIE BESTMÖGLICHE, NATÜRLICHSTE UND KONSISTENTESTE VD-E-VOICE ÜBER DIE GESAMTE AUSGABE.**
 
-Die interne technische Methode darf sich diesem Ziel unterordnen.
-
 ---
 
 ## 17. Stop-Punkt
 
-Nach:
-- ✅ Vorbereitung abgeschlossen
-- ⏳ Baseline (ausstehend auf RTX 5060)
-- ⏳ A/B-Test (ausstehend auf RTX 5060)
-- ⏳ Long-Form-Test (ausstehend auf RTX 5060)
-- ⏳ Akustische Bewertung (ausstehend)
+Nach Erstellung des Target-Pakets:
 
 **STOP.**
 
-Keine weiteren großen Architekturänderungen, bis die Ergebnisse ausgewertet wurden.
+Keine weiteren großen Änderungen.  
+Warten auf reale Ergebnisse des Benutzers.
 
 ---
 
 ## 18. Dateien
 
-| Datei | Zweck |
-|-------|-------|
-| `benchmark/phase4_env_check.py` | Umgebung-Check |
-| `benchmark/phase4_benchmark.py` | Baseline + A/B-Test |
-| `benchmark/phase4_longform.py` | Long-Form-Test |
-| `benchmark/PHASE4_INSTRUCTIONS.md` | Ausführungsanleitung |
-| `PHASE4_REAL_AUDIO_REPORT.md` | Dieser Report |
-| `PHASE4_REAL_AUDIO_REPORT.json` | Maschinell lesbar (nach Ausführung) |
+| Datei | Zweck | Status |
+|-------|-------|--------|
+| `benchmark/phase4_env_check.py` | Umgebung-Check | ✅ Erstellt |
+| `benchmark/phase4_benchmark.py` | Baseline + A/B-Test | ✅ Erstellt |
+| `benchmark/phase4_longform.py` | Long-Form-Test | ✅ Erstellt |
+| `benchmark/PHASE4_INSTRUCTIONS.md` | Ausführungsanleitung | ✅ Erstellt |
+| `run_phase4_target.ps1` | Zentraler Runner | ✅ Erstellt |
+| `run_phase4_longform.ps1` | Long-Form-Runner | ✅ Erstellt |
+| `PHASE4_REAL_AUDIO_REPORT.md` | Dieser Report | ✅ Erstellt |
+| `CURRENT_STATE.md` | Projekt-Status | ✅ Aktualisiert |
 
 ---
 
@@ -457,9 +401,10 @@ Keine weiteren großen Architekturänderungen, bis die Ergebnisse ausgewertet wu
 Phase 4 hat die vollständige Infrastruktur für den echten Audio-Benchmark auf der RTX 5060 erstellt. Alle Skripte sind vorbereitet, getestet und dokumentiert.
 
 **Status:** ✅ VORBEREITUNG ABGESCHLOSSEN  
-**Nächster Schritt:** Skripte auf RTX 5060 ausführen
+**Nächster Schritt:** `.\run_phase4_target.ps1` auf RTX 5060 ausführen  
+**Echte Audio-Ergebnisse:** ⏳ AUSSTEHEND
 
 ---
 
 *Erstellt durch Arena.ai Voice-AI-Reference Agent*  
-*2026-09-04*
+*2026-09-05*
