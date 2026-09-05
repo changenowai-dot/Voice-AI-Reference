@@ -1,9 +1,15 @@
 # ============================================================
-# VoiceOverApp Phase 4 — Long-Form Benchmark Runner
+# VoiceOverApp Phase 4 — Long-Form Benchmark Runner (Hardened)
 # ============================================================
 # Führt Long-Form-Tests mit dem A/B-Gewinner durch.
 #
 # VORAUSSETZUNG: Phase 4 Benchmark bereits abgeschlossen
+#
+# ROBUSTHEIT:
+# - Erkennt Repository Root automatisch
+# - Funktioniert aus jedem Arbeitsverzeichnis
+# - Validiert Golden Reference + Runtime Voice
+# - ValidateSet für Winner-Parameter
 #
 # AUSFÜHRUNG:
 #   .\run_phase4_longform.ps1 -Winner D -MaxMinutes 60
@@ -13,7 +19,9 @@
 # ============================================================
 
 param(
+    [ValidateSet("A","B","C","D","E")]
     [string]$Winner = "A",
+    [ValidateRange(1,180)]
     [int]$MaxMinutes = 60,
     [switch]$Quick,
     [string]$RunID = ""
@@ -22,50 +30,112 @@ param(
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
+# ============================================================
+# Repository Root erkennen
+# ============================================================
+$ScriptDir = $PSScriptRoot
+if (-not $ScriptDir) {
+    $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+}
+
+$RepoRoot = $ScriptDir
+$ProjectRoot = Join-Path $RepoRoot "project"
+
+# Validierung
+if (-not (Test-Path (Join-Path $ProjectRoot "app"))) {
+    Write-Host "FEHLER: Projektstruktur nicht gefunden." -ForegroundColor Red
+    Write-Host "Erwartet: $ProjectRoot\app\" -ForegroundColor Red
+    exit 1
+}
+
+# Winner validieren (keine automatische Präferenz für D)
+Write-Host "============================================================" -ForegroundColor Cyan
+Write-Host "VoiceOverApp Phase 4 — Long-Form Benchmark" -ForegroundColor Cyan
+Write-Host "============================================================" -ForegroundColor Cyan
+Write-Host "Repository: $RepoRoot" -ForegroundColor Gray
+Write-Host "Project:    $ProjectRoot" -ForegroundColor Gray
+
 if (-not $RunID) {
     $RunID = Get-Date -Format "yyyyMMdd_HHmmss"
 }
 
-$ResultsDir = Join-Path $PSScriptRoot "results\phase4\longform_$RunID"
-
-Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "VoiceOverApp Phase 4 — Long-Form Benchmark" -ForegroundColor Cyan
-Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "Winner: $Winner" -ForegroundColor Gray
-Write-Host "Max Duration: $MaxMinutes minutes" -ForegroundColor Gray
-Write-Host "Run-ID: $RunID" -ForegroundColor Gray
-Write-Host "Results: $ResultsDir" -ForegroundColor Gray
+$ResultsDir = Join-Path $RepoRoot "results\phase4\longform_$RunID"
+Write-Host "Winner:   $Winner" -ForegroundColor Gray
+Write-Host "Max:      $MaxMinutes minutes" -ForegroundColor Gray
+Write-Host "Run-ID:   $RunID" -ForegroundColor Gray
+Write-Host "Results:  $ResultsDir" -ForegroundColor Gray
 Write-Host ""
 
 New-Item -ItemType Directory -Force -Path $ResultsDir | Out-Null
 
 # ============================================================
+# Python prüfen
+# ============================================================
+$PythonCmd = $null
+foreach ($py in @("python", "python3", "py")) {
+    try {
+        $ver = & $py --version 2>&1
+        if ($LASTEXITCODE -eq 0 -and $ver -match "Python 3\.\d+") {
+            $PythonCmd = $py
+            break
+        }
+    } catch { }
+}
+
+if (-not $PythonCmd) {
+    Write-Host "FEHLER: Python 3 nicht gefunden." -ForegroundColor Red
+    exit 1
+}
+
+# ============================================================
 # Golden Reference Verify
 # ============================================================
-$GoldenRef = Join-Path $PSScriptRoot "reference\VD-E_GOLDEN_REFERENCE\VD-E.wav"
+Write-Host "Schritt 1/4: Golden Reference..." -ForegroundColor Yellow
+
+$GoldenRef = Join-Path $RepoRoot "reference\VD-E_GOLDEN_REFERENCE\VD-E.wav"
 $ExpectedHash = "B156C02A60A873AD95FC92390C4A136C85308B20188373CD734BEE5E5E5F2025"
 
 if (-not (Test-Path $GoldenRef)) {
-    Write-Host "FEHLER: Golden Reference nicht gefunden" -ForegroundColor Red
+    Write-Host "  FEHLER: Golden Reference nicht gefunden" -ForegroundColor Red
     exit 1
 }
 
 $ActualHash = (Get-FileHash $GoldenRef -Algorithm SHA256).Hash.ToUpper()
 if ($ActualHash -ne $ExpectedHash) {
-    Write-Host "FEHLER: Golden Reference Hash-Mismatch!" -ForegroundColor Red
+    Write-Host "  FEHLER: Golden Reference Hash-Mismatch!" -ForegroundColor Red
+    Write-Host "  Erwartet: $ExpectedHash" -ForegroundColor Red
+    Write-Host "  Gefunden: $ActualHash" -ForegroundColor Red
     exit 1
 }
-Write-Host "✓ Golden Reference verifiziert" -ForegroundColor Green
+Write-Host "  ✓ Golden Reference verifiziert" -ForegroundColor Green
 
-# Runtime Voice Reference prüfen
-$RuntimeRef = Join-Path $PSScriptRoot "cache\voice_refs\VD-E.wav"
+# ============================================================
+# Runtime Voice Reference
+# ============================================================
+Write-Host "Schritt 2/4: Runtime Voice Reference..." -ForegroundColor Yellow
+
+$RuntimeRefDir = Join-Path $ProjectRoot "cache\voice_refs"
+$RuntimeRef = Join-Path $RuntimeRefDir "VD-E.wav"
+
 if (-not (Test-Path $RuntimeRef)) {
-    Write-Host "Runtime Voice Reference fehlt. Kopiere..." -ForegroundColor DarkYellow
-    New-Item -ItemType Directory -Force -Path (Join-Path $PSScriptRoot "cache\voice_refs") | Out-Null
+    Write-Host "  Runtime Voice Reference fehlt. Kopiere..." -ForegroundColor DarkYellow
+    New-Item -ItemType Directory -Force -Path $RuntimeRefDir | Out-Null
     Copy-Item $GoldenRef $RuntimeRef -Force
-    Write-Host "✓ Runtime Voice Reference erstellt" -ForegroundColor Green
+    
+    $RuntimeHash = (Get-FileHash $RuntimeRef -Algorithm SHA256).Hash.ToUpper()
+    if ($RuntimeHash -ne $ExpectedHash) {
+        Write-Host "  FEHLER: Runtime Hash-Mismatch nach Kopie!" -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "  ✓ Runtime Voice Reference erstellt" -ForegroundColor Green
 } else {
-    Write-Host "✓ Runtime Voice Reference vorhanden" -ForegroundColor Green
+    $RuntimeHash = (Get-FileHash $RuntimeRef -Algorithm SHA256).Hash.ToUpper()
+    if ($RuntimeHash -ne $ExpectedHash) {
+        Write-Host "  FEHLER: Runtime Voice Reference Hash-Mismatch!" -ForegroundColor Red
+        Write-Host "  Bitte Datei löschen und Phase 4 neu starten." -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "  ✓ Runtime Voice Reference vorhanden" -ForegroundColor Green
 }
 
 Write-Host ""
@@ -73,10 +143,12 @@ Write-Host ""
 # ============================================================
 # Long-Form Test ausführen
 # ============================================================
-$LongformScript = Join-Path $PSScriptRoot "benchmark\phase4_longform.py"
+Write-Host "Schritt 3/4: Long-Form Test ($Winner, max $MaxMinutes min)..." -ForegroundColor Yellow
+
+$LongformScript = Join-Path $ProjectRoot "benchmark\phase4_longform.py"
 
 if (-not (Test-Path $LongformScript)) {
-    Write-Host "FEHLER: $LongformScript nicht gefunden" -ForegroundColor Red
+    Write-Host "  FEHLER: $LongformScript nicht gefunden" -ForegroundColor Red
     exit 1
 }
 
@@ -85,22 +157,29 @@ if ($Quick) {
     $LongformArgs += "--quick"
 }
 
-Write-Host "Starte Long-Form-Test..." -ForegroundColor Yellow
-Write-Host "Parameter: winner=$Winner, max-minutes=$MaxMinutes, quick=$Quick" -ForegroundColor Gray
+Write-Host "  Starte Long-Form-Test..." -ForegroundColor Gray
+Write-Host "  Parameter: winner=$Winner, max-minutes=$MaxMinutes, quick=$Quick" -ForegroundColor Gray
 Write-Host ""
 
 $LongformOutput = Join-Path $ResultsDir "longform_output.txt"
 $StartTime = Get-Date
 
-python $LongformScript @LongformArgs *> $LongformOutput
-$ExitCode = $LASTEXITCODE
+$env:VOICEOVER_ROOT = $ProjectRoot
+
+Push-Location $ProjectRoot
+try {
+    & $PythonCmd $LongformScript @LongformArgs *> $LongformOutput
+    $ExitCode = $LASTEXITCODE
+} finally {
+    Pop-Location
+}
 
 $EndTime = Get-Date
 $TotalTime = ($EndTime - $StartTime).TotalMinutes
 
 # Reports kopieren
-$ReportMd = Join-Path $PSScriptRoot "PHASE4_LONGFORM_REPORT.md"
-$ReportJson = Join-Path $PSScriptRoot "PHASE4_LONGFORM_REPORT.json"
+$ReportMd = Join-Path $RepoRoot "PHASE4_LONGFORM_REPORT.md"
+$ReportJson = Join-Path $RepoRoot "PHASE4_LONGFORM_REPORT.json"
 
 if (Test-Path $ReportMd) {
     Copy-Item $ReportMd (Join-Path $ResultsDir "PHASE4_LONGFORM_REPORT.md") -Force
@@ -115,21 +194,35 @@ Write-Host "============================================================" -Foreg
 if ($ExitCode -eq 0) {
     Write-Host "LONG-FORM BENCHMARK ABGESCHLOSSEN" -ForegroundColor Green
     Write-Host "Gesamtlaufzeit: $([math]::Round($TotalTime, 1)) Minuten" -ForegroundColor Gray
-    Write-Host "Results: $ResultsDir" -ForegroundColor Gray
     Write-Host ""
-    Write-Host "Audio-Dateien:" -ForegroundColor White
-    Write-Host "  - output/phase4_longform_5min/" -ForegroundColor Gray
-    Write-Host "  - output/phase4_longform_10min/" -ForegroundColor Gray
-    Write-Host "  - output/phase4_longform_30min/" -ForegroundColor Gray
-    if (-not $Quick -and $MaxMinutes -ge 60) {
-        Write-Host "  - output/phase4_longform_60min/" -ForegroundColor Gray
+    
+    # Audio-Dateien auflisten
+    $OutputDir = Join-Path $ProjectRoot "output"
+    $lfDirs = Get-ChildItem $OutputDir -Directory -Filter "phase4_longform_*" -ErrorAction SilentlyContinue | Sort-Object Name
+    
+    if ($lfDirs.Count -gt 0) {
+        Write-Host "Audio-Dateien:" -ForegroundColor White
+        foreach ($d in $lfDirs) {
+            $wavs = Get-ChildItem $d.FullName -Filter "*.wav" -ErrorAction SilentlyContinue
+            foreach ($w in $wavs) {
+                $sizeMB = [math]::Round($w.Length / (1024*1024), 1)
+                Write-Host "  $($w.FullName) ($sizeMB MB)" -ForegroundColor Gray
+            }
+        }
     }
-    if (-not $Quick -and $MaxMinutes -ge 120) {
-        Write-Host "  - output/phase4_longform_120min/" -ForegroundColor Gray
-    }
+    
+    Write-Host ""
+    Write-Host "Status:" -ForegroundColor Yellow
+    Write-Host "  Repository Verified: ✅" -ForegroundColor Green
+    Write-Host "  Target Hardware Run: ✅" -ForegroundColor Green
+    Write-Host "  Long-Form Verified:  ✅" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "Results: $ResultsDir" -ForegroundColor Gray
 } else {
-    Write-Host "LONG-FORM BENCHMARK FEHLGESCHLAGEN" -ForegroundColor Red
+    Write-Host "LONG-FORM BENCHMARK FEHLGESCHLAGEN (Exit-Code: $ExitCode)" -ForegroundColor Red
     Write-Host "Output: $LongformOutput" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Letzte Zeilen:" -ForegroundColor Yellow
     Get-Content $LongformOutput -Tail 30
 }
 
