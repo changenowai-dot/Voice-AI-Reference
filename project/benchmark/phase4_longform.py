@@ -208,7 +208,7 @@ def main():
         allow_design=False,
     )
     engine.load()
-    print("✓ Engine geladen")
+    print("[OK] Engine geladen")
 
     cfg = load_config()
     results = {}
@@ -264,10 +264,10 @@ def main():
             continue
 
         wav_path = Path(report["wav"])
-        print(f"✓ Dauer: {report.get('duration_s')}s")
-        print(f"✓ Segmente: {report.get('segments')}")
-        print(f"✓ QC-Score: {report.get('avg_score')}")
-        print(f"✓ Laufzeit: {elapsed:.1f}s")
+        print(f"[OK] Dauer: {report.get('duration_s')}s")
+        print(f"[OK] Segmente: {report.get('segments')}")
+        print(f"[OK] QC-Score: {report.get('avg_score')}")
+        print(f"[OK] Laufzeit: {elapsed:.1f}s")
 
         # Konsistenz-Analyse
         consistency = analyze_longform_audio(wav_path, n_points=10)
@@ -286,7 +286,7 @@ def main():
             "consistency": consistency,
         }
 
-        print(f"✓ Konsistenz: RMS-Std = {consistency.get('rms_std_db', '?')} dB")
+        print(f"[OK] Konsistenz: RMS-Std = {consistency.get('rms_std_db', '?')} dB")
 
     # Report
     report_data = {
@@ -312,12 +312,12 @@ def main():
         for key, data in results.items():
             if data.get("ok"):
                 c = data.get("consistency", {})
-                f.write(f"| {key} | ✓ | {data['actual_duration_s']}s | "
+                f.write(f"| {key} | [OK] | {data['actual_duration_s']}s | "
                         f"{data['n_segments']} | {data['avg_qc_score']} | "
                         f"{data['elapsed_s']}s | {c.get('rms_std_db', '?')} dB | "
-                        f"{'✓' if c.get('consistent') else '✗'} |\n")
+                        f"{'[OK]' if c.get('consistent') else '[FAIL]'} |\n")
             else:
-                f.write(f"| {key} | ✗ | — | — | — | {data.get('elapsed_s')}s | — | {data.get('error', '')} |\n")
+                f.write(f"| {key} | [FAIL] | — | — | — | {data.get('elapsed_s')}s | — | {data.get('error', '')} |\n")
         f.write("\n")
 
         f.write("## Voice-Consistency über die Zeit\n\n")
@@ -332,12 +332,12 @@ def main():
         successful = sum(1 for d in results.values() if d.get("ok"))
         f.write(f"- Erfolgreich: {successful}/{len(results)}\n")
         if successful == len(results):
-            f.write("- ✓ Alle Dauern stabil verarbeitet\n")
+            f.write("- [OK] Alle Dauern stabil verarbeitet\n")
         else:
-            f.write("- ✗ Einige Dauern fehlgeschlagen\n")
+            f.write("- [FAIL] Einige Dauern fehlgeschlagen\n")
 
-    print(f"\n✓ Report: {md_path}")
-    print(f"✓ JSON: {json_path}")
+    print(f"\n[OK] Report: {md_path}")
+    print(f"[OK] JSON: {json_path}")
 
 
 def get_gpu_memory() -> dict:

@@ -300,7 +300,7 @@ def run_variant_d(text: str, engine, cfg: dict) -> dict:
             result = engine.synthesize(req)
             waves.append(result.waveform)
             sr_out = result.sample_rate
-            print(f"    → {result.duration_s:.1f}s, RTF={result.realtime_factor}")
+            print(f"    -> {result.duration_s:.1f}s, RTF={result.realtime_factor}")
         except Exception as e:
             print(f"    FEHLER: {e}")
             traceback.print_exc()
@@ -411,9 +411,9 @@ def run_variant(variant_name: str, seg_target: int, seg_min: int, seg_max: int,
         "ram_after": ram_after,
     }
 
-    print(f"  ✓ Dauer: {metrics.get('duration_s')}s, Segmente: {report.get('segments')}")
-    print(f"  ✓ QC-Score: {report.get('avg_score')}, Laufzeit: {elapsed:.1f}s")
-    print(f"  ✓ Datei: {wav_path}")
+    print(f"  [OK] Dauer: {metrics.get('duration_s')}s, Segmente: {report.get('segments')}")
+    print(f"  [OK] QC-Score: {report.get('avg_score')}, Laufzeit: {elapsed:.1f}s")
+    print(f"  [OK] Datei: {wav_path}")
 
     return result
 
@@ -494,7 +494,7 @@ def main():
         allow_design=False,  # LOCKED: VD-E darf NICHT neu designt werden
     )
     engine.load()
-    print("✓ Engine geladen")
+    print("[OK] Engine geladen")
 
     cfg = load_config()
 
@@ -529,11 +529,11 @@ def main():
         sys.exit(1)
 
     baseline_wav = Path(baseline_report["wav"])
-    print(f"\n✓ Baseline erzeugt: {baseline_wav}")
-    print(f"✓ Dauer: {baseline_report.get('duration_s')}s")
-    print(f"✓ Segmente: {baseline_report.get('segments')}")
-    print(f"✓ QC-Score: {baseline_report.get('avg_score')}")
-    print(f"✓ Laufzeit: {baseline_elapsed:.1f}s")
+    print(f"\n[OK] Baseline erzeugt: {baseline_wav}")
+    print(f"[OK] Dauer: {baseline_report.get('duration_s')}s")
+    print(f"[OK] Segmente: {baseline_report.get('segments')}")
+    print(f"[OK] QC-Score: {baseline_report.get('avg_score')}")
+    print(f"[OK] Laufzeit: {baseline_elapsed:.1f}s")
 
     baseline_metrics = safe_audio_metrics(baseline_wav)
     baseline_consistency = measure_consistency(baseline_wav)
@@ -646,7 +646,7 @@ def main():
     json_path = paths.ROOT / "PHASE4_REAL_AUDIO_REPORT.json"
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(report_data, f, indent=2, ensure_ascii=False, default=str)
-    print(f"✓ JSON: {json_path}")
+    print(f"[OK] JSON: {json_path}")
 
     # Markdown-Report
     md_path = paths.ROOT / "PHASE4_REAL_AUDIO_REPORT.md"
@@ -662,7 +662,7 @@ def main():
 
         f.write("## 2. Modell & Voice\n\n")
         f.write("- Voice: VD-E (LOCKED)\n")
-        f.write("- Backend: clone (VoiceDesign → Base)\n")
+        f.write("- Backend: clone (VoiceDesign -> Base)\n")
         f.write("- Modell: Qwen3-TTS-12Hz-1.7B-Base\n")
         f.write("- Seed: 52001\n")
         f.write("- Sampling: expressive\n")
@@ -732,7 +732,7 @@ def main():
         f.write("4. Long-Form-Test durchführen\n")
         f.write("5. Produktionsentscheidung\n")
 
-    print(f"✓ Report: {md_path}")
+    print(f"[OK] Report: {md_path}")
 
     # Zusammenfassung
     print("\n" + "=" * 70)

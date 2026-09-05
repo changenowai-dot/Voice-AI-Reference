@@ -150,7 +150,7 @@ def check_models() -> dict:
     return {
         "check": "Modelle",
         "required": "CustomVoice + Base + Tokenizer",
-        "actual": {k: ("✓" if v else "✗ FEHLT") for k, v in models.items()},
+        "actual": {k: ("[OK]" if v else "[FAIL] FEHLT") for k, v in models.items()},
         "ok": all_present,
     }
 
@@ -247,7 +247,7 @@ def main():
     results = {}
     all_ok = True
     for check in checks:
-        status = "✓ PASS" if check["ok"] else "✗ FAIL"
+        status = "[OK]" if check["ok"] else "[FAIL]"
         print(f"  {status}  {check['check']}")
         print(f"         Erforderlich: {check['required']}")
         actual = check.get("actual")
@@ -269,12 +269,12 @@ def main():
     print("=" * 70)
 
     if all_ok:
-        print("\n✓ ALLE CHECKS BESTANDEN")
+        print("\n[OK] ALLE CHECKS BESTANDEN")
         print("Benchmark kann gestartet werden:")
         print("  python benchmark/phase4_benchmark.py")
     else:
         failed = [c["check"] for c in checks if not c["ok"]]
-        print(f"\n✗ FEHLENDE VORAUSSETZUNGEN: {', '.join(failed)}")
+        print(f"\n[FAIL] FEHLENDE VORAUSSETZUNGEN: {', '.join(failed)}")
         print("\nBitte install.ps1 ausführen und erneut prüfen.")
 
     # Report speichern
