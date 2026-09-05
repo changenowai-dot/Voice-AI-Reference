@@ -281,6 +281,22 @@ class CacheManager:
                 pass
         return removed
 
+    def clear_project(self, project_id: str) -> int:
+        """Entfernt alle Cache-Einträge eines bestimmten Projekts."""
+        if not project_id or not self._meta_dir.exists():
+            return 0
+        removed = 0
+        for meta_p in self._meta_dir.glob("*.json"):
+            try:
+                meta = json.loads(meta_p.read_text(encoding="utf-8"))
+                if meta.get("project_id") == project_id:
+                    key = meta_p.stem
+                    self.clear_segment(key)
+                    removed += 1
+            except (json.JSONDecodeError, OSError):
+                pass
+        return removed
+
     def clear_all(self) -> int:
         """Entfernt alle Cache-Einträge."""
         removed = 0

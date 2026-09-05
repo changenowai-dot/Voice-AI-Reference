@@ -165,7 +165,7 @@ if (-not $SkipModels) {
 # ------------------------------------------------ 7) Abschluss-Checks --
 Log "Schreibe versions.json + environment.json ..."
 & $Vpy app\main.py --info | Add-Content -Path $InstallLog -Encoding UTF8
-& $Vpy -c "import json,torch,transformers,platform;d={'created':__import__('datetime').datetime.now().isoformat(),'python':platform.python_version(),'torch':torch.__version__,'torch_cuda':torch.version.cuda,'transformers':transformers.__version__,'app':'1.0.0'};json.dump(d,open('versions.json','w'),indent=2)"
+& $Vpy -c "import json,torch,transformers,platform;d={'created':__import__('datetime').datetime.now().isoformat(),'python':platform.python_version(),'torch':torch.__version__,'torch_cuda':torch.version.cuda,'transformers':transformers.__version__,'app':'2.1.0'};json.dump(d,open('versions.json','w'),indent=2)"
 
 New-Item -ItemType File -Path ".installed" -Force | Out-Null
 Log "=== Installation abgeschlossen ===" "Green"
