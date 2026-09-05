@@ -1,26 +1,9 @@
+﻿# ============================================================
+# VoiceOverApp Phase 4 - Target Hardware Runner
 # ============================================================
-# VoiceOverApp Phase 4 — Target Hardware Runner (Hardened)
-# ============================================================
-# Führt den kompletten Audio-Benchmark auf der Zielhardware aus.
-# 
-# ROBUSTHEIT:
-# - Erkennt Repository Root automatisch
-# - Funktioniert aus jedem Arbeitsverzeichnis
-# - Validiert alle kritischen Pfade
-# - Model Discovery (direct + hub-cache)
-# - FFmpeg-Erkennung mit Fallback
 #
-# AUSFÜHRUNG:
+# AUSFUEHRUNG:
 #   .\run_phase4_target.ps1
-#
-# OUTPUT:
-#   results/phase4/<timestamp>/
-#     - environment.json
-#     - baseline/
-#     - variant_A/ ... variant_E/
-#     - AUDIO_REVIEW.md
-#     - PHASE4_REAL_AUDIO_REPORT.md
-#     - PHASE4_REAL_AUDIO_REPORT.json
 #
 # ============================================================
 
@@ -35,57 +18,59 @@ $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
 # ============================================================
-# Repository Root erkennen (robust, auch bei falschem cwd)
+# Repository Root erkennen
 # ============================================================
 $ScriptDir = $PSScriptRoot
 if (-not $ScriptDir) {
     $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 }
 
-# Repository Root bestimmen (da run_phase4_target.ps1 im Root liegt)
 $RepoRoot = $ScriptDir
 $ProjectRoot = Join-Path $RepoRoot "project"
 
-# Validierung: project/app/ muss existieren
+# Validierung
 if (-not (Test-Path (Join-Path $ProjectRoot "app"))) {
     Write-Host "FEHLER: Projektstruktur nicht gefunden." -ForegroundColor Red
     Write-Host "Erwartet: $ProjectRoot\app\" -ForegroundColor Red
-    Write-Host "Bitte Skript aus dem Repository-Root starten." -ForegroundColor Red
     exit 1
 }
 
 Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "VoiceOverApp Phase 4 — Target Hardware Benchmark" -ForegroundColor Cyan
+Write-Host "VoiceOverApp Phase 4 - Target Hardware Benchmark" -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host "Repository: $RepoRoot" -ForegroundColor Gray
 Write-Host "Project:    $ProjectRoot" -ForegroundColor Gray
 
-# Timestamp für eindeutige Run-ID
+# Timestamp
 $RunID = Get-Date -Format "yyyyMMdd_HHmmss"
 $ResultsDir = Join-Path $RepoRoot "results\phase4\$RunID"
 Write-Host "Run-ID:   $RunID" -ForegroundColor Gray
 Write-Host "Results:  $ResultsDir" -ForegroundColor Gray
 Write-Host ""
 
-# Results-Verzeichnis erstellen
+# Results-Verzeichnis
 New-Item -ItemType Directory -Force -Path $ResultsDir | Out-Null
 
 # ============================================================
-# Schritt 1: Python und Environment Check
+# SCHRITT 1: Python und Environment Check
 # ============================================================
-Write-Host "Schritt 1/7: Python & Environment Check..." -ForegroundColor Yellow
+Write-Host "Schritt 1/7: Python und Environment Check..." -ForegroundColor Yellow
 
-# Python prüfen
+# Python pruefen
 $PythonCmd = $null
-foreach ($py in @("python", "python3", "py")) {
+$pythonCandidates = @("python", "python3", "py")
+foreach ($py in $pythonCandidates) {
     try {
         $ver = & $py --version 2>&1
-        if ($LASTEXITCODE -eq 0 -and $ver -match "Python 3\.\d+") {
+        if ($LASTEXITCODE -eq 0 -and $ver -match "Python 3\.") {
             $PythonCmd = $py
             Write-Host "  Python: $ver" -ForegroundColor Gray
             break
         }
-    } catch { }
+    }
+    catch {
+        # Weiter probieren
+    }
 }
 
 if (-not $PythonCmd) {
@@ -104,7 +89,7 @@ if (-not (Test-Path $EnvCheckScript)) {
 if (-not $SkipEnvCheck) {
     $EnvOutput = Join-Path $ResultsDir "env_check_output.txt"
     
-    # VOICEOVER_ROOT setzen, damit die App die richtigen Pfade findet
+    # VOICEOVER_ROOT setzen
     $env:VOICEOVER_ROOT = $ProjectRoot
     
     & $PythonCmd $EnvCheckScript *> $EnvOutput
@@ -113,17 +98,12 @@ if (-not $SkipEnvCheck) {
     if ($EnvExitCode -ne 0) {
         Write-Host ""
         Write-Host "UMGEBUNGS-CHECK FEHLGESCHLAGEN (Exit-Code: $EnvExitCode)" -ForegroundColor Red
-        Write-Host "Bitte Output prüfen: $EnvOutput" -ForegroundColor Red
+        Write-Host "Bitte Output pruefen: $EnvOutput" -ForegroundColor Red
         Write-Host ""
         Write-Host "Letzte Zeilen:" -ForegroundColor Yellow
         Get-Content $EnvOutput -Tail 30
         Write-Host ""
-        Write-Host "Alle Voraussetzungen müssen erfüllt sein." -ForegroundColor Red
-        Write-Host "Typische Probleme:" -ForegroundColor Yellow
-        Write-Host "  - PyTorch ohne CUDA-Support" -ForegroundColor Gray
-        Write-Host "  - qwen-tts nicht installiert" -ForegroundColor Gray
-        Write-Host "  - FFmpeg fehlt" -ForegroundColor Gray
-        Write-Host "  - Modelle nicht heruntergeladen" -ForegroundColor Gray
+        Write-Host "Alle Voraussetzungen muessen erfuellt sein." -ForegroundColor Red
         exit 1
     }
     
@@ -132,18 +112,19 @@ if (-not $SkipEnvCheck) {
     $EnvReport = Join-Path $ResultsDir "environment.json"
     if (Test-Path $EnvJson) {
         Copy-Item $EnvJson $EnvReport -Force
-        Write-Host "  ✓ Environment-Report: $EnvReport" -ForegroundColor Gray
+        Write-Host "  Environment-Report: $EnvReport" -ForegroundColor Gray
     }
     
-    Write-Host "  ✓ Environment OK" -ForegroundColor Green
-} else {
-    Write-Host "  ⚠ Environment-Check übersprungen" -ForegroundColor DarkYellow
+    Write-Host "  [OK] Environment OK" -ForegroundColor Green
+}
+else {
+    Write-Host "  [SKIP] Environment-Check uebersprungen" -ForegroundColor DarkYellow
 }
 
 Write-Host ""
 
 # ============================================================
-# Schritt 2: Golden Reference Check
+# SCHRITT 2: Golden Reference Check
 # ============================================================
 Write-Host "Schritt 2/7: Golden Reference Check..." -ForegroundColor Yellow
 
@@ -160,16 +141,15 @@ if ($ActualHash -ne $ExpectedHash) {
     Write-Host "  FEHLER: Golden Reference Hash-Mismatch!" -ForegroundColor Red
     Write-Host "  Erwartet: $ExpectedHash" -ForegroundColor Red
     Write-Host "  Gefunden: $ActualHash" -ForegroundColor Red
-    Write-Host "  Golden Reference wurde verändert. Abbruch." -ForegroundColor Red
     exit 1
 }
 
 $GRSize = [math]::Round((Get-Item $GoldenRef).Length / 1024, 1)
-Write-Host "  ✓ Golden Reference: $GRSize KB, SHA-256 OK" -ForegroundColor Green
+Write-Host "  [OK] Golden Reference: $GRSize KB, SHA-256 OK" -ForegroundColor Green
 Write-Host ""
 
 # ============================================================
-# Schritt 3: Runtime Voice Reference Setup
+# SCHRITT 3: Runtime Voice Reference Setup
 # ============================================================
 Write-Host "Schritt 3/7: Runtime Voice Reference Setup..." -ForegroundColor Yellow
 
@@ -181,40 +161,35 @@ if (-not (Test-Path $RuntimeRef)) {
     New-Item -ItemType Directory -Force -Path $RuntimeRefDir | Out-Null
     Copy-Item $GoldenRef $RuntimeRef -Force
     
-    # Hash prüfen
     $RuntimeHash = (Get-FileHash $RuntimeRef -Algorithm SHA256).Hash.ToUpper()
     if ($RuntimeHash -ne $ExpectedHash) {
         Write-Host "  FEHLER: Runtime Voice Reference Hash-Mismatch nach Kopie!" -ForegroundColor Red
         exit 1
     }
     
-    Write-Host "  ✓ Runtime Voice Reference erstellt: $RuntimeRef" -ForegroundColor Green
-} else {
+    Write-Host "  [OK] Runtime Voice Reference erstellt: $RuntimeRef" -ForegroundColor Green
+}
+else {
     $RuntimeHash = (Get-FileHash $RuntimeRef -Algorithm SHA256).Hash.ToUpper()
     if ($RuntimeHash -ne $ExpectedHash) {
         Write-Host "  FEHLER: Runtime Voice Reference Hash-Mismatch!" -ForegroundColor Red
         Write-Host "  Erwartet: $ExpectedHash" -ForegroundColor Red
         Write-Host "  Gefunden: $RuntimeHash" -ForegroundColor Red
-        Write-Host "  Runtime Voice Reference wurde verändert." -ForegroundColor Red
-        Write-Host ""
-        Write-Host "  Lösung: Datei löschen und neu kopieren:" -ForegroundColor Yellow
-        Write-Host "    Remove-Item '$RuntimeRef'" -ForegroundColor Gray
-        Write-Host "    Copy-Item '$GoldenRef' '$RuntimeRef'" -ForegroundColor Gray
         exit 1
     }
-    Write-Host "  ✓ Runtime Voice Reference vorhanden: $RuntimeRef" -ForegroundColor Green
+    Write-Host "  [OK] Runtime Voice Reference vorhanden: $RuntimeRef" -ForegroundColor Green
 }
 
 Write-Host ""
 
 # ============================================================
-# Schritt 4: Model Discovery
+# SCHRITT 4: Model Discovery
 # ============================================================
 Write-Host "Schritt 4/7: Model Discovery..." -ForegroundColor Yellow
 
 $ModelsDir = Join-Path $ProjectRoot "models"
 $RequiredModels = @(
-    @{ Name = "Qwen3-TTS-12Hz-1.7B-Base"; Repo = "Qwen/Qwen3-TTS-12Hz-1.7B-Base" },
+    @{ Name = "Qwen3-TTS-12Hz-1.7B-Base"; Repo = "Qwen/Qwen3-TTS-12Hz-1.7B-Base" }
     @{ Name = "Qwen3-TTS-Tokenizer-12Hz"; Repo = "Qwen/Qwen3-TTS-Tokenizer-12Hz" }
 )
 
@@ -234,15 +209,16 @@ foreach ($model in $RequiredModels) {
     
     # Check 2: HuggingFace Hub Cache
     if (-not $found) {
-        $hubPath = Join-Path $ModelsDir "hf\hub\models--$($modelName -replace '/', '--')"
+        $repoName = $modelName -replace '/', '--'
+        $hubPath = Join-Path $ModelsDir "hf\hub\models--$repoName"
         if (Test-Path $hubPath) {
             $snapshots = Join-Path $hubPath "snapshots"
             if (Test-Path $snapshots) {
                 $snapshotDirs = Get-ChildItem $snapshots -Directory
                 if ($snapshotDirs.Count -gt 0) {
-                    # Prüfe ob mindestens ein Snapshot model.safetensors hat
                     foreach ($snap in $snapshotDirs) {
-                        if (Test-Path (Join-Path $snap.FullName "model.safetensors")) {
+                        $modelFile = Join-Path $snap.FullName "model.safetensors"
+                        if (Test-Path $modelFile) {
                             $found = $true
                             $ModelsFound += @{ Name = $modelName; Path = $snap.FullName; Method = "hub-cache" }
                             break
@@ -264,44 +240,46 @@ if ($ModelsMissing.Count -gt 0) {
         Write-Host "    - $m" -ForegroundColor Red
     }
     Write-Host ""
-    Write-Host "  Bitte install.ps1 ausführen oder Modelle manuell herunterladen:" -ForegroundColor Yellow
-    Write-Host "    huggingface-cli download $($RequiredModels[0].Repo) --local-dir models\$($RequiredModels[0].Name)" -ForegroundColor Gray
+    Write-Host "  Bitte install.ps1 ausfuehren oder Modelle manuell herunterladen." -ForegroundColor Yellow
     exit 1
 }
 
 foreach ($m in $ModelsFound) {
-    Write-Host "  ✓ $($m.Name) ($($m.Method)): $($m.Path)" -ForegroundColor Green
+    Write-Host "  [OK] $($m.Name) ($($m.Method))" -ForegroundColor Green
 }
 
 Write-Host ""
 
 # ============================================================
-# Schritt 5: FFmpeg Check
+# SCHRITT 5: FFmpeg Check
 # ============================================================
 Write-Host "Schritt 5/7: FFmpeg Check..." -ForegroundColor Yellow
 
 $ffmpegFound = $false
-$ffmpegPath = $null
 
 try {
     $ffver = & ffmpeg -version 2>&1 | Select-Object -First 1
     if ($LASTEXITCODE -eq 0 -and $ffver -match "ffmpeg") {
         $ffmpegFound = $true
-        Write-Host "  ✓ FFmpeg: $ffver" -ForegroundColor Green
+        Write-Host "  [OK] FFmpeg gefunden" -ForegroundColor Green
     }
-} catch {
-    # Try common windows locations
+}
+catch {
+    # FFmpeg nicht im PATH
+}
+
+if (-not $ffmpegFound) {
+    # Fallback-Pfade pruefen
     $ffmpegCandidates = @(
-        (Join-Path $ProjectRoot "tools\ffmpeg.exe"),
-        (Join-Path $ProjectRoot "tools\ffmpeg\bin\ffmpeg.exe"),
+        (Join-Path $ProjectRoot "tools\ffmpeg.exe")
+        (Join-Path $ProjectRoot "tools\ffmpeg\bin\ffmpeg.exe")
         "C:\ffmpeg\bin\ffmpeg.exe"
     )
     foreach ($cand in $ffmpegCandidates) {
         if (Test-Path $cand) {
             $ffmpegFound = $true
-            $ffmpegPath = $cand
             $env:PATH = "$(Split-Path $cand);$env:PATH"
-            Write-Host "  ✓ FFmpeg: $cand" -ForegroundColor Green
+            Write-Host "  [OK] FFmpeg: $cand" -ForegroundColor Green
             break
         }
     }
@@ -309,15 +287,13 @@ try {
 
 if (-not $ffmpegFound) {
     Write-Host "  WARNUNG: FFmpeg nicht gefunden." -ForegroundColor DarkYellow
-    Write-Host "  MP3-Erzeugung und Mastering werden eingeschränkt sein." -ForegroundColor DarkYellow
-    Write-Host "  Bitte FFmpeg installieren oder in tools/ ablegen." -ForegroundColor DarkYellow
-    Write-Host "  Benchmark wird trotzdem fortgesetzt (WAV-only)..." -ForegroundColor DarkYellow
+    Write-Host "  MP3-Erzeugung eingeschraenkt. Benchmark wird fortgesetzt (WAV-only)." -ForegroundColor DarkYellow
 }
 
 Write-Host ""
 
 # ============================================================
-# Schritt 6: Baseline + A/B-Test
+# SCHRITT 6: Baseline + A/B-Test
 # ============================================================
 Write-Host "Schritt 6/7: Production Baseline + A/B-Test..." -ForegroundColor Yellow
 
@@ -331,7 +307,7 @@ if (-not $SkipBaseline) {
     $BenchmarkOutput = Join-Path $ResultsDir "benchmark_output.txt"
     
     if ($SkipABTest) {
-        Write-Host "  ⚠ A/B-Test übersprungen (nur Baseline)" -ForegroundColor DarkYellow
+        Write-Host "  [SKIP] A/B-Test uebersprungen (nur Baseline)" -ForegroundColor DarkYellow
     }
     
     Write-Host "  Starte Benchmark..." -ForegroundColor Gray
@@ -341,19 +317,20 @@ if (-not $SkipBaseline) {
     # VOICEOVER_ROOT setzen
     $env:VOICEOVER_ROOT = $ProjectRoot
     
-    # Change to project directory for proper imports
+    # Change to project directory
     Push-Location $ProjectRoot
     try {
         & $PythonCmd $BenchmarkScript *> $BenchmarkOutput
         $BenchmarkExitCode = $LASTEXITCODE
-    } finally {
+    }
+    finally {
         Pop-Location
     }
     
     if ($BenchmarkExitCode -ne 0) {
         Write-Host ""
         Write-Host "BENCHMARK FEHLGESCHLAGEN (Exit-Code: $BenchmarkExitCode)" -ForegroundColor Red
-        Write-Host "Bitte Output prüfen: $BenchmarkOutput" -ForegroundColor Red
+        Write-Host "Bitte Output pruefen: $BenchmarkOutput" -ForegroundColor Red
         Write-Host ""
         Write-Host "Letzte Zeilen:" -ForegroundColor Yellow
         Get-Content $BenchmarkOutput -Tail 30
@@ -371,28 +348,29 @@ if (-not $SkipBaseline) {
         Copy-Item $ReportJson (Join-Path $ResultsDir "PHASE4_REAL_AUDIO_REPORT.json") -Force
     }
     
-    Write-Host "  ✓ Baseline + A/B-Test abgeschlossen" -ForegroundColor Green
-} else {
-    Write-Host "  ⚠ Baseline übersprungen" -ForegroundColor DarkYellow
+    Write-Host "  [OK] Baseline + A/B-Test abgeschlossen" -ForegroundColor Green
+}
+else {
+    Write-Host "  [SKIP] Baseline uebersprungen" -ForegroundColor DarkYellow
 }
 
 Write-Host ""
 
 # ============================================================
-# Schritt 7: Audio-Pfade sammeln + AUDIO_REVIEW.md
+# SCHRITT 7: Audio-Pfade + AUDIO_REVIEW.md
 # ============================================================
-Write-Host "Schritt 7/7: Report & Audio-Review..." -ForegroundColor Yellow
+Write-Host "Schritt 7/7: Report und Audio-Review..." -ForegroundColor Yellow
 
 # Audio-Dateien finden
 $AudioFiles = @()
 $OutputDir = Join-Path $ProjectRoot "output"
 
 $audioDirs = @(
-    @{ Name = "baseline"; Pattern = "phase4_baseline*" },
-    @{ Name = "variant_A"; Pattern = "phase4_A*" },
-    @{ Name = "variant_B"; Pattern = "phase4_B*" },
-    @{ Name = "variant_C"; Pattern = "phase4_C*" },
-    @{ Name = "variant_D"; Pattern = "phase4_D*" },
+    @{ Name = "baseline"; Pattern = "phase4_baseline*" }
+    @{ Name = "variant_A"; Pattern = "phase4_A*" }
+    @{ Name = "variant_B"; Pattern = "phase4_B*" }
+    @{ Name = "variant_C"; Pattern = "phase4_C*" }
+    @{ Name = "variant_D"; Pattern = "phase4_D*" }
     @{ Name = "variant_E"; Pattern = "phase4_E*" }
 )
 
@@ -410,16 +388,16 @@ foreach ($dir in $audioDirs) {
     }
 }
 
-# Audio-Review erstellen mit tatsächlichen Pfaden
+# Audio-Review erstellen
 $AudioReview = Join-Path $ResultsDir "AUDIO_REVIEW.md"
 
 $AudioListLines = ""
 foreach ($af in $AudioFiles) {
-    $AudioListLines += "| $($af.Variant) | ``$($af.Path)`` | $($af.Size) MB | ?/10 | ?/10 | ?/10 | ?/10 | ?/10 | ?/10 |`n"
+    $AudioListLines += "| $($af.Variant) | $($af.Path) | $($af.Size) MB | ?/10 | ?/10 | ?/10 | ?/10 | ?/10 | ?/10 |`n"
 }
 
 $ReviewContent = @"
-# Audio Review — Phase 4 Benchmark
+# Audio Review - Phase 4 Benchmark
 
 **Run-ID:** $RunID
 **Datum:** $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
@@ -431,105 +409,80 @@ $ReviewContent = @"
 
 | Kategorie | Status |
 |-----------|--------|
-| Repository Verified | ✅ |
-| Target Hardware Required | ✅ |
-| Target Hardware Verified | ⏳ AUSSTEHEND |
+| Repository Verified | OK |
+| Target Hardware Required | OK |
+| Target Hardware Verified | AUSSTEHEND |
 
 ---
 
 ## Bewertungsanleitung
 
-Bitte jede Variante anhören und bewerten (0-10):
+Bitte jede Variante anhoeren und bewerten (0-10):
 
-- **0-3:** Unbrauchbar (starke Artefakte, falsche Stimme, unverständlich)
-- **4-6:** Akzeptabel (hörbare Probleme, aber nutzbar)
-- **7-8:** Gut (minor Probleme, insgesamt überzeugend)
-- **9-10:** Exzellent (professionelle Qualität, keine hörbaren Probleme)
+- **0-3:** Unbrauchbar
+- **4-6:** Akzeptabel
+- **7-8:** Gut
+- **9-10:** Exzellent
 
 ---
 
 ## Audio-Dateien
 
-| Variante | Pfad | Größe | Voice ID | Naturalness | Pronunciation | Prosody | Continuity | Overall |
-|----------|------|-------|----------|-------------|---------------|---------|------------|---------|
+| Variante | Pfad | Groesse | Voice ID | Naturalness | Pronunciation | Prosody | Continuity | Overall |
+|----------|------|---------|----------|-------------|---------------|---------|------------|---------|
 $AudioListLines
----
-
-## Baseline
-
-| Kriterium | Wert |
-|-----------|------|
-| Voice Identity | ?/10 |
-| Naturalness | ?/10 |
-| Pronunciation | ?/10 |
-| Prosody | ?/10 |
-| Continuity | ?/10 |
-| Long-Form Stability | ?/10 |
-| **Overall** | **?/10** |
-
 ---
 
 ## Gewinner
 
 **Variante:** ?
 
-**Begründung:**
+**Begruendung:**
 - 
 - 
-
----
-
-## Long-Form Ergebnisse
-
-| Dauer | OK | Dauer (s) | Segmente | QC-Score | Konsistenz | Notizen |
-|-------|----|-----------|----------|----------|------------|---------|
-| 5 min | ? | ? | ? | ? | ? | |
-| 10 min | ? | ? | ? | ? | ? | |
-| 30 min | ? | ? | ? | ? | ? | |
-| 60 min | ? | ? | ? | ? | ? | |
 
 ---
 
 ## Fazit
 
-**Empfehlung für Production:**
+**Empfehlung fuer Production:**
 - 
 
-**Nächste Schritte:**
+**Naechste Schritte:**
 - 
 "@
 
 $ReviewContent | Out-File -FilePath $AudioReview -Encoding UTF8
-Write-Host "  ✓ AUDIO_REVIEW.md erstellt" -ForegroundColor Green
+Write-Host "  [OK] AUDIO_REVIEW.md erstellt" -ForegroundColor Green
 
 # Audio-Dateien auflisten
 if ($AudioFiles.Count -gt 0) {
     Write-Host ""
-    Write-Host "  Audio-Dateien zum Anhören:" -ForegroundColor White
+    Write-Host "  Audio-Dateien zum Anhoeren:" -ForegroundColor White
     foreach ($af in $AudioFiles) {
         Write-Host "    [$($af.Variant)] $($af.Path) ($($af.Size) MB)" -ForegroundColor Gray
     }
-} else {
+}
+else {
     Write-Host "  WARNUNG: Keine Audio-Dateien gefunden." -ForegroundColor DarkYellow
-    Write-Host "  Bitte benchmark_output.txt prüfen." -ForegroundColor DarkYellow
 }
 
-Write-Host "  ✓ AUDIO_REVIEW.md: $AudioReview" -ForegroundColor Green
-Write-Host "  Bitte nach Benchmark manuell ausfüllen." -ForegroundColor Gray
+Write-Host "  AUDIO_REVIEW.md: $AudioReview" -ForegroundColor Green
+Write-Host "  Bitte nach Benchmark manuell ausfuellen." -ForegroundColor Gray
 
 Write-Host ""
 
 # ============================================================
-# Zusammenfassung
+# ZUSAMMENFASSUNG
 # ============================================================
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host "BENCHMARK ABGESCHLOSSEN" -ForegroundColor Green
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Status:" -ForegroundColor Yellow
-Write-Host "  Repository Verified: ✅" -ForegroundColor Green
-Write-Host "  Target Hardware Run: ✅" -ForegroundColor Green
-Write-Host "  Akustische Bewertung: ⏳ AUSSTEHEND (manuell)" -ForegroundColor DarkYellow
+Write-Host "  Repository Verified: OK" -ForegroundColor Green
+Write-Host "  Target Hardware Run: OK" -ForegroundColor Green
+Write-Host "  Akustische Bewertung: AUSSTEHEND (manuell)" -ForegroundColor DarkYellow
 Write-Host ""
 Write-Host "Run-ID: $RunID" -ForegroundColor Gray
 Write-Host "Results: $ResultsDir" -ForegroundColor Gray
@@ -539,15 +492,15 @@ Write-Host "  - environment.json" -ForegroundColor Gray
 Write-Host "  - benchmark_output.txt" -ForegroundColor Gray
 Write-Host "  - PHASE4_REAL_AUDIO_REPORT.md" -ForegroundColor Gray
 Write-Host "  - PHASE4_REAL_AUDIO_REPORT.json" -ForegroundColor Gray
-Write-Host "  - AUDIO_REVIEW.md (manuell ausfüllen)" -ForegroundColor Gray
+Write-Host "  - AUDIO_REVIEW.md (manuell ausfuellen)" -ForegroundColor Gray
 Write-Host ""
-Write-Host "Nächste Schritte:" -ForegroundColor Yellow
-Write-Host "  1. Audio-Dateien anhören (Pfade oben)" -ForegroundColor White
-Write-Host "  2. AUDIO_REVIEW.md ausfüllen" -ForegroundColor White
+Write-Host "Naechste Schritte:" -ForegroundColor Yellow
+Write-Host "  1. Audio-Dateien anhoeren" -ForegroundColor White
+Write-Host "  2. AUDIO_REVIEW.md ausfuellen" -ForegroundColor White
 Write-Host "  3. Gewinner identifizieren" -ForegroundColor White
 Write-Host "  4. Long-Form-Test:" -ForegroundColor White
 Write-Host "     .\run_phase4_longform.ps1 -Winner [A|B|C|D|E]" -ForegroundColor Gray
-Write-Host "  5. Results zurückliefern an den Agent" -ForegroundColor White
+Write-Host "  5. Results zurueckliefern an den Agent" -ForegroundColor White
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Cyan
 

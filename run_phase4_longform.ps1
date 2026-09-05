@@ -1,27 +1,15 @@
+﻿# ============================================================
+# VoiceOverApp Phase 4 - Long-Form Benchmark Runner
 # ============================================================
-# VoiceOverApp Phase 4 — Long-Form Benchmark Runner (Hardened)
-# ============================================================
-# Führt Long-Form-Tests mit dem A/B-Gewinner durch.
 #
-# VORAUSSETZUNG: Phase 4 Benchmark bereits abgeschlossen
-#
-# ROBUSTHEIT:
-# - Erkennt Repository Root automatisch
-# - Funktioniert aus jedem Arbeitsverzeichnis
-# - Validiert Golden Reference + Runtime Voice
-# - ValidateSet für Winner-Parameter
-#
-# AUSFÜHRUNG:
+# AUSFUEHRUNG:
 #   .\run_phase4_longform.ps1 -Winner D -MaxMinutes 60
-#   .\run_phase4_longform.ps1 -Winner D -MaxMinutes 120
-#   .\run_phase4_longform.ps1 -Winner A -Quick
 #
 # ============================================================
 
 param(
     [ValidateSet("A","B","C","D","E")]
     [string]$Winner = "A",
-    [ValidateRange(1,180)]
     [int]$MaxMinutes = 60,
     [switch]$Quick,
     [string]$RunID = ""
@@ -48,9 +36,8 @@ if (-not (Test-Path (Join-Path $ProjectRoot "app"))) {
     exit 1
 }
 
-# Winner validieren (keine automatische Präferenz für D)
 Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "VoiceOverApp Phase 4 — Long-Form Benchmark" -ForegroundColor Cyan
+Write-Host "VoiceOverApp Phase 4 - Long-Form Benchmark" -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host "Repository: $RepoRoot" -ForegroundColor Gray
 Write-Host "Project:    $ProjectRoot" -ForegroundColor Gray
@@ -69,17 +56,21 @@ Write-Host ""
 New-Item -ItemType Directory -Force -Path $ResultsDir | Out-Null
 
 # ============================================================
-# Python prüfen
+# Python pruefen
 # ============================================================
 $PythonCmd = $null
-foreach ($py in @("python", "python3", "py")) {
+$pythonCandidates = @("python", "python3", "py")
+foreach ($py in $pythonCandidates) {
     try {
         $ver = & $py --version 2>&1
-        if ($LASTEXITCODE -eq 0 -and $ver -match "Python 3\.\d+") {
+        if ($LASTEXITCODE -eq 0 -and $ver -match "Python 3\.") {
             $PythonCmd = $py
             break
         }
-    } catch { }
+    }
+    catch {
+        # Weiter probieren
+    }
 }
 
 if (-not $PythonCmd) {
@@ -103,11 +94,9 @@ if (-not (Test-Path $GoldenRef)) {
 $ActualHash = (Get-FileHash $GoldenRef -Algorithm SHA256).Hash.ToUpper()
 if ($ActualHash -ne $ExpectedHash) {
     Write-Host "  FEHLER: Golden Reference Hash-Mismatch!" -ForegroundColor Red
-    Write-Host "  Erwartet: $ExpectedHash" -ForegroundColor Red
-    Write-Host "  Gefunden: $ActualHash" -ForegroundColor Red
     exit 1
 }
-Write-Host "  ✓ Golden Reference verifiziert" -ForegroundColor Green
+Write-Host "  [OK] Golden Reference verifiziert" -ForegroundColor Green
 
 # ============================================================
 # Runtime Voice Reference
@@ -127,21 +116,21 @@ if (-not (Test-Path $RuntimeRef)) {
         Write-Host "  FEHLER: Runtime Hash-Mismatch nach Kopie!" -ForegroundColor Red
         exit 1
     }
-    Write-Host "  ✓ Runtime Voice Reference erstellt" -ForegroundColor Green
-} else {
+    Write-Host "  [OK] Runtime Voice Reference erstellt" -ForegroundColor Green
+}
+else {
     $RuntimeHash = (Get-FileHash $RuntimeRef -Algorithm SHA256).Hash.ToUpper()
     if ($RuntimeHash -ne $ExpectedHash) {
         Write-Host "  FEHLER: Runtime Voice Reference Hash-Mismatch!" -ForegroundColor Red
-        Write-Host "  Bitte Datei löschen und Phase 4 neu starten." -ForegroundColor Red
         exit 1
     }
-    Write-Host "  ✓ Runtime Voice Reference vorhanden" -ForegroundColor Green
+    Write-Host "  [OK] Runtime Voice Reference vorhanden" -ForegroundColor Green
 }
 
 Write-Host ""
 
 # ============================================================
-# Long-Form Test ausführen
+# Long-Form Test ausfuehren
 # ============================================================
 Write-Host "Schritt 3/4: Long-Form Test ($Winner, max $MaxMinutes min)..." -ForegroundColor Yellow
 
@@ -170,7 +159,8 @@ Push-Location $ProjectRoot
 try {
     & $PythonCmd $LongformScript @LongformArgs *> $LongformOutput
     $ExitCode = $LASTEXITCODE
-} finally {
+}
+finally {
     Pop-Location
 }
 
@@ -213,12 +203,13 @@ if ($ExitCode -eq 0) {
     
     Write-Host ""
     Write-Host "Status:" -ForegroundColor Yellow
-    Write-Host "  Repository Verified: ✅" -ForegroundColor Green
-    Write-Host "  Target Hardware Run: ✅" -ForegroundColor Green
-    Write-Host "  Long-Form Verified:  ✅" -ForegroundColor Green
+    Write-Host "  Repository Verified: OK" -ForegroundColor Green
+    Write-Host "  Target Hardware Run: OK" -ForegroundColor Green
+    Write-Host "  Long-Form Verified:  OK" -ForegroundColor Green
     Write-Host ""
     Write-Host "Results: $ResultsDir" -ForegroundColor Gray
-} else {
+}
+else {
     Write-Host "LONG-FORM BENCHMARK FEHLGESCHLAGEN (Exit-Code: $ExitCode)" -ForegroundColor Red
     Write-Host "Output: $LongformOutput" -ForegroundColor Red
     Write-Host ""
