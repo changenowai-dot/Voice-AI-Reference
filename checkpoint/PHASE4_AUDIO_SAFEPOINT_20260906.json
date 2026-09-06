@@ -1,0 +1,147 @@
+{
+  "checkpoint": {
+    "id": "PHASE4_AUDIO_SAFEPOINT_20260906",
+    "type": "production_audio_safepoint",
+    "purpose": "Protected known-good audio baseline for future optimization. All future work must build from this point, never overwrite it.",
+    "created": "2026-09-06",
+    "source_commit": "6966b271143fa71dd591d224d06cde60d2bb06e3",
+    "git_tag": "PHASE4_AUDIO_SAFEPOINT_20260906",
+    "branch": "arena/01a06e55-voice-ai-reference"
+  },
+  "benchmark_run": {
+    "run_id": "20260906_210750",
+    "timestamp": "2026-09-06T21:07:50",
+    "runner": "run_phase4_target.ps1",
+    "results_dir_local": "results\\phase4\\20260906_210750",
+    "results_dir_local_files": [
+      "environment.json",
+      "benchmark_output.txt",
+      "PHASE4_REAL_AUDIO_REPORT.md",
+      "PHASE4_REAL_AUDIO_REPORT.json",
+      "AUDIO_REVIEW.md"
+    ]
+  },
+  "hardware": {
+    "cpu": "AMD Ryzen 7 5700X",
+    "ram_total_gb": 34.3,
+    "gpu": "NVIDIA GeForce RTX 5060",
+    "gpu_vram_gb": 8.6,
+    "os": "Windows 10 x64"
+  },
+  "software": {
+    "python": "3.12.10",
+    "torch": "2.11.0+cu128",
+    "cuda": "12.8",
+    "transformers": "4.57.3",
+    "app_version": "2.1.0"
+  },
+  "golden_reference": {
+    "sha256": "B156C02A60A873AD95FC92390C4A136C85308B20188373CD734BEE5E5E5F2025",
+    "path": "cache/voice_refs/VD-E.wav",
+    "status": "VERIFIED_PASS"
+  },
+  "vde_production_config": {
+    "voice_id": "vd_e",
+    "mode": "voicedesign_base_clone",
+    "variant": "BASE",
+    "seed": 52001,
+    "model": "Qwen3-TTS-12Hz-1.7B-Base",
+    "sampling": "expressive",
+    "locked": true
+  },
+  "checks": {
+    "environment": "PASS",
+    "golden_reference_sha256": "PASS",
+    "identity_lock": "PASS",
+    "model_discovery": "PASS",
+    "ffmpeg": "PASS",
+    "benchmark_execution": "PASS"
+  },
+  "audio_artifacts": {
+    "base_path": "<REPO_ROOT>/project/output/",
+    "note": "Audio files reside on local RTX 5060 machine. Hashes must be computed locally with: checkpoint/compute_audio_hashes.ps1",
+    "candidates": [
+      {
+        "variant": "Baseline",
+        "output_dir": "phase4_baseline",
+        "strategy": "Default production pipeline (no segmentation overrides)",
+        "quality_rating": "GOOD",
+        "status": "PROTECTED_CANDIDATE",
+        "selected": true,
+        "sha256": null,
+        "note": "Compute hash locally: Get-FileHash -Algorithm SHA256 project/output/phase4_baseline/*.wav"
+      },
+      {
+        "variant": "A",
+        "output_dir": "phase4_A",
+        "strategy": "A_production_standard (seg_target=420s, seg_min=120s, seg_max=700s)",
+        "quality_rating": "GOOD",
+        "status": "PROTECTED_CANDIDATE",
+        "selected": true,
+        "sha256": null,
+        "note": "Compute hash locally: Get-FileHash -Algorithm SHA256 project/output/phase4_A/*.wav"
+      },
+      {
+        "variant": "B",
+        "output_dir": "phase4_B",
+        "strategy": "B_larger_segments (seg_target=700s, seg_min=200s, seg_max=1000s)",
+        "quality_rating": "GOOD",
+        "status": "PROTECTED_CANDIDATE",
+        "selected": true,
+        "sha256": null,
+        "note": "Compute hash locally: Get-FileHash -Algorithm SHA256 project/output/phase4_B/*.wav"
+      },
+      {
+        "variant": "E",
+        "output_dir": "phase4_E",
+        "strategy": "E_hybrid_paragraph (seg_target=1000s, seg_min=300s, seg_max=2000s)",
+        "quality_rating": "GOOD",
+        "status": "PROTECTED_CANDIDATE",
+        "selected": true,
+        "sha256": null,
+        "note": "Compute hash locally: Get-FileHash -Algorithm SHA256 project/output/phase4_E/*.wav"
+      }
+    ],
+    "non_preferred": [
+      {
+        "variant": "C",
+        "output_dir": "phase4_C",
+        "strategy": "C_very_large_blocks (seg_target=1200s, seg_min=400s, seg_max=1800s)",
+        "quality_rating": "BAD",
+        "status": "NON_PREFERRED",
+        "selected": false,
+        "note": "Manual listening test: NOT selected. Audio preserved for historical reference only."
+      },
+      {
+        "variant": "D",
+        "output_dir": "phase4_variant_D",
+        "strategy": "D_large_blocks_with_cutting (special implementation)",
+        "quality_rating": "BAD",
+        "status": "NON_PREFERRED",
+        "selected": false,
+        "note": "Manual listening test: NOT selected. Audio preserved for historical reference only."
+      }
+    ]
+  },
+  "winner_status": {
+    "status": "UNDECIDED",
+    "reason": "User manually evaluated all variants. Baseline, A, B, and E are all considered GOOD/PRODUCTION-CAPABLE. No single winner declared yet.",
+    "leading_candidates": ["Baseline", "E"],
+    "note": "Baseline and E are especially promising, but final selection is pending further optimization."
+  },
+  "constraints": {
+    "no_modification_allowed": [
+      "Golden Reference (SHA-256 must remain B156C02A...5F2025)",
+      "VD-E production identity/configuration (project/config/production.json)",
+      "Current working model configuration",
+      "Benchmark experiment definitions (phase4_benchmark.py variant parameters)",
+      "Candidate audio artifacts (Baseline, A, B, E)"
+    ],
+    "optimization_rules": [
+      "All future optimization must build FROM this checkpoint, never overwrite it",
+      "Each optimization attempt must be a separate branch/commit",
+      "This safepoint serves as the rollback target if optimization fails",
+      "Winner selection is deferred until optimization is complete"
+    ]
+  }
+}
