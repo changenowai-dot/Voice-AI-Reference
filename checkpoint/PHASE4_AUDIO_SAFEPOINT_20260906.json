@@ -4,7 +4,8 @@
     "type": "production_audio_safepoint",
     "purpose": "Protected known-good audio baseline for future optimization. All future work must build from this point, never overwrite it.",
     "created": "2026-09-06",
-    "source_commit": "6966b271143fa71dd591d224d06cde60d2bb06e3",
+    "source_commit": "7fbf917bbb7a40e350f61098eebaa6f367c33bec",
+    "updated": "2026-09-07",
     "git_tag": "PHASE4_AUDIO_SAFEPOINT_20260906",
     "branch": "arena/01a06e55-voice-ai-reference"
   },
@@ -68,8 +69,8 @@
         "quality_rating": "GOOD",
         "status": "PROTECTED_CANDIDATE",
         "selected": true,
-        "sha256": null,
-        "note": "Compute hash locally: Get-FileHash -Algorithm SHA256 project/output/phase4_baseline/*.wav"
+        "sha256": "05EE6EB1A13F66D82A2DFFA5088AA7D409E8FA5A7F6071F58F5DBB8AE86326E5",
+        "note": "Byte-identical to A, B, C, E"
       },
       {
         "variant": "A",
@@ -78,8 +79,8 @@
         "quality_rating": "GOOD",
         "status": "PROTECTED_CANDIDATE",
         "selected": true,
-        "sha256": null,
-        "note": "Compute hash locally: Get-FileHash -Algorithm SHA256 project/output/phase4_A/*.wav"
+        "sha256": "05EE6EB1A13F66D82A2DFFA5088AA7D409E8FA5A7F6071F58F5DBB8AE86326E5",
+        "note": "Byte-identical to Baseline, B, C, E"
       },
       {
         "variant": "B",
@@ -88,8 +89,8 @@
         "quality_rating": "GOOD",
         "status": "PROTECTED_CANDIDATE",
         "selected": true,
-        "sha256": null,
-        "note": "Compute hash locally: Get-FileHash -Algorithm SHA256 project/output/phase4_B/*.wav"
+        "sha256": "05EE6EB1A13F66D82A2DFFA5088AA7D409E8FA5A7F6071F58F5DBB8AE86326E5",
+        "note": "Byte-identical to Baseline, A, C, E"
       },
       {
         "variant": "E",
@@ -98,36 +99,41 @@
         "quality_rating": "GOOD",
         "status": "PROTECTED_CANDIDATE",
         "selected": true,
-        "sha256": null,
+        "sha256": "05EE6EB1A13F66D82A2DFFA5088AA7D409E8FA5A7F6071F58F5DBB8AE86326E5",
         "note": "Compute hash locally: Get-FileHash -Algorithm SHA256 project/output/phase4_E/*.wav"
-      }
-    ],
-    "non_preferred": [
+      },
       {
         "variant": "C",
         "output_dir": "phase4_C",
         "strategy": "C_very_large_blocks (seg_target=1200s, seg_min=400s, seg_max=1800s)",
-        "quality_rating": "BAD",
-        "status": "NON_PREFERRED",
-        "selected": false,
-        "note": "Manual listening test: NOT selected. Audio preserved for historical reference only."
-      },
+        "quality_rating": "GOOD",
+        "status": "PROTECTED_CANDIDATE",
+        "selected": true,
+        "sha256": "05EE6EB1A13F66D82A2DFFA5088AA7D409E8FA5A7F6071F58F5DBB8AE86326E5",
+        "note": "Moved from NON_PREFERRED to GOOD in final user evaluation 2026-09-07"
+      }
+    ],
+    "non_preferred": [
       {
         "variant": "D",
         "output_dir": "phase4_variant_D",
         "strategy": "D_large_blocks_with_cutting (special implementation)",
         "quality_rating": "BAD",
-        "status": "NON_PREFERRED",
+        "status": "REJECTED",
         "selected": false,
-        "note": "Manual listening test: NOT selected. Audio preserved for historical reference only."
+        "sha256": "C35DB293C4306249FE6CEB533CCE6D2E0AE24D0EB4A89999BF01AD33D13FD7EA",
+        "note": "REJECTED in final user evaluation 2026-09-07. DO NOT USE for production or future optimization. Audio preserved for historical reference only."
       }
-    ]
+    ],
+    "common_good_sha256": "05EE6EB1A13F66D82A2DFFA5088AA7D409E8FA5A7F6071F58F5DBB8AE86326E5",
+    "common_good_note": "Baseline, A, B, C, E are byte-identical. This is the common preferred audio artifact."
   },
   "winner_status": {
     "status": "UNDECIDED",
-    "reason": "User manually evaluated all variants. Baseline, A, B, and E are all considered GOOD/PRODUCTION-CAPABLE. No single winner declared yet.",
-    "leading_candidates": ["Baseline", "E"],
-    "note": "Baseline and E are especially promising, but final selection is pending further optimization."
+    "reason": "User manually evaluated all variants. Baseline, A, B, C, E are all GOOD/PRODUCTION-CAPABLE and byte-identical (same SHA-256). No meaningful single winner among them. Only D is REJECTED.",
+    "leading_candidates": ["Baseline", "A", "B", "C", "E"],
+    "byte_identical": true,
+    "note": "All 5 good variants produce the exact same audio (SHA-256: 05EE6EB1A13F66D82A2DFFA5088AA7D409E8FA5A7F6071F58F5DBB8AE86326E5). There is no meaningful winner among them because they are the same artifact. Current preferred audio reference = common good artifact. D is the only rejected variant and must not be used."
   },
   "constraints": {
     "no_modification_allowed": [
@@ -135,7 +141,7 @@
       "VD-E production identity/configuration (project/config/production.json)",
       "Current working model configuration",
       "Benchmark experiment definitions (phase4_benchmark.py variant parameters)",
-      "Candidate audio artifacts (Baseline, A, B, E)"
+      "Candidate audio artifacts (Baseline, A, B, C, E)"
     ],
     "optimization_rules": [
       "All future optimization must build FROM this checkpoint, never overwrite it",

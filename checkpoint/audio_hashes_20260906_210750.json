@@ -1,0 +1,59 @@
+{
+  "run_id": "20260906_210750",
+  "timestamp": "2026-09-07T00:00:00Z",
+  "computed_by": "user manual review on RTX 5060",
+  "note": "Final user audio review 2026-09-07: Baseline/A/B/C/E are byte-identical (GOOD). D is the only different artifact (REJECTED).",
+  "variants": {
+    "Baseline": {
+      "output_dir": "phase4_baseline",
+      "status": "GOOD",
+      "sha256": "05EE6EB1A13F66D82A2DFFA5088AA7D409E8FA5A7F6071F58F5DBB8AE86326E5",
+      "selected": true,
+      "note": "Byte-identical to A, B, C, E"
+    },
+    "A": {
+      "output_dir": "phase4_A",
+      "status": "GOOD",
+      "sha256": "05EE6EB1A13F66D82A2DFFA5088AA7D409E8FA5A7F6071F58F5DBB8AE86326E5",
+      "selected": true,
+      "note": "Byte-identical to Baseline, B, C, E"
+    },
+    "B": {
+      "output_dir": "phase4_B",
+      "status": "GOOD",
+      "sha256": "05EE6EB1A13F66D82A2DFFA5088AA7D409E8FA5A7F6071F58F5DBB8AE86326E5",
+      "selected": true,
+      "note": "Byte-identical to Baseline, A, C, E"
+    },
+    "C": {
+      "output_dir": "phase4_C",
+      "status": "GOOD",
+      "sha256": "05EE6EB1A13F66D82A2DFFA5088AA7D409E8FA5A7F6071F58F5DBB8AE86326E5",
+      "selected": true,
+      "note": "Moved from NON_PREFERRED to GOOD in final user evaluation. Byte-identical to Baseline, A, B, E"
+    },
+    "E": {
+      "output_dir": "phase4_E",
+      "status": "GOOD",
+      "sha256": "05EE6EB1A13F66D82A2DFFA5088AA7D409E8FA5A7F6071F58F5DBB8AE86326E5",
+      "selected": true,
+      "note": "Byte-identical to Baseline, A, B, C"
+    },
+    "D": {
+      "output_dir": "phase4_variant_D",
+      "status": "REJECTED",
+      "sha256": "C35DB293C4306249FE6CEB533CCE6D2E0AE24D0EB4A89999BF01AD33D13FD7EA",
+      "selected": false,
+      "note": "REJECTED in final user evaluation. DO NOT USE for production or future optimization."
+    }
+  },
+  "summary": {
+    "good_count": 5,
+    "rejected_count": 1,
+    "common_good_sha256": "05EE6EB1A13F66D82A2DFFA5088AA7D409E8FA5A7F6071F58F5DBB8AE86326E5",
+    "rejected_sha256": "C35DB293C4306249FE6CEB533CCE6D2E0AE24D0EB4A89999BF01AD33D13FD7EA",
+    "byte_identical_variants": ["Baseline", "A", "B", "C", "E"],
+    "winner_status": "UNDECIDED",
+    "winner_note": "All good variants are byte-identical, so no meaningful single winner among them"
+  }
+}

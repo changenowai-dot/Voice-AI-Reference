@@ -6,6 +6,7 @@
 **Git Tag:** `PHASE4_AUDIO_SAFEPOINT_20260906`
 **Branch:** `arena/01a06e55-voice-ai-reference`
 **Created:** 2026-09-06
+**Last Updated:** 2026-09-07 (final user audio review)
 
 ---
 
@@ -22,7 +23,7 @@ This checkpoint captures the **first successful Phase 4 audio benchmark run** on
 | Model configuration unchanged | ✅ |
 | Benchmark experiment definitions unchanged | ✅ |
 | Candidate audio artifacts preserved | ✅ |
-| Winner status = UNDECIDED | ✅ |
+| Winner status = UNDECIDED (all good variants byte-identical) | ✅ |
 
 ---
 
@@ -97,66 +98,71 @@ This checkpoint captures the **first successful Phase 4 audio benchmark run** on
 
 ---
 
+## Audio Artifact Integrity
+
+### SHA-256 Hashes (verified on RTX 5060)
+
+All good variants (Baseline, A, B, C, E) are **byte-identical**:
+
+| Variant | SHA-256 | Status |
+|---------|---------|--------|
+| **Baseline** | `05EE6EB1A13F66D82A2DFFA5088AA7D409E8FA5A7F6071F58F5DBB8AE86326E5` | ✅ GOOD |
+| **A** | `05EE6EB1A13F66D82A2DFFA5088AA7D409E8FA5A7F6071F58F5DBB8AE86326E5` | ✅ GOOD |
+| **B** | `05EE6EB1A13F66D82A2DFFA5088AA7D409E8FA5A7F6071F58F5DBB8AE86326E5` | ✅ GOOD |
+| **C** | `05EE6EB1A13F66D82A2DFFA5088AA7D409E8FA5A7F6071F58F5DBB8AE86326E5` | ✅ GOOD |
+| **E** | `05EE6EB1A13F66D82A2DFFA5088AA7D409E8FA5A7F6071F58F5DBB8AE86326E5` | ✅ GOOD |
+
+Rejected variant (D):
+
+| Variant | SHA-256 | Status |
+|---------|---------|--------|
+| **D** | `C35DB293C4306249FE6CEB533CCE6D2E0AE24D0EB4A89999BF01AD33D13FD7EA` | ❌ REJECTED |
+
+**Common good artifact hash:** `05EE6EB1A13F66D82A2DFFA5088AA7D409E8FA5A7F6071F58F5DBB8AE86326E5`
+
+**Rejected artifact hash:** `C35DB293C4306249FE6CEB533CCE6D2E0AE24D0EB4A89999BF01AD33D13FD7EA`
+
+---
+
 ## Audio Candidate Evaluation
 
-### Manual Listening Test Results
+### Final User Listening Test (2026-09-07)
 
-The user listened to all generated Phase 4 variants on the RTX 5060 and provided qualitative ratings:
+The user re-listened to all six Phase 4 outputs and provided final qualitative ratings:
 
 ### ✅ PROTECTED CANDIDATES (GOOD / Production-Capable)
 
-| Variant | Output Directory | Strategy | Rating |
-|---------|-----------------|----------|--------|
-| **Baseline** | `project/output/phase4_baseline/` | Default production pipeline | ✅ GOOD |
-| **A** | `project/output/phase4_A/` | Production standard (seg_target=420s) | ✅ GOOD |
-| **B** | `project/output/phase4_B/` | Larger segments (seg_target=700s) | ✅ GOOD |
-| **E** | `project/output/phase4_E/` | Hybrid paragraph (seg_target=1000s) | ✅ GOOD |
+| Variant | Output Directory | Strategy | SHA-256 | Rating |
+|---------|-----------------|----------|---------|--------|
+| **Baseline** | `project/output/phase4_baseline/` | Default production pipeline | `05EE6EB1...86326E5` | ✅ GOOD |
+| **A** | `project/output/phase4_A/` | Production standard (seg_target=420s) | `05EE6EB1...86326E5` | ✅ GOOD |
+| **B** | `project/output/phase4_B/` | Larger segments (seg_target=700s) | `05EE6EB1...86326E5` | ✅ GOOD |
+| **C** | `project/output/phase4_C/` | Very large blocks (seg_target=1200s) | `05EE6EB1...86326E5` | ✅ GOOD |
+| **E** | `project/output/phase4_E/` | Hybrid paragraph (seg_target=1000s) | `05EE6EB1...86326E5` | ✅ GOOD |
 
-### ❌ NON-PREFERRED (BAD / Not Selected)
+**Key finding:** All five good variants produce **byte-identical audio** (same SHA-256 hash). This confirms they are the same artifact generated through different segmentation strategies.
 
-| Variant | Output Directory | Strategy | Rating | Note |
-|---------|-----------------|----------|--------|------|
-| **C** | `project/output/phase4_C/` | Very large blocks (seg_target=1200s) | ❌ BAD | Preserved for historical reference only |
-| **D** | `project/output/phase4_variant_D/` | Large blocks + cutting | ❌ BAD | Preserved for historical reference only |
+### ❌ REJECTED (DO NOT USE)
+
+| Variant | Output Directory | Strategy | SHA-256 | Rating | Note |
+|---------|-----------------|----------|---------|--------|------|
+| **D** | `project/output/phase4_variant_D/` | Large blocks + cutting | `C35DB293...13FD7EA` | ❌ REJECTED | **DO NOT USE** for production or future optimization. Preserved for historical reference only. |
 
 ---
 
 ## Winner Status
 
-### 🟡 UNDECIDED
+### 🟡 UNDECIDED (Byte-Identical)
 
-**No single winner has been declared.**
+**No meaningful single winner exists among the good variants.**
 
-All four candidates (Baseline, A, B, E) are considered production-capable. The user currently cannot choose among them.
+All five candidates (Baseline, A, B, C, E) are byte-identical — they produce the exact same audio artifact. Therefore, there is no meaningful distinction between them, and no winner needs to be declared among them.
 
-**Leading candidates:** Baseline and E are noted as especially promising.
+**Current preferred audio reference:** The common good artifact (SHA-256: `05EE6EB1A13F66D82A2DFFA5088AA7D409E8FA5A7F6071F58F5DBB8AE86326E5`)
 
-**Next steps:** Further optimization will be performed from this checkpoint. The winner will be selected after optimization is complete.
+**Rejected:** Only D is rejected and must not be used.
 
----
-
-## Audio Artifact Integrity
-
-Audio files reside on the local RTX 5060 machine and are **not stored in Git** (too large).
-
-### Required: Compute SHA-256 Hashes Locally
-
-Run the helper script on the RTX 5060:
-
-```powershell
-.\checkpoint\compute_audio_hashes.ps1
-```
-
-Or manually compute hashes:
-
-```powershell
-Get-FileHash -Algorithm SHA256 project\output\phase4_baseline\*.wav
-Get-FileHash -Algorithm SHA256 project\output\phase4_A\*.wav
-Get-FileHash -Algorithm SHA256 project\output\phase4_B\*.wav
-Get-FileHash -Algorithm SHA256 project\output\phase4_E\*.wav
-```
-
-**⚠️ These hashes must be recorded in the manifest after computation. They serve as the integrity anchor — any future regeneration must produce matching hashes to prove no silent substitution occurred.**
+**Implication for future optimization:** Any optimization work should use the common good artifact as the reference. The segmentation strategy differences (A/B/C/E vs Baseline) do not affect the final output, suggesting the pipeline produces deterministic results for this input.
 
 ---
 
@@ -168,21 +174,23 @@ Get-FileHash -Algorithm SHA256 project\output\phase4_E\*.wav
 2. **VD-E production config** — `project/config/production.json` voice_id/mode/seed locked
 3. **Model configuration** — Current working model setup unchanged
 4. **Benchmark experiment definitions** — Variant parameters in `phase4_benchmark.py`
-5. **Candidate audio artifacts** — Baseline, A, B, E files must not be regenerated or deleted
+5. **Candidate audio artifacts** — Baseline, A, B, C, E files must not be regenerated or deleted
+6. **D variant** — Preserved for historical reference, but must not be used for production
 
 ### 📋 OPTIMIZATION RULES
 
 1. **All future optimization must build FROM this checkpoint, never overwrite it**
 2. Each optimization attempt must be a **separate branch/commit**
 3. This safepoint serves as the **rollback target** if optimization fails
-4. Winner selection is **deferred** until optimization is complete
-5. Non-preferred variants (C, D) must remain in historical benchmark results
+4. Use the common good artifact (SHA-256: `05EE6EB1...86326E5`) as the reference for any optimization
+5. **DO NOT use D** for any production or optimization work
+6. Historical artifacts (including D) must remain in benchmark results
 
 ### 🚫 NOT YET (Deferred)
 
 - Long-Form optimization — not started
 - Segmentation logic changes — not yet applied
-- Winner declaration — pending further optimization
+- Winner declaration — not applicable (all good variants are byte-identical)
 
 ---
 
@@ -192,9 +200,11 @@ Safety tests in `project/tests/test_phase4_checkpoint.py` verify:
 
 - [ ] Checkpoint manifest exists and is valid JSON
 - [ ] Golden Reference hash remains exact
-- [ ] Required candidate list contains Baseline/A/B/E
-- [ ] C/D are not selected as candidates
+- [ ] Required candidate list contains Baseline/A/B/C/E
+- [ ] Only D is rejected
 - [ ] Winner remains UNDECIDED
+- [ ] Common good SHA-256 is recorded
+- [ ] D SHA-256 is recorded and different from good hash
 - [ ] Checkpoint metadata is internally consistent
 - [ ] Production VD-E configuration remains unchanged
 
@@ -212,5 +222,16 @@ This restores the exact code state of the successful Phase 4 benchmark.
 
 ---
 
-*This checkpoint was created automatically from the successful benchmark run `20260906_210750` on RTX 5060.*
+## Related Files
+
+- `checkpoint/PHASE4_AUDIO_SAFEPOINT_20260906.json` — Machine-readable manifest
+- `checkpoint/PHASE4_AUDIO_SAFEPOINT_20260906.md` — This document
+- `checkpoint/audio_hashes_20260906_210750.json` — SHA-256 hash manifest for all variants
+- `checkpoint/compute_audio_hashes.ps1` — Helper script for computing audio hashes
+- `project/tests/test_phase4_checkpoint.py` — 67 regression/safety tests
+
+---
+
+*This checkpoint was created from the successful benchmark run `20260906_210750` on RTX 5060.*
+*Final user audio review completed 2026-09-07: Baseline/A/B/C/E are GOOD (byte-identical), D is REJECTED.*
 *It represents the first verified production-capable audio output from the VoiceOverApp Phase 4 pipeline.*

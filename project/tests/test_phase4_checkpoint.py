@@ -4,9 +4,11 @@ Regression tests for PHASE4_AUDIO_SAFEPOINT_20260906 checkpoint.
 These tests verify the integrity of the protected audio checkpoint:
 - Checkpoint manifest exists and is valid JSON
 - Golden Reference hash remains exact
-- Required candidate list contains Baseline/A/B/E
-- C/D are not selected as candidates
-- Winner remains UNDECIDED
+- Required candidate list contains Baseline/A/B/C/E
+- Only D is rejected
+- Winner remains UNDECIDED (all good variants byte-identical)
+- Common good SHA-256 is recorded
+- D SHA-256 is recorded and different from good hash
 - Checkpoint metadata is internally consistent
 - Production VD-E configuration remains unchanged
 """
@@ -20,6 +22,7 @@ REPO_ROOT = Path(__file__).parent.parent.parent
 CHECKPOINT_DIR = REPO_ROOT / "checkpoint"
 SAFEPOINT_JSON = CHECKPOINT_DIR / "PHASE4_AUDIO_SAFEPOINT_20260906.json"
 SAFEPOINT_MD = CHECKPOINT_DIR / "PHASE4_AUDIO_SAFEPOINT_20260906.md"
+AUDIO_HASHES_JSON = CHECKPOINT_DIR / "audio_hashes_20260906_210750.json"
 PRODUCTION_CONFIG = REPO_ROOT / "project" / "config" / "production.json"
 BENCHMARK_SCRIPT = REPO_ROOT / "project" / "benchmark" / "phase4_benchmark.py"
 
@@ -27,8 +30,10 @@ BENCHMARK_SCRIPT = REPO_ROOT / "project" / "benchmark" / "phase4_benchmark.py"
 GOLDEN_REFERENCE_SHA256 = "B156C02A60A873AD95FC92390C4A136C85308B20188373CD734BEE5E5E5F2025"
 CHECKPOINT_ID = "PHASE4_AUDIO_SAFEPOINT_20260906"
 BENCHMARK_RUN_ID = "20260906_210750"
-PROTECTED_CANDIDATES = {"Baseline", "A", "B", "E"}
-NON_PREFERRED = {"C", "D"}
+PROTECTED_CANDIDATES = {"Baseline", "A", "B", "C", "E"}
+REJECTED_VARIANTS = {"D"}
+COMMON_GOOD_SHA256 = "05EE6EB1A13F66D82A2DFFA5088AA7D409E8FA5A7F6071F58F5DBB8AE86326E5"
+REJECTED_D_SHA256 = "C35DB293C4306249FE6CEB533CCE6D2E0AE24D0EB4A89999BF01AD33D13FD7EA"
 
 
 class TestCheckpointFilesExist(unittest.TestCase):
@@ -48,6 +53,11 @@ class TestCheckpointFilesExist(unittest.TestCase):
         """Human-readable checkpoint document must exist."""
         self.assertTrue(SAFEPOINT_MD.is_file(),
                        f"Checkpoint document missing: {SAFEPOINT_MD}")
+
+    def test_audio_hashes_json_exists(self):
+        """Audio hash manifest must exist."""
+        self.assertTrue(AUDIO_HASHES_JSON.is_file(),
+                       f"Audio hash manifest missing: {AUDIO_HASHES_JSON}")
 
     def test_manifest_not_empty(self):
         """Manifest JSON must not be empty."""
@@ -70,7 +80,6 @@ class TestManifestValidity(unittest.TestCase):
 
     def test_manifest_is_valid_json(self):
         """Manifest must be valid JSON."""
-        # Already loaded in setUpClass; if it fails, test errors
         self.assertIsInstance(self.manifest, dict)
 
     def test_manifest_has_checkpoint_section(self):
@@ -109,6 +118,14 @@ class TestManifestValidity(unittest.TestCase):
         """Manifest must have 'vde_production_config' section."""
         self.assertIn("vde_production_config", self.manifest)
 
+    def test_manifest_has_common_good_sha256(self):
+        """Manifest must have common_good_sha256 in audio_artifacts."""
+        self.assertIn("common_good_sha256", self.manifest["audio_artifacts"])
+        self.assertEqual(
+            self.manifest["audio_artifacts"]["common_good_sha256"],
+            COMMON_GOOD_SHA256
+        )
+
 
 class TestGoldenReferenceIntegrity(unittest.TestCase):
     """Verify Golden Reference SHA-256 is preserved exactly."""
@@ -139,7 +156,7 @@ class TestGoldenReferenceIntegrity(unittest.TestCase):
 
 
 class TestCandidateVariants(unittest.TestCase):
-    """Verify candidate variant list is correct."""
+    """Verify candidate variant list is correct (Baseline, A, B, C, E are all GOOD)."""
 
     @classmethod
     def setUpClass(cls):
@@ -160,6 +177,10 @@ class TestCandidateVariants(unittest.TestCase):
     def test_variant_b_is_candidate(self):
         """Variant B must be in the candidate list."""
         self.assertIn("B", self.candidates)
+
+    def test_variant_c_is_candidate(self):
+        """Variant C must be in the candidate list (moved from non-preferred in final review)."""
+        self.assertIn("C", self.candidates)
 
     def test_variant_e_is_candidate(self):
         """Variant E must be in the candidate list."""
@@ -183,14 +204,26 @@ class TestCandidateVariants(unittest.TestCase):
             self.assertEqual(cand["quality_rating"], "GOOD",
                            f"Candidate {name} quality_rating is {cand['quality_rating']}")
 
-    def test_candidate_count_is_four(self):
-        """There must be exactly 4 candidates."""
-        self.assertEqual(len(self.candidates), 4,
-                        f"Expected 4 candidates, got {len(self.candidates)}")
+    def test_candidate_count_is_five(self):
+        """There must be exactly 5 candidates (Baseline, A, B, C, E)."""
+        self.assertEqual(len(self.candidates), 5,
+                        f"Expected 5 candidates, got {len(self.candidates)}")
+
+    def test_all_candidates_have_sha256(self):
+        """All candidates must have SHA-256 hash recorded."""
+        for name, cand in self.candidates.items():
+            self.assertIn("sha256", cand, f"Candidate {name} missing sha256")
+            self.assertIsNotNone(cand["sha256"], f"Candidate {name} sha256 is null")
+
+    def test_all_candidates_have_common_hash(self):
+        """All good candidates must have the common byte-identical hash."""
+        for name, cand in self.candidates.items():
+            self.assertEqual(cand["sha256"], COMMON_GOOD_SHA256,
+                           f"Candidate {name} sha256 does not match common good hash")
 
 
-class TestNonPreferredVariants(unittest.TestCase):
-    """Verify C and D are correctly marked as non-preferred."""
+class TestRejectedVariants(unittest.TestCase):
+    """Verify only D is correctly marked as rejected."""
 
     @classmethod
     def setUpClass(cls):
@@ -200,50 +233,126 @@ class TestNonPreferredVariants(unittest.TestCase):
         cls.non_preferred = {c["variant"]: c for c in cls.artifacts["non_preferred"]}
         cls.candidates = {c["variant"]: c for c in cls.artifacts["candidates"]}
 
-    def test_variant_c_in_non_preferred(self):
-        """Variant C must be in the non-preferred list."""
-        self.assertIn("C", self.non_preferred)
-
-    def test_variant_d_in_non_preferred(self):
-        """Variant D must be in the non-preferred list."""
+    def test_variant_d_in_rejected(self):
+        """Variant D must be in the non-preferred (rejected) list."""
         self.assertIn("D", self.non_preferred)
-
-    def test_variant_c_not_selected(self):
-        """Variant C must NOT be selected."""
-        self.assertFalse(self.non_preferred["C"]["selected"],
-                        "Variant C must not be selected")
 
     def test_variant_d_not_selected(self):
         """Variant D must NOT be selected."""
         self.assertFalse(self.non_preferred["D"]["selected"],
                         "Variant D must not be selected")
 
-    def test_variant_c_status_non_preferred(self):
-        """Variant C must have status NON_PREFERRED."""
-        self.assertEqual(self.non_preferred["C"]["status"], "NON_PREFERRED")
-
-    def test_variant_d_status_non_preferred(self):
-        """Variant D must have status NON_PREFERRED."""
-        self.assertEqual(self.non_preferred["D"]["status"], "NON_PREFERRED")
-
-    def test_variant_c_quality_bad(self):
-        """Variant C must be rated BAD."""
-        self.assertEqual(self.non_preferred["C"]["quality_rating"], "BAD")
+    def test_variant_d_status_rejected(self):
+        """Variant D must have status REJECTED."""
+        self.assertEqual(self.non_preferred["D"]["status"], "REJECTED")
 
     def test_variant_d_quality_bad(self):
         """Variant D must be rated BAD."""
         self.assertEqual(self.non_preferred["D"]["quality_rating"], "BAD")
 
-    def test_c_d_not_in_candidates(self):
-        """C and D must NOT appear in the candidates list."""
-        self.assertNotIn("C", self.candidates,
-                        "Variant C must not be in candidates")
+    def test_variant_d_has_sha256(self):
+        """Variant D must have SHA-256 hash recorded."""
+        self.assertIn("sha256", self.non_preferred["D"])
+        self.assertEqual(
+            self.non_preferred["D"]["sha256"],
+            REJECTED_D_SHA256,
+            "Variant D sha256 does not match expected rejected hash"
+        )
+
+    def test_d_not_in_candidates(self):
+        """D must NOT appear in the candidates list."""
         self.assertNotIn("D", self.candidates,
                         "Variant D must not be in candidates")
 
+    def test_only_d_is_rejected(self):
+        """Only D should be in the non-preferred list."""
+        self.assertEqual(len(self.non_preferred), 1,
+                        f"Expected only 1 rejected variant, got {len(self.non_preferred)}")
+        self.assertIn("D", self.non_preferred)
+
+    def test_d_hash_differs_from_good(self):
+        """D's hash must differ from the common good hash."""
+        self.assertNotEqual(
+            self.non_preferred["D"]["sha256"],
+            COMMON_GOOD_SHA256,
+            "Variant D sha256 must differ from common good hash"
+        )
+
+
+class TestAudioHashesManifest(unittest.TestCase):
+    """Verify the audio_hashes_20260906_210750.json file."""
+
+    @classmethod
+    def setUpClass(cls):
+        """Load the audio hashes manifest."""
+        cls.hashes = json.loads(AUDIO_HASHES_JSON.read_text(encoding='utf-8'))
+
+    def test_audio_hashes_valid_json(self):
+        """Audio hashes manifest must be valid JSON."""
+        self.assertIsInstance(self.hashes, dict)
+
+    def test_audio_hashes_has_run_id(self):
+        """Audio hashes manifest must have run_id."""
+        self.assertEqual(self.hashes["run_id"], BENCHMARK_RUN_ID)
+
+    def test_audio_hashes_has_all_variants(self):
+        """Audio hashes manifest must have all 6 variants."""
+        variants = self.hashes["variants"]
+        for name in ["Baseline", "A", "B", "C", "D", "E"]:
+            self.assertIn(name, variants, f"Variant {name} missing from audio hashes")
+
+    def test_good_variants_have_correct_hash(self):
+        """Good variants must have the common good hash."""
+        variants = self.hashes["variants"]
+        for name in ["Baseline", "A", "B", "C", "E"]:
+            self.assertEqual(
+                variants[name]["sha256"],
+                COMMON_GOOD_SHA256,
+                f"Variant {name} hash does not match common good hash"
+            )
+
+    def test_d_has_rejected_hash(self):
+        """D must have the rejected hash."""
+        self.assertEqual(
+            self.hashes["variants"]["D"]["sha256"],
+            REJECTED_D_SHA256,
+            "Variant D hash does not match expected rejected hash"
+        )
+
+    def test_summary_good_count(self):
+        """Summary must show 5 good variants."""
+        self.assertEqual(self.hashes["summary"]["good_count"], 5)
+
+    def test_summary_rejected_count(self):
+        """Summary must show 1 rejected variant."""
+        self.assertEqual(self.hashes["summary"]["rejected_count"], 1)
+
+    def test_summary_common_hash(self):
+        """Summary must record the common good hash."""
+        self.assertEqual(
+            self.hashes["summary"]["common_good_sha256"],
+            COMMON_GOOD_SHA256
+        )
+
+    def test_summary_rejected_hash(self):
+        """Summary must record the rejected D hash."""
+        self.assertEqual(
+            self.hashes["summary"]["rejected_sha256"],
+            REJECTED_D_SHA256
+        )
+
+    def test_summary_byte_identical_list(self):
+        """Summary must list byte-identical variants."""
+        byte_identical = self.hashes["summary"]["byte_identical_variants"]
+        self.assertEqual(set(byte_identical), PROTECTED_CANDIDATES)
+
+    def test_summary_winner_status(self):
+        """Summary must record winner status."""
+        self.assertEqual(self.hashes["summary"]["winner_status"], "UNDECIDED")
+
 
 class TestWinnerStatus(unittest.TestCase):
-    """Verify winner status is UNDECIDED."""
+    """Verify winner status is UNDECIDED with byte-identical explanation."""
 
     @classmethod
     def setUpClass(cls):
@@ -262,12 +371,19 @@ class TestWinnerStatus(unittest.TestCase):
         self.assertGreater(len(reason), 10,
                           "Winner reason must be a meaningful description")
 
-    def test_winner_has_leading_candidates(self):
-        """Winner section must list leading candidates."""
+    def test_winner_byte_identical_flag(self):
+        """Winner section must have byte_identical=true."""
+        self.assertTrue(
+            self.manifest["winner_status"].get("byte_identical", False),
+            "Winner section must have byte_identical=true"
+        )
+
+    def test_winner_has_all_leading_candidates(self):
+        """Winner section must list all 5 good candidates as leading."""
         leading = self.manifest["winner_status"].get("leading_candidates", [])
         self.assertIsInstance(leading, list)
-        self.assertGreater(len(leading), 0,
-                          "Must list at least one leading candidate")
+        self.assertEqual(set(leading), PROTECTED_CANDIDATES,
+                        f"Leading candidates {set(leading)} != {PROTECTED_CANDIDATES}")
 
 
 class TestCheckpointConsistency(unittest.TestCase):
@@ -340,6 +456,16 @@ class TestCheckpointConsistency(unittest.TestCase):
         rules = constraints["optimization_rules"]
         self.assertGreater(len(rules), 2,
                           "Must list at least 3 optimization rules")
+
+    def test_common_good_hash_consistent(self):
+        """common_good_sha256 must match between manifest and audio_hashes."""
+        manifest_hash = self.manifest["audio_artifacts"]["common_good_sha256"]
+        hashes = json.loads(AUDIO_HASHES_JSON.read_text(encoding='utf-8'))
+        self.assertEqual(
+            manifest_hash,
+            hashes["summary"]["common_good_sha256"],
+            "common_good_sha256 inconsistent between manifest and audio_hashes"
+        )
 
 
 class TestVDEConfigUnchanged(unittest.TestCase):
@@ -443,29 +569,31 @@ class TestCheckpointDocument(unittest.TestCase):
         """Document must state winner is UNDECIDED."""
         self.assertIn("UNDECIDED", self.content)
 
-    def test_document_lists_all_candidates(self):
-        """Document must list all 4 protected candidates."""
-        for name in ["Baseline", "Variant A", "Variant B", "Variant E"]:
-            # Check at least one of these patterns appears
-            short = name.split()[-1]  # A, B, E, or Baseline
-            self.assertTrue(
-                name in self.content or short in self.content,
-                f"Candidate '{name}' not found in document"
-            )
+    def test_document_has_common_good_hash(self):
+        """Document must contain the common good SHA-256."""
+        self.assertIn(COMMON_GOOD_SHA256, self.content)
 
-    def test_document_marks_c_d_non_preferred(self):
-        """Document must mark C and D as non-preferred."""
-        self.assertIn("NON-PREFERRED", self.content.upper())
-        # C and D are listed in the non-preferred table as **C** and **D**
-        # Check that both appear in the non-preferred section
-        non_preferred_section_start = self.content.find("NON-PREFERRED")
-        self.assertGreater(non_preferred_section_start, 0,
-                          "NON-PREFERRED section not found in document")
-        non_preferred_section = self.content[non_preferred_section_start:]
-        self.assertIn("**C**", non_preferred_section,
-                     "Variant C not found in NON-PREFERRED section")
-        self.assertIn("**D**", non_preferred_section,
-                     "Variant D not found in NON-PREFERRED section")
+    def test_document_has_rejected_d_hash(self):
+        """Document must contain the rejected D SHA-256."""
+        self.assertIn(REJECTED_D_SHA256, self.content)
+
+    def test_document_lists_all_good_candidates(self):
+        """Document must list all 5 protected candidates."""
+        for name in ["Baseline", "A", "B", "C", "E"]:
+            self.assertIn(name, self.content,
+                         f"Candidate '{name}' not found in document")
+
+    def test_document_marks_d_rejected(self):
+        """Document must mark D as REJECTED."""
+        self.assertIn("REJECTED", self.content)
+        # D must be explicitly rejected
+        rejected_section_start = self.content.find("REJECTED")
+        self.assertGreater(rejected_section_start, 0,
+                          "REJECTED section not found in document")
+        # Verify D is in the rejected context
+        rejected_context = self.content[rejected_section_start:rejected_section_start+200]
+        self.assertIn("D", rejected_context,
+                     "Variant D not found in REJECTED section")
 
     def test_document_has_snapshot_warning(self):
         """Document must clearly state this is a SNAPSHOT/FREEZE."""
@@ -475,6 +603,10 @@ class TestCheckpointDocument(unittest.TestCase):
     def test_document_has_immutable_constraints(self):
         """Document must list immutable constraints."""
         self.assertIn("IMMUTABLE", self.content.upper())
+
+    def test_document_has_byte_identical_note(self):
+        """Document must note that good variants are byte-identical."""
+        self.assertIn("byte-identical", self.content.lower())
 
 
 if __name__ == "__main__":
