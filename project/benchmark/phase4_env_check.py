@@ -45,7 +45,7 @@ def check_pytorch() -> dict:
         vram_gb = None
         if cuda_available:
             props = torch.cuda.get_device_properties(0)
-            vram_gb = round(props.total_mem / (1024**3), 1)
+            vram_gb = round(props.total_memory / (1024**3), 1)
         return {
             "check": "PyTorch",
             "required": ">= 2.0 mit CUDA",
@@ -251,7 +251,7 @@ def check_gpu_specs() -> dict:
                 "ok": False,
             }
         props = torch.cuda.get_device_properties(0)
-        vram_gb = round(props.total_mem / (1024**3), 1)
+        vram_gb = round(props.total_memory / (1024**3), 1)
         name = props.name
         ok = vram_gb >= 7.5  # RTX 5060 hat 8 GB, etwas Toleranz
         return {
