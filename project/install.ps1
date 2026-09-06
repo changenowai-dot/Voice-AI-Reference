@@ -15,7 +15,7 @@ param(
     [switch]$SkipModels,
     [switch]$CpuOnly
 )
-$ErrorActionPreference = "Continue"
+$ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $Root
 New-Item -ItemType Directory -Force -Path "logs" | Out-Null
@@ -78,11 +78,10 @@ if (-not (Test-Path ".venv\Scripts\python.exe")) {
         Log "venv konnte nicht erstellt werden." "Red"; Read-Host "Enter"; exit 1
     }
 }
-$Vpy = ".venv\Scripts\python.exe"
-$Pip = @("$Vpy", "-m", "pip")
+$Vpy = Join-Path $Root ".venv\Scripts\python.exe"
 
 Log "pip aktualisieren ..."
-& $Pip -m pip install --upgrade pip --quiet 2>>$null
+& $Vpy -m pip install --upgrade pip --quiet 2>$null
 
 # ------------------------------------------------------- 3) PyTorch/CUDA --
 $needTorch = $true
@@ -103,14 +102,14 @@ if ($needTorch) {
     $gpu = Has-NvidiaGPU
     if ($gpu -and -not $CpuOnly) {
         Log "Installiere PyTorch mit CUDA 12.8 (cu128) - Download ca. 3 GB, einmalig ..." "Yellow"
-        & $Pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu128 --quiet
+        & $Vpy -m pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu128 --quiet
         if ($LASTEXITCODE -ne 0) {
             Log "CUDA-Installation fehlgeschlagen - weiche auf CPU-Version aus." "Yellow"
-            & $Pip install torch torchaudio --quiet
+            & $Vpy -m pip install torch torchaudio --quiet
         }
     } else {
         Log "Keine NVIDIA-GPU erkannt (oder -CpuOnly) - installiere CPU-PyTorch ..." "Yellow"
-        & $Pip install torch torchaudio --quiet
+        & $Vpy -m pip install torch torchaudio --quiet
     }
 }
 $t = & $Vpy -c "import torch;print(torch.__version__, torch.version.cuda)" 2>$null
@@ -118,10 +117,10 @@ Log "PyTorch aktiv: $t"
 
 # --------------------------------------------------- 4) Pakete (app) ----
 Log "Installiere Python-Pakete (qwen-tts, transformers 4.57.3, ...) ..." "Yellow"
-& $Pip -m pip install -r requirements.txt --quiet
+& $Vpy -m pip install -r requirements.txt --quiet
 if ($LASTEXITCODE -ne 0) {
     Log "Paketinstallation fehlgeschlagen - Details:" "Red"
-    & $Pip install -r requirements.txt
+    & $Vpy -m pip install -r requirements.txt
     Log "Bitte Fehler oben pruefen und erneut ausfuehren." "Red"
     Read-Host "Enter"; exit 1
 }
