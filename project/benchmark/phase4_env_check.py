@@ -29,6 +29,8 @@ def _find_all_model_roots() -> list[Path]:
     1. VOICEOVER_MODELS_ROOTS (Env, komma-separiert)
     2. VOICEOVER_MODELS_DIR (Env, einzeln)
     3. Standard VoiceOverApp-Installationen (Downloads, Documents, Desktop)
+       - Direkt: VoiceOverApp_*/models
+       - Verschachtelt: VoiceOverApp_*/VoiceOverApp/models
     4. Primärer Models-Root aus paths.MODELS_DIR
     """
     roots = []
@@ -65,9 +67,15 @@ def _find_all_model_roots() -> list[Path]:
         # Suche VoiceOverApp* Verzeichnisse
         for candidate in search_dir.glob("VoiceOverApp*"):
             if candidate.is_dir():
+                # Direkt: VoiceOverApp_*/models
                 models_dir = candidate / "models"
                 if models_dir.exists() and models_dir not in roots:
                     roots.append(models_dir)
+                
+                # Verschachtelt: VoiceOverApp_*/VoiceOverApp/models
+                nested = candidate / "VoiceOverApp" / "models"
+                if nested.exists() and nested not in roots:
+                    roots.append(nested)
     
     # 4. Primärer Models-Root aus paths
     try:
@@ -98,6 +106,32 @@ def _find_model_in_roots(model_name: str, hf_names: list[str], roots: list[Path]
             hf_dir = root / "hf" / "hub" / hf_name
             if hf_dir.exists():
                 return True, hf_dir
+    
+    # Für Tokenizer: Auch speech_tokenizer in Base/CustomVoice prüfen
+    if "Tokenizer" in model_name:
+        for root in roots:
+            # Prüfe Base und CustomVoice auf speech_tokenizer
+            for model_subdir in ["Qwen3-TTS-12Hz-1.7B-Base", "Qwen3-TTS-12Hz-1.7B-CustomVoice"]:
+                # Direkt: root/Qwen3-TTS-12Hz-1.7B-Base/speech_tokenizer
+                speech_tok = root / model_subdir / "speech_tokenizer"
+                if speech_tok.exists() and speech_tok.is_dir():
+                    # Prüfe ob es aussieht wie ein valider speech_tokenizer
+                    if (speech_tok / "config.json").exists() or any(speech_tok.glob("*")):
+                        return True, speech_tok
+                
+                # In HF cache snapshots
+                for hf_name in [f"models--Qwen--{model_subdir}", model_subdir]:
+                    hf_base = root / "hf" / "hub" / hf_name
+                    if hf_base.exists():
+                        snapshots = hf_base / "snapshots"
+                        if snapshots.exists():
+                            for snap in snapshots.iterdir():
+                                if snap.is_dir():
+                                    speech_tok = snap / "speech_tokenizer"
+                                    if speech_tok.exists() and speech_tok.is_dir():
+                                        # Prüfe ob es aussieht wie ein valider speech_tokenizer
+                                        if (speech_tok / "config.json").exists() or any(speech_tok.glob("*")):
+                                            return True, speech_tok
     
     return False, None
 

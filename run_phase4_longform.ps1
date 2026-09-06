@@ -179,10 +179,18 @@ foreach ($searchDir in $SearchRoots) {
     $candidates = Get-ChildItem -Path "$searchDir\VoiceOverApp*" -Directory -ErrorAction SilentlyContinue |
                   Where-Object { $_.FullName -ne $RepoRoot }
     foreach ($cand in $candidates) {
+        # Direkt: VoiceOverApp_*/models
         $modelsDir = Join-Path $cand.FullName "models"
         if ((Test-Path $modelsDir) -and ($modelsDir -notin $AllModelsRoots)) {
             $AllModelsRoots += $modelsDir
             Write-Host "  [OK] External: $modelsDir" -ForegroundColor Green
+        }
+        
+        # Verschachtelt: VoiceOverApp_*/VoiceOverApp/models
+        $nestedModels = Join-Path $cand.FullName "VoiceOverApp\models"
+        if ((Test-Path $nestedModels) -and ($nestedModels -notin $AllModelsRoots)) {
+            $AllModelsRoots += $nestedModels
+            Write-Host "  [OK] External (nested): $nestedModels" -ForegroundColor Green
         }
     }
 }
