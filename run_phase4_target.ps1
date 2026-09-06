@@ -164,107 +164,108 @@ Write-Host "  Source: $PythonSource" -ForegroundColor DarkGray
 Write-Host ""
 
 # ------------------------------------------------------------
-# 2. Model-Root-Discovery
+# 2. Model-Root-Discovery (Multi-Root)
 # ------------------------------------------------------------
-Write-Host "[2/3] Model-Root-Discovery..." -ForegroundColor Cyan
+Write-Host "[2/3] Model-Root-Discovery (Multi-Root)..." -ForegroundColor Cyan
 
-$ModelsRoot = $null
-$ModelsSource = ""
+$AllModelsRoots = @()
 
-# Prioritaet A: Explizite Environment-Variable
-if ($env:VOICEOVER_MODELS_DIR) {
-    if (Test-Path $env:VOICEOVER_MODELS_DIR) {
-        $ModelsRoot = $env:VOICEOVER_MODELS_DIR
-        $ModelsSource = "VOICEOVER_MODELS_DIR (explicit)"
-        Write-Host "  [OK] Explicit: $ModelsRoot" -ForegroundColor Green
+# Prioritaet A: Explizite Environment-Variablen
+if ($env:VOICEOVER_MODELS_ROOTS) {
+    foreach ($r in ($env:VOICEOVER_MODELS_ROOTS -split [IO.Path]::PathSeparator)) {
+        $r = $r.Trim()
+        if ($r -and (Test-Path $r)) {
+            $AllModelsRoots += $r
+        }
+    }
+    if ($AllModelsRoots.Count -gt 0) {
+        Write-Host "  [OK] VOICEOVER_MODELS_ROOTS: $($AllModelsRoots.Count) Roots" -ForegroundColor Green
+    }
+}
+if ($env:VOICEOVER_MODELS_DIR -and (Test-Path $env:VOICEOVER_MODELS_DIR)) {
+    if ($env:VOICEOVER_MODELS_DIR -notin $AllModelsRoots) {
+        $AllModelsRoots += $env:VOICEOVER_MODELS_DIR
+        Write-Host "  [OK] VOICEOVER_MODELS_DIR: $env:VOICEOVER_MODELS_DIR" -ForegroundColor Green
     }
 }
 
 # Prioritaet B: Repository project\models
-if (-not $ModelsRoot) {
-    $RepoModels = Join-Path $ProjectRoot "models"
-    if (Test-Path $RepoModels) {
-        # Check ob mindestens ein Modell vorhanden
-        $requiredModels = @(
-            @{ Name = "Qwen3-TTS-12Hz-1.7B-CustomVoice"; Hf = @("models--Qwen--Qwen3-TTS-12Hz-1.7B-CustomVoice", "models--Qwen3-TTS-12Hz-1.7B-CustomVoice") }
-            @{ Name = "Qwen3-TTS-12Hz-1.7B-Base"; Hf = @("models--Qwen--Qwen3-TTS-12Hz-1.7B-Base", "models--Qwen3-TTS-12Hz-1.7B-Base") }
-            @{ Name = "Qwen3-TTS-Tokenizer-12Hz"; Hf = @("models--Qwen--Qwen3-TTS-Tokenizer-12Hz", "models--Qwen3-TTS-Tokenizer-12Hz") }
-        )
-        $foundCount = 0
-        foreach ($model in $requiredModels) {
-            $directPath = Join-Path $RepoModels $model.Name
-            $found = Test-Path $directPath
-            if (-not $found) {
-                foreach ($hfName in $model.Hf) {
-                    $hfPath = Join-Path $RepoModels "hf\hub\$hfName"
-                    if (Test-Path $hfPath) { $found = $true; break }
-                }
-            }
-            if ($found) { $foundCount++ }
-        }
-        if ($foundCount -gt 0) {
-            $ModelsRoot = $RepoModels
-            $ModelsSource = "Repository project\models"
-            Write-Host "  [OK] Repository: $ModelsRoot ($foundCount/3 models)" -ForegroundColor Green
+$RepoModels = Join-Path $ProjectRoot "models"
+if ((Test-Path $RepoModels) -and ($RepoModels -notin $AllModelsRoots)) {
+    $AllModelsRoots += $RepoModels
+    Write-Host "  [OK] Repository: $RepoModels" -ForegroundColor Green
+}
+
+# Prioritaet C: ALLE externen VoiceOverApp-Installationen sammeln
+$SearchRoots = @(
+    "$env:USERPROFILE\Downloads"
+    "$env:USERPROFILE\Documents"
+    "$env:USERPROFILE\Desktop"
+)
+$ParentOfRepo = Split-Path $RepoRoot -Parent
+if ($ParentOfRepo -and $ParentOfRepo -notin $SearchRoots) {
+    $SearchRoots += $ParentOfRepo
+}
+
+foreach ($searchDir in $SearchRoots) {
+    if (-not (Test-Path $searchDir)) { continue }
+    $candidates = Get-ChildItem -Path "$searchDir\VoiceOverApp*" -Directory -ErrorAction SilentlyContinue |
+                  Where-Object { $_.FullName -ne $RepoRoot }
+    foreach ($cand in $candidates) {
+        $modelsDir = Join-Path $cand.FullName "models"
+        if ((Test-Path $modelsDir) -and ($modelsDir -notin $AllModelsRoots)) {
+            $AllModelsRoots += $modelsDir
+            Write-Host "  [OK] External: $modelsDir" -ForegroundColor Green
         }
     }
 }
 
-# Prioritaet C: Externe Model-Roots
-if (-not $ModelsRoot) {
-    $SearchPatterns = @(
-        "$env:USERPROFILE\Downloads\VoiceOverApp*",
-        "$env:USERPROFILE\Documents\VoiceOverApp*",
-        (Join-Path (Split-Path $RepoRoot -Parent) "VoiceOverApp*")
-    )
-    
-    foreach ($pattern in $SearchPatterns) {
-        $candidates = Get-ChildItem -Path $pattern -Directory -ErrorAction SilentlyContinue | 
-                      Where-Object { $_.FullName -ne $RepoRoot }
-        
-        foreach ($cand in $candidates) {
-            $modelsDir = Join-Path $cand.FullName "models"
-            if (Test-Path $modelsDir) {
-                # Check ob alle Modelle vorhanden
-                $requiredModels = @(
-                    @{ Name = "Qwen3-TTS-12Hz-1.7B-CustomVoice"; Hf = @("models--Qwen--Qwen3-TTS-12Hz-1.7B-CustomVoice", "models--Qwen3-TTS-12Hz-1.7B-CustomVoice") }
-                    @{ Name = "Qwen3-TTS-12Hz-1.7B-Base"; Hf = @("models--Qwen--Qwen3-TTS-12Hz-1.7B-Base", "models--Qwen3-TTS-12Hz-1.7B-Base") }
-                    @{ Name = "Qwen3-TTS-Tokenizer-12Hz"; Hf = @("models--Qwen--Qwen3-TTS-Tokenizer-12Hz", "models--Qwen3-TTS-Tokenizer-12Hz") }
-                )
-                $foundCount = 0
-                foreach ($model in $requiredModels) {
-                    $directPath = Join-Path $modelsDir $model.Name
-                    $found = Test-Path $directPath
-                    if (-not $found) {
-                        foreach ($hfName in $model.Hf) {
-                            $hfPath = Join-Path $modelsDir "hf\hub\$hfName"
-                            if (Test-Path $hfPath) { $found = $true; break }
-                        }
-                    }
-                    if ($found) { $foundCount++ }
-                }
-                if ($foundCount -ge 2) {
-                    $ModelsRoot = $modelsDir
-                    $ModelsSource = "External: $($cand.FullName)"
-                    Write-Host "  [OK] External: $ModelsRoot ($foundCount/3 models)" -ForegroundColor Green
-                    Write-Host "       Source: $($cand.FullName)" -ForegroundColor DarkGray
-                    break
-                }
+# Primaeren Root bestimmen (der mit den meisten Modellen)
+$ModelsRoot = $null
+$BestCount = 0
+
+$requiredModelNames = @("Qwen3-TTS-12Hz-1.7B-CustomVoice", "Qwen3-TTS-12Hz-1.7B-Base", "Qwen3-TTS-Tokenizer-12Hz")
+$requiredHfNames = @(
+    @("models--Qwen--Qwen3-TTS-12Hz-1.7B-CustomVoice", "models--Qwen3-TTS-12Hz-1.7B-CustomVoice"),
+    @("models--Qwen--Qwen3-TTS-12Hz-1.7B-Base", "models--Qwen3-TTS-12Hz-1.7B-Base"),
+    @("models--Qwen--Qwen3-TTS-Tokenizer-12Hz", "models--Qwen3-TTS-Tokenizer-12Hz", "models--Qwen--Qwen3-TTS-12Hz-Tokenizer")
+)
+
+foreach ($root in $AllModelsRoots) {
+    $count = 0
+    for ($i = 0; $i -lt $requiredModelNames.Count; $i++) {
+        $name = $requiredModelNames[$i]
+        $hfNames = $requiredHfNames[$i]
+        $found = $false
+        $directPath = Join-Path $root $name
+        if (Test-Path $directPath) { $found = $true }
+        if (-not $found) {
+            foreach ($hfName in $hfNames) {
+                $hfPath = Join-Path $root "hf\hub\$hfName"
+                if (Test-Path $hfPath) { $found = $true; break }
             }
         }
-        if ($ModelsRoot) { break }
+        if ($found) { $count++ }
+    }
+    if ($count -gt $BestCount) {
+        $BestCount = $count
+        $ModelsRoot = $root
     }
 }
 
 if (-not $ModelsRoot) {
-    Write-Host "  [WARN] Keine Modelle gefunden. Verwende Repository project\models" -ForegroundColor DarkYellow
+    Write-Host "  [WARN] Keine Modelle gefunden." -ForegroundColor DarkYellow
     $ModelsRoot = Join-Path $ProjectRoot "models"
-    $ModelsSource = "Repository project\models (empty)"
 }
 
 Write-Host ""
-Write-Host "  Models Root: $ModelsRoot" -ForegroundColor Green
-Write-Host "  Source: $ModelsSource" -ForegroundColor DarkGray
+Write-Host "  Primary Root: $ModelsRoot ($BestCount/3 models)" -ForegroundColor Green
+Write-Host "  Total Roots:  $($AllModelsRoots.Count)" -ForegroundColor Green
+
+# Alle Models Roots als Pfad-Liste ausgeben
+foreach ($r in $AllModelsRoots) {
+    Write-Host "    - $r" -ForegroundColor DarkGray
+}
 Write-Host ""
 
 # ------------------------------------------------------------
@@ -355,14 +356,18 @@ Write-Host ""
 $env:VOICEOVER_ROOT = $ProjectRoot
 $env:VOICEOVER_MODELS_DIR = $ModelsRoot
 
+# Setze VOICEOVER_MODELS_ROOTS (plural) mit ALLEN gefundenen Roots
+$env:VOICEOVER_MODELS_ROOTS = ($AllModelsRoots -join [IO.Path]::PathSeparator)
+
 if ($RuntimeRef) {
     $env:VOICEOVER_RUNTIME_REF = $RuntimeRef
     $refsDir = Split-Path $RuntimeRef -Parent
     $env:VOICEOVER_REFS_DIR = $refsDir
 }
 
-Write-Host "  VOICEOVER_ROOT:         $env:VOICEOVER_ROOT" -ForegroundColor Gray
-Write-Host "  VOICEOVER_MODELS_DIR:   $env:VOICEOVER_MODELS_DIR" -ForegroundColor Gray
+Write-Host "  VOICEOVER_ROOT:           $env:VOICEOVER_ROOT" -ForegroundColor Gray
+Write-Host "  VOICEOVER_MODELS_DIR:     $env:VOICEOVER_MODELS_DIR" -ForegroundColor Gray
+Write-Host "  VOICEOVER_MODELS_ROOTS:   $($AllModelsRoots.Count) roots" -ForegroundColor Gray
 if ($env:VOICEOVER_RUNTIME_REF) {
     Write-Host "  VOICEOVER_RUNTIME_REF:  $env:VOICEOVER_RUNTIME_REF" -ForegroundColor Gray
     Write-Host "  VOICEOVER_REFS_DIR:     $env:VOICEOVER_REFS_DIR" -ForegroundColor Gray
@@ -465,7 +470,7 @@ $RequiredModels = @(
     }
     @{
         Name = "Qwen3-TTS-Tokenizer-12Hz"
-        HfNames = @("models--Qwen--Qwen3-TTS-Tokenizer-12Hz", "models--Qwen3-TTS-Tokenizer-12Hz")
+        HfNames = @("models--Qwen--Qwen3-TTS-Tokenizer-12Hz", "models--Qwen3-TTS-Tokenizer-12Hz", "models--Qwen--Qwen3-TTS-12Hz-Tokenizer")
     }
     @{
         Name = "Qwen3-TTS-12Hz-1.7B-CustomVoice"
@@ -481,17 +486,21 @@ foreach ($model in $RequiredModels) {
     $hfNames = $model.HfNames
     $found = $false
     
-    # Check 1: Direkter Pfad
-    $directPath = Join-Path $ModelsRoot $modelName
-    if ((Test-Path $directPath) -and (Test-Path (Join-Path $directPath "config.json"))) {
-        $found = $true
-        $ModelsFound += @{ Name = $modelName; Path = $directPath; Method = "direct" }
-    }
-    
-    # Check 2: HuggingFace Hub Cache (multiple name variants)
-    if (-not $found) {
+    # Suche ueber ALLE bekannten Model-Roots
+    foreach ($searchRoot in $AllModelsRoots) {
+        if ($found) { break }
+        
+        # Check 1: Direkter Pfad
+        $directPath = Join-Path $searchRoot $modelName
+        if ((Test-Path $directPath) -and (Test-Path (Join-Path $directPath "config.json"))) {
+            $found = $true
+            $ModelsFound += @{ Name = $modelName; Path = $directPath; Method = "direct"; Root = $searchRoot }
+            break
+        }
+        
+        # Check 2: HuggingFace Hub Cache (multiple name variants)
         foreach ($hfName in $hfNames) {
-            $hubPath = Join-Path $ModelsRoot "hf\hub\$hfName"
+            $hubPath = Join-Path $searchRoot "hf\hub\$hfName"
             if (Test-Path $hubPath) {
                 $snapshots = Join-Path $hubPath "snapshots"
                 if (Test-Path $snapshots) {
@@ -501,7 +510,7 @@ foreach ($model in $RequiredModels) {
                             $modelFile = Join-Path $snap.FullName "model.safetensors"
                             if (Test-Path $modelFile) {
                                 $found = $true
-                                $ModelsFound += @{ Name = $modelName; Path = $snap.FullName; Method = "hub-cache" }
+                                $ModelsFound += @{ Name = $modelName; Path = $snap.FullName; Method = "hub-cache"; Root = $searchRoot }
                                 break
                             }
                         }
@@ -518,17 +527,23 @@ foreach ($model in $RequiredModels) {
 }
 
 if ($ModelsMissing.Count -gt 0) {
-    Write-Host "  FEHLER: Folgende Modelle fehlen:" -ForegroundColor Red
+    Write-Host "  FEHLER: Folgende Modelle fehlen in ALLEN Roots:" -ForegroundColor Red
     foreach ($m in $ModelsMissing) {
         Write-Host "    - $m" -ForegroundColor Red
     }
     Write-Host ""
-    Write-Host "  Bitte install.ps1 ausfuehren oder Modelle manuell herunterladen." -ForegroundColor Yellow
+    Write-Host "  Durchsuchte Roots:" -ForegroundColor Yellow
+    foreach ($r in $AllModelsRoots) {
+        Write-Host "    - $r" -ForegroundColor DarkGray
+    }
+    Write-Host ""
+    Write-Host "  Tipp: Setze VOICEOVER_MODELS_ROOTS um weitere Pfade anzugeben." -ForegroundColor Yellow
     exit 1
 }
 
 foreach ($m in $ModelsFound) {
     Write-Host "  [OK] $($m.Name) ($($m.Method))" -ForegroundColor Green
+    Write-Host "       Root: $($m.Root)" -ForegroundColor DarkGray
 }
 
 Write-Host ""

@@ -20,6 +20,89 @@ APP_ROOT = SCRIPT_DIR.parent
 sys.path.insert(0, str(APP_ROOT))
 
 # =====================================================================
+# Multi-Root Model Discovery
+# =====================================================================
+def _find_all_model_roots() -> list[Path]:
+    """Findet alle bekannten Model-Roots auf dem System.
+    
+    Sucht in:
+    1. VOICEOVER_MODELS_ROOTS (Env, komma-separiert)
+    2. VOICEOVER_MODELS_DIR (Env, einzeln)
+    3. Standard VoiceOverApp-Installationen (Downloads, Documents, Desktop)
+    4. Primärer Models-Root aus paths.MODELS_DIR
+    """
+    roots = []
+    
+    # 1. VOICEOVER_MODELS_ROOTS (plural, komma-separiert)
+    env_roots = os.environ.get("VOICEOVER_MODELS_ROOTS", "")
+    if env_roots:
+        for r in env_roots.split(os.pathsep if os.pathsep else ";"):
+            r = r.strip()
+            if r:
+                p = Path(r)
+                if p.exists() and p not in roots:
+                    roots.append(p)
+    
+    # 2. VOICEOVER_MODELS_DIR (singular)
+    env_dir = os.environ.get("VOICEOVER_MODELS_DIR", "")
+    if env_dir:
+        p = Path(env_dir)
+        if p.exists() and p not in roots:
+            roots.append(p)
+    
+    # 3. Standard VoiceOverApp-Installationen
+    user_home = Path.home()
+    search_dirs = [
+        user_home / "Downloads",
+        user_home / "Documents",
+        user_home / "Desktop",
+        user_home.parent / "Downloads" if user_home.parent else None,
+    ]
+    
+    for search_dir in search_dirs:
+        if not search_dir or not search_dir.exists():
+            continue
+        # Suche VoiceOverApp* Verzeichnisse
+        for candidate in search_dir.glob("VoiceOverApp*"):
+            if candidate.is_dir():
+                models_dir = candidate / "models"
+                if models_dir.exists() and models_dir not in roots:
+                    roots.append(models_dir)
+    
+    # 4. Primärer Models-Root aus paths
+    try:
+        from app import paths
+        primary = Path(paths.MODELS_DIR)
+        if primary.exists() and primary not in roots:
+            roots.insert(0, primary)  # Bevorzuge primären Root
+    except Exception:
+        pass
+    
+    return roots
+
+
+def _find_model_in_roots(model_name: str, hf_names: list[str], roots: list[Path]) -> tuple[bool, Path | None]:
+    """Sucht ein Modell in allen gegebenen Roots.
+    
+    Returns:
+        (found, found_path)
+    """
+    for root in roots:
+        # Check direct path
+        direct = root / model_name
+        if direct.exists():
+            return True, direct
+        
+        # Check HF cache variants
+        for hf_name in hf_names:
+            hf_dir = root / "hf" / "hub" / hf_name
+            if hf_dir.exists():
+                return True, hf_dir
+    
+    return False, None
+
+
+# =====================================================================
 # Check-Funktionen
 # =====================================================================
 def check_python_version() -> dict:
@@ -134,9 +217,13 @@ def check_ffmpeg() -> dict:
 
 
 def check_models() -> dict:
-    """Qwen3-TTS-Modelle müssen vorhanden sein."""
+    """Qwen3-TTS-Modelle müssen vorhanden sein (Multi-Root-Discovery)."""
     from app import paths
     paths.ensure_directories()
+    
+    # Alle bekannten Model-Roots finden
+    all_roots = _find_all_model_roots()
+    
     # Map: display_name -> list of possible HF cache names
     models_to_check = {
         "Qwen3-TTS-12Hz-1.7B-CustomVoice": [
@@ -150,30 +237,40 @@ def check_models() -> dict:
         "Qwen3-TTS-Tokenizer-12Hz": [
             "models--Qwen--Qwen3-TTS-Tokenizer-12Hz",
             "models--Qwen3-TTS-Tokenizer-12Hz",
+            # Tokenizer kann auch als "tokenizer" Unterverzeichnis existieren
+            "models--Qwen--Qwen3-TTS-12Hz-Tokenizer",
         ],
     }
+    
     results = {}
+    found_paths = {}
+    
     for display_name, hf_names in models_to_check.items():
-        found = False
-        # Check direct path
-        direct = paths.MODELS_DIR / display_name
-        if direct.exists():
-            found = True
-        # Check HF cache variants
-        if not found:
-            for hf_name in hf_names:
-                hf_dir = paths.MODELS_DIR / "hf" / "hub" / hf_name
-                if hf_dir.exists():
-                    found = True
-                    break
+        found, found_path = _find_model_in_roots(display_name, hf_names, all_roots)
         results[display_name] = found
+        if found and found_path:
+            found_paths[display_name] = str(found_path)
+    
     all_present = all(results.values())
-    models_root_src = os.environ.get("VOICEOVER_MODELS_DIR", str(paths.MODELS_DIR))
+    
+    # Modelle im Output dokumentieren
+    actual_dict = {}
+    for model_name, found in results.items():
+        if found:
+            path_info = found_paths.get(model_name, "")
+            actual_dict[model_name] = f"[OK] ({path_info})"
+        else:
+            actual_dict[model_name] = "[FAIL] FEHLT"
+    
+    # Models-Roots dokumentieren
+    roots_info = "; ".join(str(r) for r in all_roots)
+    
     return {
         "check": "Modelle",
         "required": "CustomVoice + Base + Tokenizer",
-        "actual": {k: ("[OK]" if v else "[FAIL] FEHLT") for k, v in results.items()},
-        "models_root": models_root_src,
+        "actual": actual_dict,
+        "models_roots": roots_info,
+        "models_found_paths": found_paths,
         "ok": all_present,
     }
 
@@ -326,7 +423,7 @@ def main():
         else:
             print(f"         Vorhanden: {actual}")
         # Additional info fields
-        for info_key in ("models_root", "ref_path", "sha256", "expected_sha256", "actual_sha256"):
+        for info_key in ("models_root", "models_roots", "ref_path", "sha256", "expected_sha256", "actual_sha256"):
             if info_key in check:
                 print(f"         {info_key}: {check[info_key]}")
         print()

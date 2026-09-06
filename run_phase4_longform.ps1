@@ -144,47 +144,58 @@ if (-not $PythonCmd) {
 Write-Host "  Python: $PythonCmd ($PythonSource)" -ForegroundColor Green
 
 # ------------------------------------------------------------
-# Model-Root-Discovery
+# Model-Root-Discovery (Multi-Root)
 # ------------------------------------------------------------
-Write-Host "[2/3] Model-Root-Discovery..." -ForegroundColor Cyan
+Write-Host "[2/3] Model-Root-Discovery (Multi-Root)..." -ForegroundColor Cyan
 
-$ModelsRoot = $null
-$ModelsSource = ""
+$AllModelsRoots = @()
 
-if ($env:VOICEOVER_MODELS_DIR -and (Test-Path $env:VOICEOVER_MODELS_DIR)) {
-    $ModelsRoot = $env:VOICEOVER_MODELS_DIR
-    $ModelsSource = "VOICEOVER_MODELS_DIR (explicit)"
-    Write-Host "  [OK] Explicit: $ModelsRoot" -ForegroundColor Green
+# Prioritaet A: Explizite Environment-Variablen
+if ($env:VOICEOVER_MODELS_ROOTS) {
+    foreach ($r in ($env:VOICEOVER_MODELS_ROOTS -split [IO.Path]::PathSeparator)) {
+        $r = $r.Trim()
+        if ($r -and (Test-Path $r)) { $AllModelsRoots += $r }
+    }
 }
-
-if (-not $ModelsRoot) {
-    $SearchPatterns = @(
-        "$env:USERPROFILE\Downloads\VoiceOverApp*",
-        "$env:USERPROFILE\Documents\VoiceOverApp*",
-        (Join-Path (Split-Path $RepoRoot -Parent) "VoiceOverApp*")
-    )
-    foreach ($pattern in $SearchPatterns) {
-        $candidates = Get-ChildItem -Path $pattern -Directory -ErrorAction SilentlyContinue | 
-                      Where-Object { $_.FullName -ne $RepoRoot }
-        foreach ($cand in $candidates) {
-            $modelsDir = Join-Path $cand.FullName "models"
-            if (Test-Path $modelsDir) {
-                $ModelsRoot = $modelsDir
-                $ModelsSource = "External: $($cand.FullName)"
-                Write-Host "  [OK] External: $ModelsRoot" -ForegroundColor Green
-                break
-            }
-        }
-        if ($ModelsRoot) { break }
+if ($env:VOICEOVER_MODELS_DIR -and (Test-Path $env:VOICEOVER_MODELS_DIR)) {
+    if ($env:VOICEOVER_MODELS_DIR -notin $AllModelsRoots) {
+        $AllModelsRoots += $env:VOICEOVER_MODELS_DIR
     }
 }
 
-if (-not $ModelsRoot) {
-    $ModelsRoot = Join-Path $ProjectRoot "models"
-    $ModelsSource = "Repository project\models"
+# Prioritaet B: Repository project\models
+$RepoModels = Join-Path $ProjectRoot "models"
+if ((Test-Path $RepoModels) -and ($RepoModels -notin $AllModelsRoots)) {
+    $AllModelsRoots += $RepoModels
 }
 
-Write-Host "  Models Root: $ModelsRoot ($ModelsSource)" -ForegroundColor DarkGray
+# Prioritaet C: Externe VoiceOverApp-Installationen
+$SearchRoots = @("$env:USERPROFILE\Downloads", "$env:USERPROFILE\Documents", "$env:USERPROFILE\Desktop")
+$ParentOfRepo = Split-Path $RepoRoot -Parent
+if ($ParentOfRepo -and $ParentOfRepo -notin $SearchRoots) { $SearchRoots += $ParentOfRepo }
+
+foreach ($searchDir in $SearchRoots) {
+    if (-not (Test-Path $searchDir)) { continue }
+    $candidates = Get-ChildItem -Path "$searchDir\VoiceOverApp*" -Directory -ErrorAction SilentlyContinue |
+                  Where-Object { $_.FullName -ne $RepoRoot }
+    foreach ($cand in $candidates) {
+        $modelsDir = Join-Path $cand.FullName "models"
+        if ((Test-Path $modelsDir) -and ($modelsDir -notin $AllModelsRoots)) {
+            $AllModelsRoots += $modelsDir
+            Write-Host "  [OK] External: $modelsDir" -ForegroundColor Green
+        }
+    }
+}
+
+$ModelsRoot = $null
+if ($AllModelsRoots.Count -gt 0) { $ModelsRoot = $AllModelsRoots[0] }
+else {
+    $ModelsRoot = Join-Path $ProjectRoot "models"
+    $AllModelsRoots += $ModelsRoot
+}
+
+Write-Host "  Primary Root: $ModelsRoot" -ForegroundColor Green
+Write-Host "  Total Roots:  $($AllModelsRoots.Count)" -ForegroundColor Green
 
 # ------------------------------------------------------------
 # Runtime-Reference-Discovery
@@ -230,6 +241,7 @@ if ($RuntimeRef) {
 # Environment setzen
 $env:VOICEOVER_ROOT = $ProjectRoot
 $env:VOICEOVER_MODELS_DIR = $ModelsRoot
+$env:VOICEOVER_MODELS_ROOTS = ($AllModelsRoots -join [IO.Path]::PathSeparator)
 if ($RuntimeRef) {
     $env:VOICEOVER_RUNTIME_REF = $RuntimeRef
     $env:VOICEOVER_REFS_DIR = Split-Path $RuntimeRef -Parent
