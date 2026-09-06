@@ -49,13 +49,39 @@ def load_production() -> dict:
     return data
 
 
+def _resolve_reference_path(production: dict) -> Path:
+    """Ermittelt den Pfad zur VD-E-Referenz.
+    
+    Priorität:
+    1. VOICEOVER_RUNTIME_REF Environment-Variable (explizit gesetzt vom Runner)
+    2. reference_path aus production.json Config
+    3. Default: cache/voice_refs/VD-E.wav
+    """
+    import os
+    
+    # 1. Environment Variable hat höchste Priorität
+    env_ref = os.environ.get("VOICEOVER_RUNTIME_REF")
+    if env_ref:
+        env_path = Path(env_ref)
+        if env_path.is_file():
+            log.info(f"Verwende VD-E-Referenz aus VOICEOVER_RUNTIME_REF: {env_path}")
+            return env_path
+        else:
+            log.warning(f"VOICEOVER_RUNTIME_REF gesetzt aber Datei nicht gefunden: {env_path}")
+    
+    # 2. Config-Pfad
+    rel = str(production.get("reference_path", "cache/voice_refs/VD-E.wav"))
+    if Path(rel).is_absolute():
+        return Path(rel)
+    return paths.ROOT / rel
+
+
 def check_identity(production: dict | None = None) -> IdentityStatus:
     """Prüft die VD-E-Referenz. Gibt Status zurück; verändert NICHTS."""
     production = production or load_production()
     expected = str(production.get("reference_sha256", "") or "").upper()
-    rel = str(production.get("reference_path",
-                             "cache/voice_refs/VD-E.wav"))
-    ref = (paths.ROOT / rel) if not Path(rel).is_absolute() else Path(rel)
+    ref = _resolve_reference_path(production)
+    
     if not expected:
         return IdentityStatus(False, "no_config", expected, "", str(ref),
                               "config/production.json enthält keinen "
