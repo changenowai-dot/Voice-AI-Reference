@@ -137,36 +137,105 @@ def check_models() -> dict:
     """Qwen3-TTS-Modelle müssen vorhanden sein."""
     from app import paths
     paths.ensure_directories()
-    models = {
-        "Qwen3-TTS-12Hz-1.7B-CustomVoice": False,
-        "Qwen3-TTS-12Hz-1.7B-Base": False,
-        "Qwen3-TTS-Tokenizer-12Hz": False,
+    # Map: display_name -> list of possible HF cache names
+    models_to_check = {
+        "Qwen3-TTS-12Hz-1.7B-CustomVoice": [
+            "models--Qwen--Qwen3-TTS-12Hz-1.7B-CustomVoice",
+            "models--Qwen3-TTS-12Hz-1.7B-CustomVoice",
+        ],
+        "Qwen3-TTS-12Hz-1.7B-Base": [
+            "models--Qwen--Qwen3-TTS-12Hz-1.7B-Base",
+            "models--Qwen3-TTS-12Hz-1.7B-Base",
+        ],
+        "Qwen3-TTS-Tokenizer-12Hz": [
+            "models--Qwen--Qwen3-TTS-Tokenizer-12Hz",
+            "models--Qwen3-TTS-Tokenizer-12Hz",
+        ],
     }
-    for repo_name in models:
-        model_dir = paths.MODELS_DIR / repo_name
-        hf_dir = paths.MODELS_DIR / "hf" / "hub" / f"models--{repo_name.replace('/', '--')}"
-        models[repo_name] = model_dir.exists() or hf_dir.exists()
-    all_present = all(models.values())
+    results = {}
+    for display_name, hf_names in models_to_check.items():
+        found = False
+        # Check direct path
+        direct = paths.MODELS_DIR / display_name
+        if direct.exists():
+            found = True
+        # Check HF cache variants
+        if not found:
+            for hf_name in hf_names:
+                hf_dir = paths.MODELS_DIR / "hf" / "hub" / hf_name
+                if hf_dir.exists():
+                    found = True
+                    break
+        results[display_name] = found
+    all_present = all(results.values())
+    models_root_src = os.environ.get("VOICEOVER_MODELS_DIR", str(paths.MODELS_DIR))
     return {
         "check": "Modelle",
         "required": "CustomVoice + Base + Tokenizer",
-        "actual": {k: ("[OK]" if v else "[FAIL] FEHLT") for k, v in models.items()},
+        "actual": {k: ("[OK]" if v else "[FAIL] FEHLT") for k, v in results.items()},
+        "models_root": models_root_src,
         "ok": all_present,
     }
 
 
 def check_voice_reference() -> dict:
     """Runtime Voice Reference muss existieren und Hash stimmen."""
+    import hashlib
+
     from app import paths
-    from app.security.identity_lock import check_identity
     paths.ensure_directories()
-    status = check_identity()
+
+    # Priorisierung: VOICEOVER_RUNTIME_REF > VOICEOVER_REFS_DIR > Default
+    runtime_ref = os.environ.get("VOICEOVER_RUNTIME_REF", "")
+    refs_dir = os.environ.get("VOICEOVER_REFS_DIR", str(paths.VOICE_REFS_DIR))
+
+    expected_sha = "B156C02A60A873AD95FC92390C4A136C85308B20188373CD734BEE5E5E5F2025"
+
+    # Determine reference file path
+    if runtime_ref and Path(runtime_ref).is_file():
+        ref_path = Path(runtime_ref)
+    else:
+        ref_path = Path(refs_dir) / "VD-E.wav"
+
+    ref_str = str(ref_path)
+
+    if not ref_path.exists():
+        return {
+            "check": "VD-E Runtime Reference",
+            "required": "VD-E.wav mit korrektem SHA-256",
+            "actual": "VD-E-Referenz fehlt: {}. VD-E ist deaktiviert. Keine Neuerzeugung (LOCKED).".format(ref_str),
+            "ref_path": ref_str,
+            "status_level": "missing_ref",
+            "ok": False,
+        }
+
+    # SHA-256 berechnen
+    h = hashlib.sha256()
+    with open(ref_path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    actual_sha = h.hexdigest().upper()
+
+    if actual_sha != expected_sha:
+        return {
+            "check": "VD-E Runtime Reference",
+            "required": "VD-E.wav mit korrektem SHA-256",
+            "actual": "SHA-256 Mismatch: erwartet {}, gefunden {}".format(expected_sha[:16], actual_sha[:16]),
+            "ref_path": ref_str,
+            "expected_sha256": expected_sha,
+            "actual_sha256": actual_sha,
+            "status_level": "hash_mismatch",
+            "ok": False,
+        }
+
     return {
         "check": "VD-E Runtime Reference",
-        "required": "cache/voice_refs/VD-E.wav mit korrektem SHA-256",
-        "actual": status.message,
-        "status_level": status.level,
-        "ok": status.ok,
+        "required": "VD-E.wav mit korrektem SHA-256",
+        "actual": "VD-E-Referenz identitaetgesichert (SHA-256 OK)",
+        "ref_path": ref_str,
+        "sha256": actual_sha,
+        "status_level": "ok",
+        "ok": True,
     }
 
 
@@ -256,6 +325,10 @@ def main():
                 print(f"         {k}: {v}")
         else:
             print(f"         Vorhanden: {actual}")
+        # Additional info fields
+        for info_key in ("models_root", "ref_path", "sha256", "expected_sha256", "actual_sha256"):
+            if info_key in check:
+                print(f"         {info_key}: {check[info_key]}")
         print()
         results[check["check"]] = check
         if not check["ok"]:

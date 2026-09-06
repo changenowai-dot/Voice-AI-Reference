@@ -56,27 +56,186 @@ Write-Host ""
 New-Item -ItemType Directory -Force -Path $ResultsDir | Out-Null
 
 # ============================================================
-# Python pruefen
+# DISCOVERY: Python, Modelle, Runtime Reference
 # ============================================================
+Write-Host "============================================================" -ForegroundColor Yellow
+Write-Host "DISCOVERY: Lokale Ressourcen suchen..." -ForegroundColor Yellow
+Write-Host "============================================================" -ForegroundColor Yellow
+Write-Host ""
+
+# ------------------------------------------------------------
+# Python-Discovery (gleiche Logik wie run_phase4_target.ps1)
+# ------------------------------------------------------------
+Write-Host "[1/3] Python-Discovery..." -ForegroundColor Cyan
+
 $PythonCmd = $null
-$pythonCandidates = @("python", "python3", "py")
-foreach ($py in $pythonCandidates) {
-    try {
-        $ver = & $py --version 2>&1
-        if ($LASTEXITCODE -eq 0 -and $ver -match "Python 3\.") {
-            $PythonCmd = $py
-            break
-        }
+$PythonSource = ""
+
+# Prioritaet A: Explizite Environment-Variable
+if ($env:VOICEOVER_PYTHON) {
+    if (Test-Path $env:VOICEOVER_PYTHON) {
+        $PythonCmd = $env:VOICEOVER_PYTHON
+        $PythonSource = "VOICEOVER_PYTHON (explicit)"
+        Write-Host "  [OK] Explicit: $PythonCmd" -ForegroundColor Green
     }
-    catch {
-        # Weiter probieren
+}
+
+# Prioritaet B: Repository .venv
+if (-not $PythonCmd) {
+    $RepoVenv = Join-Path $RepoRoot ".venv\Scripts\python.exe"
+    if (Test-Path $RepoVenv) {
+        $PythonCmd = $RepoVenv
+        $PythonSource = "Repository .venv"
+        Write-Host "  [OK] Repository: $PythonCmd" -ForegroundColor Green
+    }
+}
+
+# Prioritaet C: Bekannte VoiceOverApp-Runtimes
+if (-not $PythonCmd) {
+    $SearchPatterns = @(
+        "$env:USERPROFILE\Downloads\VoiceOverApp*",
+        "$env:USERPROFILE\Documents\VoiceOverApp*",
+        "$env:USERPROFILE\Desktop\VoiceOverApp*",
+        (Join-Path (Split-Path $RepoRoot -Parent) "VoiceOverApp*")
+    )
+    
+    foreach ($pattern in $SearchPatterns) {
+        $candidates = Get-ChildItem -Path $pattern -Directory -ErrorAction SilentlyContinue | 
+                      Where-Object { $_.FullName -ne $RepoRoot }
+        foreach ($cand in $candidates) {
+            $venvPy = Join-Path $cand.FullName ".venv\Scripts\python.exe"
+            if (Test-Path $venvPy) {
+                try {
+                    $torchCheck = & $venvPy -c "import torch; print('OK' if torch.cuda.is_available() else 'NO_CUDA')" 2>&1
+                    if ($torchCheck -eq "OK") {
+                        $PythonCmd = $venvPy
+                        $PythonSource = "External: $($cand.FullName)"
+                        Write-Host "  [OK] External: $PythonCmd" -ForegroundColor Green
+                        break
+                    }
+                } catch { }
+            }
+        }
+        if ($PythonCmd) { break }
+    }
+}
+
+# Prioritaet D: Systemweites Python
+if (-not $PythonCmd) {
+    $pythonCandidates = @("python", "python3", "py")
+    foreach ($py in $pythonCandidates) {
+        try {
+            $ver = & $py --version 2>&1
+            if ($LASTEXITCODE -eq 0 -and $ver -match "Python 3\.") {
+                $PythonCmd = $py
+                $PythonSource = "System Python"
+                Write-Host "  [WARN] System Python: $ver" -ForegroundColor DarkYellow
+                break
+            }
+        } catch { }
     }
 }
 
 if (-not $PythonCmd) {
-    Write-Host "FEHLER: Python 3 nicht gefunden." -ForegroundColor Red
+    Write-Host "  [FAIL] Python nicht gefunden." -ForegroundColor Red
     exit 1
 }
+
+Write-Host "  Python: $PythonCmd ($PythonSource)" -ForegroundColor Green
+
+# ------------------------------------------------------------
+# Model-Root-Discovery
+# ------------------------------------------------------------
+Write-Host "[2/3] Model-Root-Discovery..." -ForegroundColor Cyan
+
+$ModelsRoot = $null
+$ModelsSource = ""
+
+if ($env:VOICEOVER_MODELS_DIR -and (Test-Path $env:VOICEOVER_MODELS_DIR)) {
+    $ModelsRoot = $env:VOICEOVER_MODELS_DIR
+    $ModelsSource = "VOICEOVER_MODELS_DIR (explicit)"
+    Write-Host "  [OK] Explicit: $ModelsRoot" -ForegroundColor Green
+}
+
+if (-not $ModelsRoot) {
+    $SearchPatterns = @(
+        "$env:USERPROFILE\Downloads\VoiceOverApp*",
+        "$env:USERPROFILE\Documents\VoiceOverApp*",
+        (Join-Path (Split-Path $RepoRoot -Parent) "VoiceOverApp*")
+    )
+    foreach ($pattern in $SearchPatterns) {
+        $candidates = Get-ChildItem -Path $pattern -Directory -ErrorAction SilentlyContinue | 
+                      Where-Object { $_.FullName -ne $RepoRoot }
+        foreach ($cand in $candidates) {
+            $modelsDir = Join-Path $cand.FullName "models"
+            if (Test-Path $modelsDir) {
+                $ModelsRoot = $modelsDir
+                $ModelsSource = "External: $($cand.FullName)"
+                Write-Host "  [OK] External: $ModelsRoot" -ForegroundColor Green
+                break
+            }
+        }
+        if ($ModelsRoot) { break }
+    }
+}
+
+if (-not $ModelsRoot) {
+    $ModelsRoot = Join-Path $ProjectRoot "models"
+    $ModelsSource = "Repository project\models"
+}
+
+Write-Host "  Models Root: $ModelsRoot ($ModelsSource)" -ForegroundColor DarkGray
+
+# ------------------------------------------------------------
+# Runtime-Reference-Discovery
+# ------------------------------------------------------------
+Write-Host "[3/3] Runtime-Reference-Discovery..." -ForegroundColor Cyan
+
+$ExpectedHash = "B156C02A60A873AD95FC92390C4A136C85308B20188373CD734BEE5E5E5F2025"
+$RuntimeRef = $null
+
+if ($env:VOICEOVER_RUNTIME_REF -and (Test-Path $env:VOICEOVER_RUNTIME_REF)) {
+    $RuntimeRef = $env:VOICEOVER_RUNTIME_REF
+    Write-Host "  [OK] Explicit: $RuntimeRef" -ForegroundColor Green
+}
+
+if (-not $RuntimeRef) {
+    $SearchPatterns = @(
+        "$env:USERPROFILE\Downloads\VoiceOverApp*",
+        "$env:USERPROFILE\Documents\VoiceOverApp*",
+        (Join-Path (Split-Path $RepoRoot -Parent) "VoiceOverApp*")
+    )
+    foreach ($pattern in $SearchPatterns) {
+        $candidates = Get-ChildItem -Path $pattern -Directory -ErrorAction SilentlyContinue | 
+                      Where-Object { $_.FullName -ne $RepoRoot }
+        foreach ($cand in $candidates) {
+            $refPath = Join-Path $cand.FullName "cache\voice_refs\VD-E.wav"
+            if (Test-Path $refPath) {
+                $hash = (Get-FileHash $refPath -Algorithm SHA256).Hash.ToUpper()
+                if ($hash -eq $ExpectedHash) {
+                    $RuntimeRef = $refPath
+                    Write-Host "  [OK] External: $RuntimeRef" -ForegroundColor Green
+                    break
+                }
+            }
+        }
+        if ($RuntimeRef) { break }
+    }
+}
+
+if ($RuntimeRef) {
+    Write-Host "  Runtime Ref: $RuntimeRef" -ForegroundColor DarkGray
+}
+
+# Environment setzen
+$env:VOICEOVER_ROOT = $ProjectRoot
+$env:VOICEOVER_MODELS_DIR = $ModelsRoot
+if ($RuntimeRef) {
+    $env:VOICEOVER_RUNTIME_REF = $RuntimeRef
+    $env:VOICEOVER_REFS_DIR = Split-Path $RuntimeRef -Parent
+}
+
+Write-Host ""
 
 # ============================================================
 # Golden Reference Verify

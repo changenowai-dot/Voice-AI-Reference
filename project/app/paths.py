@@ -22,7 +22,7 @@ else:
 INPUT_DIR = ROOT / "input"
 OUTPUT_DIR = ROOT / "output"
 CACHE_DIR = ROOT / "cache"
-MODELS_DIR = ROOT / "models"
+MODELS_DIR = Path(os.environ.get("VOICEOVER_MODELS_DIR") or str(ROOT / "models"))
 CONFIG_DIR = ROOT / "config"
 PRONUNCIATION_DIR = ROOT / "pronunciation"
 LOGS_DIR = ROOT / "logs"
@@ -33,7 +33,7 @@ CACHE_AUDIO_DIR = CACHE_DIR / "audio"
 CACHE_META_DIR = CACHE_DIR / "metadata"
 CACHE_SEGMENT_DIR = CACHE_DIR / "segments"
 CACHE_PROJECT_DIR = CACHE_DIR / "projects"
-VOICE_REFS_DIR = CACHE_DIR / "voice_refs"
+VOICE_REFS_DIR = Path(os.environ.get("VOICEOVER_REFS_DIR") or str(CACHE_DIR / "voice_refs"))
 
 CONFIG_FILE = CONFIG_DIR / "config.json"
 PRESETS_FILE = CONFIG_DIR / "presets.json"
