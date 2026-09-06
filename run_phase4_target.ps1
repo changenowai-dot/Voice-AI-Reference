@@ -396,8 +396,18 @@ if (-not (Test-Path $EnvCheckScript)) {
 if (-not $SkipEnvCheck) {
     $EnvOutput = Join-Path $ResultsDir "env_check_output.txt"
     
-    & $PythonCmd $EnvCheckScript *> $EnvOutput
-    $EnvExitCode = $LASTEXITCODE
+    # Temporarily allow stderr warnings for robustness
+    $prevEAP = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    
+    try {
+        $output = & $PythonCmd $EnvCheckScript 2>&1
+        $EnvExitCode = $LASTEXITCODE
+        $output | Out-File -FilePath $EnvOutput -Encoding UTF8
+    }
+    finally {
+        $ErrorActionPreference = $prevEAP
+    }
     
     if ($EnvExitCode -ne 0) {
         Write-Host ""
@@ -405,7 +415,9 @@ if (-not $SkipEnvCheck) {
         Write-Host "Bitte Output pruefen: $EnvOutput" -ForegroundColor Red
         Write-Host ""
         Write-Host "Letzte Zeilen:" -ForegroundColor Yellow
-        Get-Content $EnvOutput -Tail 30
+        if (Test-Path $EnvOutput) {
+            Get-Content $EnvOutput -Tail 30
+        }
         Write-Host ""
         Write-Host "Alle Voraussetzungen muessen erfuellt sein." -ForegroundColor Red
         exit 1
@@ -622,11 +634,22 @@ if (-not $SkipBaseline) {
     
     # Change to project directory
     Push-Location $ProjectRoot
+    
+    # Temporarily allow stderr warnings (Transformers emits pad_token_id warnings)
+    $prevEAP = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    
     try {
-        & $PythonCmd $BenchmarkScript *> $BenchmarkOutput
+        # Capture both stdout and stderr, then write to file
+        $output = & $PythonCmd $BenchmarkScript 2>&1
         $BenchmarkExitCode = $LASTEXITCODE
+        
+        # Write output to file (combines stdout + stderr)
+        $output | Out-File -FilePath $BenchmarkOutput -Encoding UTF8
     }
     finally {
+        # Restore error preference
+        $ErrorActionPreference = $prevEAP
         Pop-Location
     }
     
@@ -636,7 +659,9 @@ if (-not $SkipBaseline) {
         Write-Host "Bitte Output pruefen: $BenchmarkOutput" -ForegroundColor Red
         Write-Host ""
         Write-Host "Letzte Zeilen:" -ForegroundColor Yellow
-        Get-Content $BenchmarkOutput -Tail 30
+        if (Test-Path $BenchmarkOutput) {
+            Get-Content $BenchmarkOutput -Tail 30
+        }
         exit 1
     }
     
