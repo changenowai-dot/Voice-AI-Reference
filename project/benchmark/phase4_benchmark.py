@@ -465,9 +465,9 @@ def main():
         print("!" * 70)
         sys.exit(1)
 
-    print(f"GPU: {hw.device_name if hasattr(hw, 'device_name') else 'unbekannt'}")
-    print(f"VRAM: {hw.vram_gb:.1f} GB")
-    print(f"RAM: {hw.ram_gb:.1f} GB")
+    print(f"GPU: {hw.gpu_name if hasattr(hw, 'gpu_name') else 'unbekannt'}")
+    print(f"VRAM: {hw.gpu_vram_total_gb:.1f} GB")
+    print(f"RAM: {hw.ram_total_gb:.1f} GB")
 
     # Voice Reference prüfen
     from app.security.identity_lock import check_identity
@@ -608,8 +608,8 @@ def main():
         "timestamp": datetime.now().isoformat(),
         "hardware": {
             "mode": hw.mode,
-            "vram_gb": hw.vram_gb,
-            "ram_gb": hw.ram_gb,
+            "vram_gb": hw.gpu_vram_total_gb,
+            "ram_gb": hw.ram_total_gb,
             "device_name": getattr(hw, "device_name", "unknown"),
         },
         "voice": {
@@ -657,8 +657,8 @@ def main():
 
         f.write("## 1. Hardware\n\n")
         f.write(f"- Modus: {hw.mode}\n")
-        f.write(f"- VRAM: {hw.vram_gb} GB\n")
-        f.write(f"- RAM: {hw.ram_gb} GB\n\n")
+        f.write(f"- VRAM: {hw.gpu_vram_total_gb} GB\n")
+        f.write(f"- RAM: {hw.ram_total_gb} GB\n\n")
 
         f.write("## 2. Modell & Voice\n\n")
         f.write("- Voice: VD-E (LOCKED)\n")

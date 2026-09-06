@@ -239,8 +239,8 @@ def main():
         print("Dieses Skript muss auf der Zielhardware (RTX 5060) ausgeführt werden.")
         sys.exit(1)
 
-    print(f"VRAM: {hw.vram_gb:.1f} GB")
-    print(f"RAM: {hw.ram_gb:.1f} GB")
+    print(f"VRAM: {hw.gpu_vram_total_gb:.1f} GB")
+    print(f"RAM: {hw.ram_total_gb:.1f} GB")
 
     # Engine laden
     print("\nLade Qwen3-TTS-Engine...")
@@ -366,7 +366,7 @@ def main():
     with open(report_path, "w", encoding="utf-8") as f:
         f.write("# Phase 3: Real Audio Baseline + Segmentation A/B Study\n\n")
         f.write(f"**Datum:** {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
-        f.write(f"**Hardware:** {hw.mode}, VRAM {hw.vram_gb:.1f} GB, RAM {hw.ram_gb:.1f} GB\n\n")
+        f.write(f"**Hardware:** {hw.mode}, VRAM {hw.gpu_vram_total_gb:.1f} GB, RAM {hw.ram_total_gb:.1f} GB\n\n")
 
         f.write("## 1. Technische Baseline\n\n")
         f.write(f"- Voice: VD-E (LOCKED)\n")
@@ -435,8 +435,8 @@ def main():
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
         "hardware": {
             "mode": hw.mode,
-            "vram_gb": hw.vram_gb,
-            "ram_gb": hw.ram_gb,
+            "vram_gb": hw.gpu_vram_total_gb,
+            "ram_gb": hw.ram_total_gb,
         },
         "baseline": {
             "metrics": baseline_metrics,
