@@ -85,13 +85,17 @@ Log "pip aktualisieren ..."
 
 # ------------------------------------------------------- 3) PyTorch/CUDA --
 $needTorch = $true
+$prevEAP = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
 try {
     $hasTorch = & $Vpy -c "import torch; print(torch.__version__)" 2>$null
-    if ($hasTorch) {
+    $torchCheckExit = $LASTEXITCODE
+    if ($torchCheckExit -eq 0 -and $hasTorch) {
         $needTorch = $false
         Log "PyTorch bereits installiert: $hasTorch"
     }
 } catch {}
+$ErrorActionPreference = $prevEAP
 
 function Has-NvidiaGPU {
     try { nvidia-smi *> $null; return ($LASTEXITCODE -eq 0) }
@@ -112,7 +116,15 @@ if ($needTorch) {
         & $Vpy -m pip install torch torchaudio --quiet
     }
 }
+$prevEAP = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
 $t = & $Vpy -c "import torch;print(torch.__version__, torch.version.cuda)" 2>$null
+$torchVerifyExit = $LASTEXITCODE
+$ErrorActionPreference = $prevEAP
+if ($torchVerifyExit -ne 0) {
+    Log "PyTorch-Installation verifizierung fehlgeschlagen (Exit-Code: $torchVerifyExit)" "Red"
+    exit $torchVerifyExit
+}
 Log "PyTorch aktiv: $t"
 
 # --------------------------------------------------- 4) Pakete (app) ----
@@ -163,8 +175,23 @@ if (-not $SkipModels) {
 
 # ------------------------------------------------ 7) Abschluss-Checks --
 Log "Schreibe versions.json + environment.json ..."
-& $Vpy app\main.py --info | Add-Content -Path $InstallLog -Encoding UTF8
-& $Vpy -c "import json,torch,transformers,platform;d={'created':__import__('datetime').datetime.now().isoformat(),'python':platform.python_version(),'torch':torch.__version__,'torch_cuda':torch.version.cuda,'transformers':transformers.__version__,'app':'2.1.0'};json.dump(d,open('versions.json','w'),indent=2)"
+$prevEAP = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
+& $Vpy app\main.py --info 2>$null | Add-Content -Path $InstallLog -Encoding UTF8
+$infoExit = $LASTEXITCODE
+$ErrorActionPreference = $prevEAP
+if ($infoExit -ne 0) {
+    Log "WARNUNG: app info-Check fehlgeschlagen (Exit-Code: $infoExit)" "Yellow"
+}
+
+$prevEAP = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
+& $Vpy -c "import json,torch,transformers,platform;d={'created':__import__('datetime').datetime.now().isoformat(),'python':platform.python_version(),'torch':torch.__version__,'torch_cuda':torch.version.cuda,'transformers':transformers.__version__,'app':'2.1.0'};json.dump(d,open('versions.json','w'),indent=2)" 2>$null
+$versionsExit = $LASTEXITCODE
+$ErrorActionPreference = $prevEAP
+if ($versionsExit -ne 0) {
+    Log "WARNUNG: versions.json konnte nicht erstellt werden (Exit-Code: $versionsExit)" "Yellow"
+}
 
 New-Item -ItemType File -Path ".installed" -Force | Out-Null
 Log "=== Installation abgeschlossen ===" "Green"

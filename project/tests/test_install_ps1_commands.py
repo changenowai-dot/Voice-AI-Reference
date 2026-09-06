@@ -223,5 +223,151 @@ class InstallPs1SyntaxTest(unittest.TestCase):
         self.assertIn("requirements.txt", self.source)
 
 
+class InstallPs1StderrHandlingTest(unittest.TestCase):
+    """Validate that Python verification commands handle stderr correctly.
+
+    PowerShell 5.1 with $ErrorActionPreference = 'Stop' treats native command
+    stderr output as a terminating NativeCommandError even when the process
+    exit code is 0. Torch frequently emits UserWarning to stderr (e.g. about
+    numpy) that must NOT abort the installer.
+
+    The required pattern is:
+        $prevEAP = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        $output = & $Vpy -c "..." 2>$null
+        $exitCode = $LASTEXITCODE
+        $ErrorActionPreference = $prevEAP
+        if ($exitCode -ne 0) { ... fail ... }
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.source = INSTALL_PS1.read_text(encoding="utf-8")
+        cls.lines = cls.source.splitlines()
+
+    def test_torch_import_check_uses_eap_switching(self):
+        """The torch import check must use ErrorActionPreference switching."""
+        # Find lines that import torch
+        torch_import_lines = []
+        for i, line in enumerate(self.lines, 1):
+            if re.search(r'import\s+torch', line) and not line.strip().startswith("#"):
+                torch_import_lines.append((i, line))
+
+        self.assertTrue(len(torch_import_lines) > 0, "No torch import lines found")
+
+        for lineno, line in torch_import_lines:
+            # Look in a window of 5 lines before for $ErrorActionPreference = 'Continue'
+            context_start = max(0, lineno - 6)
+            context_end = min(len(self.lines), lineno + 3)
+            context = "\n".join(self.lines[context_start:context_end])
+
+            has_eap_switch = (
+                "ErrorActionPreference = 'Continue'" in context or
+                'ErrorActionPreference = "Continue"' in context
+            )
+            self.assertTrue(
+                has_eap_switch,
+                f"Torch import at line {lineno} must be wrapped with "
+                f"$ErrorActionPreference = 'Continue' to handle stderr warnings.\n"
+                f"Context:\n{context}"
+            )
+
+    def test_lastexitcode_checked_after_torch_verify(self):
+        """After torch verification, $LASTEXITCODE must be checked."""
+        # Find the torch version verification line
+        torch_verify_pattern = re.compile(
+            r'import\s+torch.*torch\.__version__.*torch\.version\.cuda'
+        )
+
+        found_verify = False
+        for i, line in enumerate(self.lines, 1):
+            if torch_verify_pattern.search(line) and not line.strip().startswith("#"):
+                found_verify = True
+                # Look ahead 5 lines for LASTEXITCODE check
+                context_end = min(len(self.lines), i + 5)
+                context = "\n".join(self.lines[i:context_end])
+                self.assertIn(
+                    "LASTEXITCODE", context,
+                    f"Torch verification at line {i} must check $LASTEXITCODE "
+                    f"to detect genuine failures."
+                )
+
+        self.assertTrue(found_verify, "No torch version verification line found")
+
+    def test_prev_eap_pattern_used(self):
+        """The $prevEAP save/restore pattern must be used for EAP switching."""
+        save_pattern = re.compile(r'\$prevEAP\s*=\s*\$ErrorActionPreference')
+        restore_pattern = re.compile(r'\$ErrorActionPreference\s*=\s*\$prevEAP')
+
+        saves = save_pattern.findall(self.source)
+        restores = restore_pattern.findall(self.source)
+
+        self.assertGreaterEqual(
+            len(saves), 3,
+            "Expected at least 3 instances of $prevEAP save pattern "
+            "(torch check, torch verify, versions.json)"
+        )
+        self.assertEqual(
+            len(saves), len(restores),
+            f"Mismatched $prevEAP save/restore: {len(saves)} saves vs {len(restores)} restores"
+        )
+
+    def test_pip_install_failure_still_fails(self):
+        """pip install failures must still cause script termination."""
+        # Find the FIRST pip install -r requirements.txt line (the primary one)
+        for i, line in enumerate(self.lines, 1):
+            if re.search(r'&\s+\$Vpy\s+-m\s+pip\s+install\s+-r\s+requirements\.txt\s+--quiet', line):
+                # Look ahead 5 lines for LASTEXITCODE check
+                context_end = min(len(self.lines), i + 5)
+                context = "\n".join(self.lines[i:context_end])
+                self.assertIn(
+                    "LASTEXITCODE", context,
+                    f"pip install at line {i} must check $LASTEXITCODE"
+                )
+                has_fail = "exit" in context.lower() or "throw" in context.lower()
+                self.assertTrue(
+                    has_fail,
+                    f"pip install at line {i} must fail on non-zero exit code"
+                )
+                return
+
+        self.fail("No primary pip install -r requirements.txt --quiet found")
+
+    def test_nonzero_python_exit_causes_failure(self):
+        """A genuine non-zero Python exit code must cause script failure."""
+        torch_verify_pattern = re.compile(r'torchVerifyExit')
+        self.assertTrue(
+            torch_verify_pattern.search(self.source),
+            "Must capture torch verification exit code"
+        )
+
+        failure_pattern = re.compile(r'if\s*\(\s*\$torchVerifyExit\s+-ne\s+0\s*\)')
+        self.assertTrue(
+            failure_pattern.search(self.source),
+            "Must check if torch verification exit code is non-zero and fail"
+        )
+
+    def test_error_action_preference_restored_to_stop(self):
+        """After stderr-tolerant sections, EAP must be restored to Stop."""
+        init_pattern = re.compile(r'^\$ErrorActionPreference\s*=\s*"Stop"', re.MULTILINE)
+        self.assertTrue(
+            init_pattern.search(self.source),
+            "$ErrorActionPreference must initially be 'Stop'"
+        )
+
+        last_eap_assignment = None
+        for i, line in enumerate(self.lines):
+            if re.search(r'\$ErrorActionPreference\s*=', line):
+                last_eap_assignment = (i + 1, line.strip())
+
+        if last_eap_assignment:
+            lineno, line = last_eap_assignment
+            if "Continue" in line:
+                self.assertIn(
+                    "$prevEAP", line,
+                    f"Last EAP assignment at line {lineno} should restore via $prevEAP"
+                )
+
+
 if __name__ == "__main__":
     unittest.main()
