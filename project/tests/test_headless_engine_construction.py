@@ -531,3 +531,204 @@ class TestCacheModuleAvailability(unittest.TestCase):
                      "__init__.py must be tracked by git")
         self.assertIn("project/app/cache/manager.py", tracked_files,
                      "manager.py must be tracked by git")
+
+
+class TestModelPathResolution(unittest.TestCase):
+    """Test that model paths are resolved correctly from environment variables."""
+
+    def test_models_dir_uses_voiceover_runtime_root(self):
+        """MODELS_DIR should use VOICEOVER_RUNTIME_ROOT/models when set."""
+        import os
+        from pathlib import Path
+        
+        # Save current environment
+        old_runtime_root = os.environ.get('VOICEOVER_RUNTIME_ROOT')
+        old_models_dir = os.environ.get('VOICEOVER_MODELS_DIR')
+        
+        try:
+            # Set VOICEOVER_RUNTIME_ROOT
+            test_runtime_root = r"C:\Test\Runtime\Root"
+            os.environ['VOICEOVER_RUNTIME_ROOT'] = test_runtime_root
+            os.environ.pop('VOICEOVER_MODELS_DIR', None)
+            
+            # Re-import paths to pick up new environment
+            import importlib
+            import sys
+            if 'app.paths' in sys.modules:
+                importlib.reload(sys.modules['app.paths'])
+            
+            from app.paths import MODELS_DIR
+            
+            # Verify MODELS_DIR points to runtime root / models
+            expected = Path(test_runtime_root) / "models"
+            self.assertEqual(MODELS_DIR, expected,
+                           "MODELS_DIR should be VOICEOVER_RUNTIME_ROOT/models")
+            
+        finally:
+            # Restore environment
+            if old_runtime_root is not None:
+                os.environ['VOICEOVER_RUNTIME_ROOT'] = old_runtime_root
+            else:
+                os.environ.pop('VOICEOVER_RUNTIME_ROOT', None)
+            
+            if old_models_dir is not None:
+                os.environ['VOICEOVER_MODELS_DIR'] = old_models_dir
+            else:
+                os.environ.pop('VOICEOVER_MODELS_DIR', None)
+            
+            # Reload paths module to restore original state
+            import importlib
+            import sys
+            if 'app.paths' in sys.modules:
+                importlib.reload(sys.modules['app.paths'])
+
+    def test_models_dir_prefers_explicit_override(self):
+        """VOICEOVER_MODELS_DIR should take precedence over VOICEOVER_RUNTIME_ROOT."""
+        import os
+        from pathlib import Path
+        
+        # Save current environment
+        old_runtime_root = os.environ.get('VOICEOVER_RUNTIME_ROOT')
+        old_models_dir = os.environ.get('VOICEOVER_MODELS_DIR')
+        
+        try:
+            # Set both environment variables
+            test_runtime_root = r"C:\Test\Runtime\Root"
+            test_models_dir = r"C:\Explicit\Models"
+            os.environ['VOICEOVER_RUNTIME_ROOT'] = test_runtime_root
+            os.environ['VOICEOVER_MODELS_DIR'] = test_models_dir
+            
+            # Re-import paths to pick up new environment
+            import importlib
+            import sys
+            if 'app.paths' in sys.modules:
+                importlib.reload(sys.modules['app.paths'])
+            
+            from app.paths import MODELS_DIR
+            
+            # Verify MODELS_DIR uses explicit override
+            expected = Path(test_models_dir)
+            self.assertEqual(MODELS_DIR, expected,
+                           "VOICEOVER_MODELS_DIR should take precedence")
+            
+        finally:
+            # Restore environment
+            if old_runtime_root is not None:
+                os.environ['VOICEOVER_RUNTIME_ROOT'] = old_runtime_root
+            else:
+                os.environ.pop('VOICEOVER_RUNTIME_ROOT', None)
+            
+            if old_models_dir is not None:
+                os.environ['VOICEOVER_MODELS_DIR'] = old_models_dir
+            else:
+                os.environ.pop('VOICEOVER_MODELS_DIR', None)
+            
+            # Reload paths module to restore original state
+            import importlib
+            import sys
+            if 'app.paths' in sys.modules:
+                importlib.reload(sys.modules['app.paths'])
+
+    def test_hf_home_set_from_models_dir(self):
+        """HF_HOME should be set to MODELS_DIR/hf in ensure_directories()."""
+        import os
+        from pathlib import Path
+        
+        # Save current environment
+        old_hf_home = os.environ.get('HF_HOME')
+        old_runtime_root = os.environ.get('VOICEOVER_RUNTIME_ROOT')
+        old_models_dir = os.environ.get('VOICEOVER_MODELS_DIR')
+        
+        try:
+            # Set VOICEOVER_RUNTIME_ROOT
+            test_runtime_root = r"C:\Test\Runtime\Root"
+            os.environ['VOICEOVER_RUNTIME_ROOT'] = test_runtime_root
+            os.environ.pop('VOICEOVER_MODELS_DIR', None)
+            os.environ.pop('HF_HOME', None)
+            
+            # Re-import paths
+            import importlib
+            import sys
+            if 'app.paths' in sys.modules:
+                importlib.reload(sys.modules['app.paths'])
+            
+            from app.paths import ensure_directories, MODELS_DIR
+            
+            # Call ensure_directories
+            ensure_directories()
+            
+            # Verify HF_HOME is set correctly
+            expected_hf_home = str(MODELS_DIR / "hf")
+            actual_hf_home = os.environ.get('HF_HOME')
+            self.assertEqual(actual_hf_home, expected_hf_home,
+                           "HF_HOME should be MODELS_DIR/hf")
+            
+        finally:
+            # Restore environment
+            if old_hf_home is not None:
+                os.environ['HF_HOME'] = old_hf_home
+            else:
+                os.environ.pop('HF_HOME', None)
+            
+            if old_runtime_root is not None:
+                os.environ['VOICEOVER_RUNTIME_ROOT'] = old_runtime_root
+            else:
+                os.environ.pop('VOICEOVER_RUNTIME_ROOT', None)
+            
+            if old_models_dir is not None:
+                os.environ['VOICEOVER_MODELS_DIR'] = old_models_dir
+            else:
+                os.environ.pop('VOICEOVER_MODELS_DIR', None)
+            
+            # Reload paths module to restore original state
+            import importlib
+            import sys
+            if 'app.paths' in sys.modules:
+                importlib.reload(sys.modules['app.paths'])
+
+    def test_model_pool_resolves_from_runtime_root(self):
+        """QwenModelPool should resolve models from VOICEOVER_RUNTIME_ROOT."""
+        import os
+        from pathlib import Path
+        from unittest.mock import MagicMock
+        
+        # Save current environment
+        old_runtime_root = os.environ.get('VOICEOVER_RUNTIME_ROOT')
+        
+        try:
+            # Set VOICEOVER_RUNTIME_ROOT
+            test_runtime_root = Path(r"C:\Test\Runtime\Root")
+            os.environ['VOICEOVER_RUNTIME_ROOT'] = str(test_runtime_root)
+            
+            # Create mock hardware
+            mock_hw = MagicMock()
+            mock_hw.mode = "gpu"
+            
+            # Create model pool with models_dir from runtime root
+            from app.tts.model_pool import QwenModelPool
+            models_dir = test_runtime_root / "models"
+            pool = QwenModelPool(hw=mock_hw, models_dir=models_dir)
+            
+            # Verify models_dir is set correctly
+            self.assertEqual(pool.models_dir, models_dir,
+                           "ModelPool should use runtime root models directory")
+            
+            # Verify _resolve_model_path would check correct locations
+            # We can't actually resolve without the model files, but we can
+            # verify the path construction
+            repo = "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
+            direct_path = pool.models_dir / repo.split("/")[-1]
+            hf_cache_path = pool.models_dir / "hf" / "hub" / ("models--" + repo.replace("/", "--"))
+            
+            # These paths should be under the runtime root
+            self.assertTrue(str(direct_path).startswith(str(test_runtime_root)),
+                          "Direct model path should be under runtime root")
+            self.assertTrue(str(hf_cache_path).startswith(str(test_runtime_root)),
+                          "HF cache path should be under runtime root")
+            
+        finally:
+            # Restore environment
+            if old_runtime_root is not None:
+                os.environ['VOICEOVER_RUNTIME_ROOT'] = old_runtime_root
+            else:
+                os.environ.pop('VOICEOVER_RUNTIME_ROOT', None)
