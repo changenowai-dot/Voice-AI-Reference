@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 from typing import Any
 
 from app.config import paths
@@ -45,9 +45,46 @@ class QwenModelPool:
                 resolved = candidates[0]
                 return str(resolved)
 
+        # Also check HF_HOME cache (standard HuggingFace cache location)
+        import os
+        hf_home = os.environ.get("HF_HOME")
+        if hf_home:
+            hf_hub = Path(hf_home) / "hub"
+            hf_cache_root = hf_hub / ("models--" + repo.replace("/", "--"))
+            hf_snapshots = hf_cache_root / "snapshots"
+            if hf_snapshots.is_dir():
+                hf_candidates = []
+                for d in hf_snapshots.iterdir():
+                    if d.is_dir() and (d / "model.safetensors").is_file():
+                        hf_candidates.append(d)
+                if hf_candidates:
+                    hf_candidates.sort(
+                        key=lambda p: (p / "model.safetensors").stat().st_size,
+                        reverse=True
+                    )
+                    return str(hf_candidates[0])
+
+        # Check default HF cache (~/.cache/huggingface/hub)
+        default_hf_hub = Path.home() / ".cache" / "huggingface" / "hub"
+        default_cache_root = default_hf_hub / ("models--" + repo.replace("/", "--"))
+        default_snapshots = default_cache_root / "snapshots"
+        if default_snapshots.is_dir():
+            default_candidates = []
+            for d in default_snapshots.iterdir():
+                if d.is_dir() and (d / "model.safetensors").is_file():
+                    default_candidates.append(d)
+            if default_candidates:
+                default_candidates.sort(
+                    key=lambda p: (p / "model.safetensors").stat().st_size,
+                    reverse=True
+                )
+                return str(default_candidates[0])
+
         raise FileNotFoundError(
             f"Qwen model not found for {repo}. "
-            f"Checked direct path {direct} and HuggingFace cache {snapshots}"
+            f"Checked direct path {direct}, local HF cache {snapshots}, "
+            f"HF_HOME={os.environ.get('HF_HOME', 'not set')}, "
+            f"and default HF cache {default_snapshots}"
         )
 
     def get(self, name: str):

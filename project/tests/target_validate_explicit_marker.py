@@ -183,13 +183,25 @@ def run_tts_test(input_file, config, hw):
 
     print(f"[INFO] Runtime reference path: {runtime_ref_path}")
 
-    # Load engine with explicit runtime reference path
+    # Resolve models directory from VOICEOVER_RUNTIME_ROOT if set
+    # This allows the target validator to use models from the LAB runtime
+    # instead of the repository's empty project/models directory
+    runtime_root = os.environ.get("VOICEOVER_RUNTIME_ROOT")
+    if runtime_root:
+        models_dir = Path(runtime_root) / "models"
+        print(f"[INFO] Using models from runtime root: {models_dir}")
+    else:
+        models_dir = paths.MODELS_DIR
+        print(f"[INFO] Using models from repository: {models_dir}")
+
+    # Load engine with explicit runtime reference path and models directory
     # This ensures VoiceCloneEngine uses the same reference that identity validation verified
+    # and can find the Qwen models in the runtime environment
     engine = VoiceCloneEngine(
         hw=hw,
         candidate_id="VD-E",
         description="tief, ruhig, seriös – professioneller Long-Form-Narrator",
-        models_dir=paths.MODELS_DIR,
+        models_dir=models_dir,
         attn_implementation="sdpa",
         allow_design=False,  # LOCKED: VD-E darf NICHT neu designt werden
         reference_path=runtime_ref_path,  # Pass verified runtime reference
@@ -197,6 +209,7 @@ def run_tts_test(input_file, config, hw):
     engine.load()
     print(f"[OK] Engine loaded: VoiceCloneEngine (VD-E)")
     print(f"[OK] Using reference: {runtime_ref_path}")
+    print(f"[OK] Using models from: {models_dir}")
     
     print("\n" + "=" * 70)
     print("TTS SYNTHESIS")
