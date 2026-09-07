@@ -227,27 +227,52 @@ class VoiceCloneEngine(TTSEngine):
     def __init__(self, hw: HardwareInfo, candidate_id: str,
                  description: str, models_dir: Path | None = None,
                  attn_implementation: str | None = None,
-                 allow_design: bool = True):
+                 allow_design: bool = True,
+                 reference_path: Path | None = None):
         """allow_design=False (VD-E-Produktion, §12): die Referenzdatei
-        MUSS vorhanden sein – niemals neu designen/clonen."""
+        MUSS vorhanden sein – niemals neu designen/clonen.
+
+        reference_path: Optional explicit override for the reference WAV path.
+        If None, uses default paths.VOICE_REFS_DIR / f"{candidate_id}.wav".
+        Used by test harness to pass runtime reference (VOICEOVER_RUNTIME_REF).
+        """
+        log.debug("[DIAG-D.1] VoiceCloneEngine.__init__() entered")
+        
+        log.debug("[DIAG-F] Importing QwenModelPool")
         from .model_pool import QwenModelPool
+        log.debug("[DIAG-F] Importing QwenVoiceStudio")
         from .voice_studio import QwenVoiceStudio
+        
         self.hw = hw
         self.candidate_id = candidate_id
         self.description = description
         self.allow_design = allow_design
+        self.reference_path = reference_path  # Test harness override
+        
+        log.debug("[DIAG-F] Creating QwenModelPool (models_dir=%s)", models_dir)
         self.pool = QwenModelPool(hw, models_dir=models_dir,
                                   attn_implementation=attn_implementation)
+        log.debug("[DIAG-F] QwenModelPool created")
+        
+        log.debug("[DIAG-G] Creating QwenVoiceStudio")
         self.studio = QwenVoiceStudio(self.pool)
+        log.debug("[DIAG-G] QwenVoiceStudio created")
+        
         self._prompt = None
         self._ref = None
+        log.debug("[DIAG-D.2] VoiceCloneEngine.__init__() completed")
 
     def _ensure_prompt(self):
         if self._prompt is not None:
             return
         from .. import paths
         from .voice_studio import VoiceRef
-        ref_path = paths.VOICE_REFS_DIR / f"{self.candidate_id}.wav"
+        # Use explicit override if provided (test harness/runtime reference),
+        # otherwise fall back to default cache location
+        if self.reference_path is not None:
+            ref_path = Path(self.reference_path)
+        else:
+            ref_path = paths.VOICE_REFS_DIR / f"{self.candidate_id}.wav"
         if ref_path.exists():
             from ..prosody.instruct import VOICEDESIGN_REF_TEXT_DE
             self._ref = VoiceRef(candidate_id=self.candidate_id,

@@ -34,12 +34,18 @@ def _make_engine(engine_name: str, cfg: dict):
     - clone (VD-E) → VoiceCloneEngine mit Base model
     - customvoice → QwenTTSEngine mit CustomVoice model
     """
+    log = get_logger("main.engine")
+    log.debug("[DIAG-A] _make_engine() entered")
+    
     from app.hardware.detector import (detect_hardware, recommend_model_size,
                                        recommend_torch_dtype)
     from app.security.identity_lock import load_production
     from app.voices.registry import VoiceRegistry
     
+    log.debug("[DIAG-A.1] Calling detect_hardware()")
     hw = detect_hardware()
+    log.debug("[DIAG-A.2] detect_hardware() returned: mode=%s", hw.mode)
+    
     adv = cfg.get("advanced", {})
     
     if engine_name == "test_double":
@@ -50,16 +56,23 @@ def _make_engine(engine_name: str, cfg: dict):
     runtime_root = os.environ.get("VOICEOVER_RUNTIME_ROOT")
     if runtime_root:
         models_dir = Path(runtime_root) / "models"
+        log.debug("[DIAG-E] Model root resolved from VOICEOVER_RUNTIME_ROOT: %s", models_dir)
     else:
         models_dir = None  # Let engine use default paths.MODELS_DIR
+        log.debug("[DIAG-E] Model root: using default paths.MODELS_DIR")
     
     # Load production config to get voice_id
+    log.debug("[DIAG-A.3] Calling load_production()")
     production = load_production()
+    log.debug("[DIAG-A.4] load_production() returned: voice_id=%s", production.get("voice_id"))
+    
     voice_id = production.get("voice_id", "vd_e")
     
     # Look up voice profile
+    log.debug("[DIAG-C] Creating VoiceRegistry")
     registry = VoiceRegistry()
     entry = registry.get(voice_id)
+    log.debug("[DIAG-C] VoiceRegistry resolved: voice_id=%s, backend_mode=%s", voice_id, entry.backend_mode if entry else None)
     if entry is None:
         raise RuntimeError(f"Unbekannte Stimme: {voice_id!r}")
     
@@ -67,7 +80,9 @@ def _make_engine(engine_name: str, cfg: dict):
     if entry.backend_mode == "clone":
         # VD-E clone backend (§12/§24)
         from app.security.identity_lock import assert_vd_e_usable
+        log.debug("[DIAG-B] Calling assert_vd_e_usable()")
         assert_vd_e_usable(production)  # Verify identity before loading
+        log.debug("[DIAG-B] assert_vd_e_usable() passed")
         
         from app.tts.qwen_engine import VoiceCloneEngine
         
@@ -75,6 +90,7 @@ def _make_engine(engine_name: str, cfg: dict):
         # VOICE_REFS_DIR is set from VOICEOVER_REFS_DIR environment variable
         # (see app/paths.py), which allows runtime override of the reference location
         
+        log.debug("[DIAG-D] Creating VoiceCloneEngine (candidate_id=VD-E, allow_design=False)")
         eng = VoiceCloneEngine(
             hw=hw,
             candidate_id="VD-E",
@@ -83,6 +99,7 @@ def _make_engine(engine_name: str, cfg: dict):
             attn_implementation=adv.get("attn_implementation") or None,
             allow_design=False  # LOCKED: VD-E darf NICHT neu designt werden
         )
+        log.debug("[DIAG-D] VoiceCloneEngine created successfully")
         return eng, hw
     
     else:
