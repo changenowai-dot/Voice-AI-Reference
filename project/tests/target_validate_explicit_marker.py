@@ -170,13 +170,21 @@ def run_tts_test(input_file, config, hw):
     from app import paths
     from app.project.pipeline import Pipeline
     from app.tts.qwen_engine import VoiceCloneEngine
-    
+    from app.security.identity_lock import check_identity
+
     print("\n" + "=" * 70)
     print("TTS ENGINE LOADING")
     print("=" * 70)
     print("\n[INFO] Loading VoiceCloneEngine (VD-E)...")
-    
-    # Load engine (same as Phase 4 benchmark)
+
+    # Get the runtime reference path from identity validation
+    identity_status = check_identity()
+    runtime_ref_path = Path(identity_status.path) if identity_status.ok else None
+
+    print(f"[INFO] Runtime reference path: {runtime_ref_path}")
+
+    # Load engine with explicit runtime reference path
+    # This ensures VoiceCloneEngine uses the same reference that identity validation verified
     engine = VoiceCloneEngine(
         hw=hw,
         candidate_id="VD-E",
@@ -184,9 +192,11 @@ def run_tts_test(input_file, config, hw):
         models_dir=paths.MODELS_DIR,
         attn_implementation="sdpa",
         allow_design=False,  # LOCKED: VD-E darf NICHT neu designt werden
+        reference_path=runtime_ref_path,  # Pass verified runtime reference
     )
     engine.load()
     print(f"[OK] Engine loaded: VoiceCloneEngine (VD-E)")
+    print(f"[OK] Using reference: {runtime_ref_path}")
     
     print("\n" + "=" * 70)
     print("TTS SYNTHESIS")

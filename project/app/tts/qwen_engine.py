@@ -227,15 +227,22 @@ class VoiceCloneEngine(TTSEngine):
     def __init__(self, hw: HardwareInfo, candidate_id: str,
                  description: str, models_dir: Path | None = None,
                  attn_implementation: str | None = None,
-                 allow_design: bool = True):
+                 allow_design: bool = True,
+                 reference_path: Path | None = None):
         """allow_design=False (VD-E-Produktion, §12): die Referenzdatei
-        MUSS vorhanden sein – niemals neu designen/clonen."""
+        MUSS vorhanden sein – niemals neu designen/clonen.
+
+        reference_path: Optional explicit override for the reference WAV path.
+        If None, uses default paths.VOICE_REFS_DIR / f"{candidate_id}.wav".
+        Used by test harness to pass runtime reference (VOICEOVER_RUNTIME_REF).
+        """
         from .model_pool import QwenModelPool
         from .voice_studio import QwenVoiceStudio
         self.hw = hw
         self.candidate_id = candidate_id
         self.description = description
         self.allow_design = allow_design
+        self.reference_path = reference_path  # Test harness override
         self.pool = QwenModelPool(hw, models_dir=models_dir,
                                   attn_implementation=attn_implementation)
         self.studio = QwenVoiceStudio(self.pool)
@@ -247,7 +254,12 @@ class VoiceCloneEngine(TTSEngine):
             return
         from .. import paths
         from .voice_studio import VoiceRef
-        ref_path = paths.VOICE_REFS_DIR / f"{self.candidate_id}.wav"
+        # Use explicit override if provided (test harness/runtime reference),
+        # otherwise fall back to default cache location
+        if self.reference_path is not None:
+            ref_path = Path(self.reference_path)
+        else:
+            ref_path = paths.VOICE_REFS_DIR / f"{self.candidate_id}.wav"
         if ref_path.exists():
             from ..prosody.instruct import VOICEDESIGN_REF_TEXT_DE
             self._ref = VoiceRef(candidate_id=self.candidate_id,
