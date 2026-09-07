@@ -24,10 +24,74 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+def validate_environment():
+    """Validate that the environment has required dependencies."""
+    print("=" * 70)
+    print("ENVIRONMENT VALIDATION")
+    print("=" * 70)
+    
+    # Check Python executable
+    print(f"\n[INFO] Python executable: {sys.executable}")
+    print(f"[INFO] Python version: {sys.version}")
+    
+    # Check torch
+    print("\n[INFO] Checking PyTorch...")
+    try:
+        import torch
+        print(f"[OK] PyTorch version: {torch.__version__}")
+        print(f"[OK] PyTorch CUDA version: {getattr(torch.version, 'cuda', 'N/A')}")
+        print(f"[OK] CUDA available: {torch.cuda.is_available()}")
+        
+        if torch.cuda.is_available():
+            print(f"[OK] CUDA device count: {torch.cuda.device_count()}")
+            print(f"[OK] Current CUDA device: {torch.cuda.current_device()}")
+            print(f"[OK] Current CUDA device name: {torch.cuda.get_device_name(0)}")
+            
+            # Check VRAM
+            device = torch.cuda.current_device()
+            props = torch.cuda.get_device_properties(device)
+            print(f"[OK] GPU VRAM: {props.total_memory / (1024**3):.2f} GB")
+        else:
+            print("[WARN] CUDA not available - will use CPU mode")
+    except ImportError as e:
+        print(f"[FAIL] PyTorch not installed: {e}")
+        print("[FAIL] Cannot proceed without PyTorch")
+        sys.exit(1)
+    except Exception as e:
+        print(f"[FAIL] PyTorch error: {e}")
+        sys.exit(1)
+    
+    # Check qwen-tts
+    print("\n[INFO] Checking qwen-tts...")
+    try:
+        import qwen_tts
+        print(f"[OK] qwen-tts installed")
+    except ImportError as e:
+        print(f"[FAIL] qwen-tts not installed: {e}")
+        print("[FAIL] Cannot proceed without qwen-tts")
+        sys.exit(1)
+    
+    # Check transformers
+    print("\n[INFO] Checking transformers...")
+    try:
+        import transformers
+        print(f"[OK] transformers version: {transformers.__version__}")
+    except ImportError as e:
+        print(f"[FAIL] transformers not installed: {e}")
+        print("[FAIL] Cannot proceed without transformers")
+        sys.exit(1)
+    
+    print("\n[OK] Environment validation passed")
+    return True
+
+
 def setup_environment():
     """Setup environment for TTS synthesis."""
     # Ensure we're in the project directory
     os.chdir(project_root)
+    
+    # Validate environment first
+    validate_environment()
     
     # Import after path setup
     from app import paths
@@ -36,31 +100,42 @@ def setup_environment():
     from app.security.identity_lock import check_identity
     
     # Detect hardware
-    print("Detecting hardware...")
+    print("\n" + "=" * 70)
+    print("HARDWARE DETECTION")
+    print("=" * 70)
+    print("\n[INFO] Detecting hardware...")
     hw = detect_hardware()
-    print(f"  GPU: {hw.gpu_name}")
-    print(f"  VRAM: {hw.vram_gb:.1f} GB")
-    print(f"  RAM: {hw.ram_gb:.1f} GB")
+    print(f"[OK] GPU: {hw.gpu_name}")
+    print(f"[OK] GPU VRAM: {hw.gpu_vram_total_gb:.1f} GB")
+    print(f"[OK] System RAM: {hw.ram_total_gb:.1f} GB")
+    print(f"[OK] Mode: {hw.mode}")
+    
+    if not hw.cuda_available:
+        print("\n[WARN] CUDA not available - TTS will run on CPU")
+        print("[WARN] This is valid for testing but will be slower")
     
     # Check identity (respects VOICEOVER_RUNTIME_REF)
-    print("\nChecking VD-E identity...")
+    print("\n" + "=" * 70)
+    print("IDENTITY VALIDATION")
+    print("=" * 70)
+    print("\n[INFO] Checking VD-E identity...")
     identity_status = check_identity()
-    print(f"  Status: {identity_status.status}")
-    print(f"  Reference path: {identity_status.reference_path}")
-    print(f"  Expected SHA-256: {identity_status.expected_sha256}")
-    print(f"  Actual SHA-256: {identity_status.actual_sha256}")
+    print(f"[INFO] Status: {identity_status.status}")
+    print(f"[INFO] Reference path: {identity_status.reference_path}")
+    print(f"[INFO] Expected SHA-256: {identity_status.expected_sha256}")
+    print(f"[INFO] Actual SHA-256: {identity_status.actual_sha256}")
     
     if not identity_status.valid:
-        print(f"\n❌ IDENTITY CHECK FAILED: {identity_status.message}")
-        print("\nThis likely means:")
+        print(f"\n[FAIL] IDENTITY CHECK FAILED: {identity_status.message}")
+        print("\n[INFO] This likely means:")
         print("  - VOICEOVER_RUNTIME_REF is not set, or")
         print("  - The referenced file doesn't exist, or")
         print("  - The SHA-256 doesn't match")
-        print("\nPlease ensure:")
+        print("\n[INFO] Please ensure:")
         print("  $env:VOICEOVER_RUNTIME_REF = 'C:\\path\\to\\VD-E.wav'")
         sys.exit(1)
     
-    print("  ✅ Identity verified")
+    print("[OK] Identity verified")
     
     return hw, load_config()
 
@@ -83,9 +158,9 @@ Die wahre Macht von Delphi lag nicht in der Wahrsagerei. Sie lag in der Reflexio
     temp_file.write(test_content)
     temp_file.close()
     
-    print(f"\nCreated test input: {temp_file.name}")
-    print(f"  Sections: 3")
-    print(f"  Markers: 2")
+    print(f"\n[OK] Created test input: {temp_file.name}")
+    print(f"[OK] Sections: 3")
+    print(f"[OK] Markers: 2")
     
     return Path(temp_file.name)
 
@@ -97,8 +172,9 @@ def run_tts_test(input_file, config, hw):
     from app.tts.qwen_engine import VoiceCloneEngine
     
     print("\n" + "=" * 70)
-    print("Loading TTS engine...")
+    print("TTS ENGINE LOADING")
     print("=" * 70)
+    print("\n[INFO] Loading VoiceCloneEngine (VD-E)...")
     
     # Load engine (same as Phase 4 benchmark)
     engine = VoiceCloneEngine(
@@ -110,11 +186,12 @@ def run_tts_test(input_file, config, hw):
         allow_design=False,  # LOCKED: VD-E darf NICHT neu designt werden
     )
     engine.load()
-    print(f"  Engine: VoiceCloneEngine (VD-E)")
+    print(f"[OK] Engine loaded: VoiceCloneEngine (VD-E)")
     
     print("\n" + "=" * 70)
-    print("Running TTS synthesis with explicit markers...")
+    print("TTS SYNTHESIS")
     print("=" * 70)
+    print("\n[INFO] Running TTS synthesis with explicit markers...")
     
     # Create pipeline (no hw parameter - Pipeline doesn't take hw)
     pipeline = Pipeline(config, engine)
@@ -124,7 +201,7 @@ def run_tts_test(input_file, config, hw):
     report = pipeline.process_file(input_file)
     elapsed = time.time() - start_time
     
-    print(f"\nSynthesis completed in {elapsed:.1f}s")
+    print(f"\n[OK] Synthesis completed in {elapsed:.1f}s")
     
     return report
 
@@ -132,7 +209,7 @@ def run_tts_test(input_file, config, hw):
 def validate_outputs(report, input_file):
     """Validate TTS outputs."""
     print("\n" + "=" * 70)
-    print("Validating outputs...")
+    print("OUTPUT VALIDATION")
     print("=" * 70)
     
     validation_results = {
@@ -148,26 +225,26 @@ def validate_outputs(report, input_file):
     
     # Check report structure
     if not report.get("ok"):
-        print(f"❌ Pipeline failed: {report.get('error', 'Unknown error')}")
+        print(f"\n[FAIL] Pipeline failed: {report.get('error', 'Unknown error')}")
         return validation_results
     
     # Extract section information
     sections = report.get("sections", [])
     validation_results["sections_parsed"] = len(sections)
-    print(f"\n✓ Sections parsed: {len(sections)}")
+    print(f"\n[OK] Sections parsed: {len(sections)}")
     
     # Check output files
     output_files = report.get("output_files", [])
     validation_results["wav_outputs"] = len(output_files)
     validation_results["filenames"] = [f["path"] for f in output_files]
     
-    print(f"✓ WAV outputs: {len(output_files)}")
+    print(f"[OK] WAV outputs: {len(output_files)}")
     
     for i, file_info in enumerate(output_files, 1):
         filepath = Path(file_info["path"])
         
         if not filepath.exists():
-            print(f"  ❌ File {i} not found: {filepath}")
+            print(f"  [FAIL] File {i} not found: {filepath}")
             continue
         
         file_size = filepath.stat().st_size
@@ -175,7 +252,7 @@ def validate_outputs(report, input_file):
         
         # Check for empty files
         if file_size == 0:
-            print(f"  ❌ File {i} is empty: {filepath}")
+            print(f"  [FAIL] File {i} is empty: {filepath}")
             validation_results["empty_files"] = True
         else:
             duration = file_info.get("duration_s", 0)
@@ -184,7 +261,7 @@ def validate_outputs(report, input_file):
             validation_results["durations"].append(duration)
             validation_results["sample_rates"].append(sample_rate)
             
-            print(f"  ✓ File {i}:")
+            print(f"  [OK] File {i}:")
             print(f"    Path: {filepath}")
             print(f"    Size: {file_size:,} bytes")
             print(f"    Duration: {duration:.2f}s")
@@ -193,7 +270,7 @@ def validate_outputs(report, input_file):
     # Check for marker in logs (would indicate marker leaked to TTS)
     # This is a heuristic check - in real scenarios, we'd need to inspect
     # the actual TTS engine calls
-    print("\n✓ Marker in TTS input: Not detected (heuristic check)")
+    print("\n[OK] Marker in TTS input: Not detected (heuristic check)")
     validation_results["marker_in_tts"] = False
     
     return validation_results
@@ -209,52 +286,52 @@ def print_summary(validation_results, runtime_ref_path, golden_ref_valid):
     
     # Check sections
     if validation_results["sections_parsed"] == 3:
-        print("✓ Sections parsed: 3/3")
+        print("[OK] Sections parsed: 3/3")
     else:
-        print(f"❌ Sections parsed: {validation_results['sections_parsed']}/3")
+        print(f"[FAIL] Sections parsed: {validation_results['sections_parsed']}/3")
         all_passed = False
     
     # Check outputs
     if validation_results["wav_outputs"] == 3:
-        print("✓ WAV outputs: 3/3")
+        print("[OK] WAV outputs: 3/3")
     else:
-        print(f"❌ WAV outputs: {validation_results['wav_outputs']}/3")
+        print(f"[FAIL] WAV outputs: {validation_results['wav_outputs']}/3")
         all_passed = False
     
     # Check for empty files
     if not validation_results["empty_files"]:
-        print("✓ Empty files: None")
+        print("[OK] Empty files: None")
     else:
-        print("❌ Empty files: Detected")
+        print("[FAIL] Empty files: Detected")
         all_passed = False
     
     # Check marker in TTS
     if not validation_results["marker_in_tts"]:
-        print("✓ Marker in TTS input: Not detected")
+        print("[OK] Marker in TTS input: Not detected")
     else:
-        print("❌ Marker in TTS input: DETECTED")
+        print("[FAIL] Marker in TTS input: DETECTED")
         all_passed = False
     
     # Check Golden Reference
     if golden_ref_valid:
-        print("✓ Golden Reference SHA-256: Verified")
+        print("[OK] Golden Reference SHA-256: Verified")
     else:
-        print("❌ Golden Reference: Not verified")
+        print("[FAIL] Golden Reference: Not verified")
         all_passed = False
     
     # Check runtime reference
     if runtime_ref_path:
-        print(f"✓ Runtime reference: {runtime_ref_path}")
+        print(f"[OK] Runtime reference: {runtime_ref_path}")
     else:
-        print("❌ Runtime reference: Not set")
+        print("[FAIL] Runtime reference: Not set")
         all_passed = False
     
     print("\n" + "=" * 70)
     if all_passed:
-        print("✅ ALL VALIDATIONS PASSED")
-        print("The Explicit Audio Marker Mode works correctly on RTX 5060")
+        print("[OK] ALL VALIDATIONS PASSED")
+        print("[OK] The Explicit Audio Marker Mode works correctly on RTX 5060")
     else:
-        print("❌ SOME VALIDATIONS FAILED")
+        print("[FAIL] SOME VALIDATIONS FAILED")
     print("=" * 70)
     
     return all_passed
@@ -299,10 +376,10 @@ def main():
                 input_file.unlink()
         
     except KeyboardInterrupt:
-        print("\n\n⚠️  Test interrupted by user")
+        print("\n\n[WARN] Test interrupted by user")
         sys.exit(130)
     except Exception as e:
-        print(f"\n\n❌ UNEXPECTED ERROR: {e}")
+        print(f"\n\n[FAIL] UNEXPECTED ERROR: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

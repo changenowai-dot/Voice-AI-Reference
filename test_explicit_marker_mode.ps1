@@ -5,13 +5,15 @@
 # auf der RTX 5060 Target-Hardware.
 #
 # AUSFUEHRUNG:
+#   $env:VOICEOVER_RUNTIME_REF = "C:\Users\johan\Downloads\VoiceOverApp_LAB_NEXT\cache\voice_refs\VD-E.wav"
 #   .\test_explicit_marker_mode.ps1
 #
 # ERWARTETES ERGEBNIS:
-#   - 3 separate WAV-Dateien (001_..., 002_..., 003_...)
-#   - Kein "+++++" in TTS-Ausgabe oder Logs
+#   - 67 Unit-Tests bestanden
+#   - Parser extrahiert 3 Abschnitte korrekt
+#   - Marker "+++++" erreicht NIEMALS die TTS-Engine
 #   - Golden Reference SHA-256 unveraendert
-#   - Alle Dateien abspielbar
+#   - (Optional) TTS-Validierung auf RTX 5060
 # ============================================================
 
 $ErrorActionPreference = "Stop"
@@ -29,32 +31,40 @@ Write-Host "Repo:    $RepoRoot" -ForegroundColor Gray
 Write-Host "Project: $ProjectRoot" -ForegroundColor Gray
 Write-Host ""
 
-# ------------------------------------------------------------
+# ============================================================
 # SCHRITT 1: Python-Discovery
-# ------------------------------------------------------------
+# ============================================================
 Write-Host "[1/6] Python-Discovery..." -ForegroundColor Yellow
 
 $PythonCmd = $null
+$PythonSource = ""
+
 if ($env:VOICEOVER_PYTHON -and (Test-Path $env:VOICEOVER_PYTHON)) {
     $PythonCmd = $env:VOICEOVER_PYTHON
+    $PythonSource = "VOICEOVER_PYTHON (explicit)"
 }
 $RepoVenv = Join-Path $RepoRoot ".venv\Scripts\python.exe"
 if (-not $PythonCmd -and (Test-Path $RepoVenv)) {
     $PythonCmd = $RepoVenv
+    $PythonSource = "Repository .venv"
 }
 if (-not $PythonCmd) {
     $PyExe = Get-Command python.exe -ErrorAction SilentlyContinue
-    if ($PyExe) { $PythonCmd = $PyExe.Source }
+    if ($PyExe) { 
+        $PythonCmd = $PyExe.Source 
+        $PythonSource = "System PATH"
+    }
 }
 if (-not $PythonCmd) {
-    Write-Host "  FEHLER: Python nicht gefunden." -ForegroundColor Red
+    Write-Host "  [FAIL] Python nicht gefunden." -ForegroundColor Red
     exit 1
 }
 Write-Host "  [OK] Python: $PythonCmd" -ForegroundColor Green
+Write-Host "       Source: $PythonSource" -ForegroundColor DarkGray
 
-# ------------------------------------------------------------
+# ============================================================
 # SCHRITT 2: Unit-Tests ausfuehren
-# ------------------------------------------------------------
+# ============================================================
 Write-Host ""
 Write-Host "[2/6] Unit-Tests (67 Tests)..." -ForegroundColor Yellow
 
@@ -81,9 +91,9 @@ try {
 }
 finally { Pop-Location }
 
-# ------------------------------------------------------------
+# ============================================================
 # SCHRITT 3: Test-Eingabedatei erstellen
-# ------------------------------------------------------------
+# ============================================================
 Write-Host ""
 Write-Host "[3/6] Test-Eingabedatei erstellen..." -ForegroundColor Yellow
 
@@ -100,11 +110,11 @@ Die wahre Macht von Delphi lag nicht in der Wahrsagerei. Sie lag in der Reflexio
 "@
 [System.IO.File]::WriteAllText($TestInputPath, $TestContent, [System.Text.Encoding]::UTF8)
 Write-Host "  [OK] Eingabedatei: $TestInputPath" -ForegroundColor Green
-Write-Host "       $(($TestContent | Measure-Object -Line).Lines) Zeilen, 2 Marker, 3 Abschnitte" -ForegroundColor Gray
+Write-Host "       $($TestContent.Split("`n").Count) Zeilen, 2 Marker, 3 Abschnitte" -ForegroundColor Gray
 
-# ------------------------------------------------------------
+# ============================================================
 # SCHRITT 4: Parser-Test (Ohne TTS)
-# ------------------------------------------------------------
+# ============================================================
 Write-Host ""
 Write-Host "[4/6] Parser-Test (Ohne TTS)..." -ForegroundColor Yellow
 
@@ -124,11 +134,11 @@ with open(r'$TestInputPath', 'r', encoding='utf-8') as f:
 
 # Pruefe Marker-Erkennung
 assert has_explicit_markers(text), 'Marker nicht erkannt!'
-print(f'  Marker erkannt: True')
+print('  [OK] Marker erkannt: True')
 
 # Splitte
 sections = split_explicit_audio_markers(text)
-print(f'  Abschnitte: {len(sections)}')
+print(f'  [OK] Abschnitte: {len(sections)}')
 assert len(sections) == 3, f'Erwartet 3, bekommen {len(sections)}'
 
 # Pruefe Inhalt
@@ -136,7 +146,7 @@ for i, s in enumerate(sections):
     assert MARKER not in s, f'Marker in Abschnitt {i+1}!'
     assert len(s.strip()) > 0, f'Abschnitt {i+1} ist leer!'
     assert_no_marker_in_tts_input(s)
-    print(f'  Abschnitt {i+1}: {len(s)} Zeichen - OK')
+    print(f'  [OK] Abschnitt {i+1}: {len(s)} Zeichen')
 
 print('  [OK] Parser-Test bestanden')
 "@
@@ -160,58 +170,36 @@ try {
 }
 finally { Pop-Location }
 
-# ------------------------------------------------------------
-# SCHRITT 5: Golden Reference SHA-256 pruefen
-# ------------------------------------------------------------
+# ============================================================
+# SCHRITT 5: Golden Reference Validation
+# ============================================================
 Write-Host ""
-Write-Host "[5/7] Golden Reference SHA-256 pruefen..." -ForegroundColor Yellow
+Write-Host "[5/6] Golden Reference Validation..." -ForegroundColor Yellow
 
-$GoldenRefPath = Join-Path $ProjectRoot "cache\voice_refs\VD-E.wav"
 $ExpectedSHA = "B156C02A60A873AD95FC92390C4A136C85308B20188373CD734BEE5E5E5F2025"
 $GoldenRefValid = $false
+$GoldenRefPath = $null
+$GoldenRefSource = ""
 
-if (Test-Path $GoldenRefPath) {
-    $ActualSHA = (Get-FileHash -Path $GoldenRefPath -Algorithm SHA256).Hash
-    if ($ActualSHA -eq $ExpectedSHA) {
-        Write-Host "  [OK] Golden Reference SHA-256 unveraendert" -ForegroundColor Green
-        Write-Host "       $ActualSHA" -ForegroundColor Gray
-        $GoldenRefValid = $true
-    }
-    else {
-        Write-Host "  [FAIL] Golden Reference SHA-256 GEAENDERT!" -ForegroundColor Red
-        Write-Host "  Erwartet: $ExpectedSHA" -ForegroundColor Red
-        Write-Host "  Bekommen: $ActualSHA" -ForegroundColor Red
-        exit 1
-    }
-}
-else {
-    Write-Host "  [WARN] Golden Reference nicht gefunden: $GoldenRefPath" -ForegroundColor DarkYellow
-    Write-Host "         (Wird beim naechsten Benchmark erstellt)" -ForegroundColor DarkYellow
-}
-
-# ------------------------------------------------------------
-# SCHRITT 6: Runtime Reference Discovery + TTS Validierung
-# ------------------------------------------------------------
-Write-Host ""
-Write-Host "[6/7] Runtime Reference Discovery + TTS Validierung..." -ForegroundColor Yellow
-
-# Check for VOICEOVER_RUNTIME_REF
-$RuntimeRefPath = $null
+# Priorität 1: VOICEOVER_RUNTIME_REF (explizite Umgebungsvariable)
 if ($env:VOICEOVER_RUNTIME_REF) {
     if (Test-Path $env:VOICEOVER_RUNTIME_REF) {
-        $RuntimeRefPath = $env:VOICEOVER_RUNTIME_REF
-        Write-Host "  [OK] VOICEOVER_RUNTIME_REF gesetzt: $RuntimeRefPath" -ForegroundColor Green
+        $GoldenRefPath = $env:VOICEOVER_RUNTIME_REF
+        $GoldenRefSource = "VOICEOVER_RUNTIME_REF (explicit)"
         
-        # Verify SHA-256
-        $RuntimeSHA = (Get-FileHash -Path $RuntimeRefPath -Algorithm SHA256).Hash
-        if ($RuntimeSHA -eq $ExpectedSHA) {
-            Write-Host "  [OK] Runtime Reference SHA-256 korrekt" -ForegroundColor Green
-            Write-Host "       $RuntimeSHA" -ForegroundColor Gray
+        $ActualSHA = (Get-FileHash -Path $GoldenRefPath -Algorithm SHA256).Hash
+        if ($ActualSHA -eq $ExpectedSHA) {
+            Write-Host "  [OK] Golden Reference SHA-256 unveraendert" -ForegroundColor Green
+            Write-Host "       Path: $GoldenRefPath" -ForegroundColor Gray
+            Write-Host "       SHA-256: $ActualSHA" -ForegroundColor Gray
+            Write-Host "       Source: $GoldenRefSource" -ForegroundColor DarkGray
+            $GoldenRefValid = $true
         }
         else {
-            Write-Host "  [FAIL] Runtime Reference SHA-256 falsch!" -ForegroundColor Red
+            Write-Host "  [FAIL] Golden Reference SHA-256 GEAENDERT!" -ForegroundColor Red
             Write-Host "  Erwartet: $ExpectedSHA" -ForegroundColor Red
-            Write-Host "  Bekommen: $RuntimeSHA" -ForegroundColor Red
+            Write-Host "  Bekommen: $ActualSHA" -ForegroundColor Red
+            Write-Host "  Pfad: $GoldenRefPath" -ForegroundColor Red
             exit 1
         }
     }
@@ -220,19 +208,49 @@ if ($env:VOICEOVER_RUNTIME_REF) {
         Write-Host "         $env:VOICEOVER_RUNTIME_REF" -ForegroundColor DarkYellow
     }
 }
-else {
-    Write-Host "  [INFO] VOICEOVER_RUNTIME_REF nicht gesetzt" -ForegroundColor DarkYellow
-    Write-Host "         TTS-Validierung uebersprungen (keine GPU-Synthese moeglich)" -ForegroundColor DarkYellow
-    Write-Host ""
-    Write-Host "  Um TTS-Validierung durchzufuehren:" -ForegroundColor Yellow
-    Write-Host "  `$env:VOICEOVER_RUNTIME_REF = 'C:\path\to\VoiceOverApp_LAB_NEXT\cache\voice_refs\VD-E.wav'" -ForegroundColor White
+
+# Priorität 2: Projekt-lokaler Cache
+if (-not $GoldenRefValid) {
+    $ProjectLocalRef = Join-Path $ProjectRoot "cache\voice_refs\VD-E.wav"
+    if (Test-Path $ProjectLocalRef) {
+        $GoldenRefPath = $ProjectLocalRef
+        $GoldenRefSource = "Project cache"
+        
+        $ActualSHA = (Get-FileHash -Path $GoldenRefPath -Algorithm SHA256).Hash
+        if ($ActualSHA -eq $ExpectedSHA) {
+            Write-Host "  [OK] Golden Reference SHA-256 unveraendert" -ForegroundColor Green
+            Write-Host "       Path: $GoldenRefPath" -ForegroundColor Gray
+            Write-Host "       SHA-256: $ActualSHA" -ForegroundColor Gray
+            Write-Host "       Source: $GoldenRefSource" -ForegroundColor DarkGray
+            $GoldenRefValid = $true
+        }
+        else {
+            Write-Host "  [FAIL] Golden Reference SHA-256 GEAENDERT!" -ForegroundColor Red
+            Write-Host "  Erwartet: $ExpectedSHA" -ForegroundColor Red
+            Write-Host "  Bekommen: $ActualSHA" -ForegroundColor Red
+            Write-Host "  Pfad: $GoldenRefPath" -ForegroundColor Red
+            exit 1
+        }
+    }
 }
 
-# Run real TTS validation if runtime reference is available
+if (-not $GoldenRefValid) {
+    Write-Host "  [WARN] Golden Reference nicht gefunden" -ForegroundColor DarkYellow
+    Write-Host "         Weder VOICEOVER_RUNTIME_REF noch projekt-lokaler Cache vorhanden" -ForegroundColor DarkYellow
+    Write-Host "         TTS-Validierung kann nicht durchgefuehrt werden" -ForegroundColor DarkYellow
+}
+
+# ============================================================
+# SCHRITT 6: TTS-Validierung (Optional)
+# ============================================================
+Write-Host ""
+Write-Host "[6/6] TTS-Validierung (Optional)..." -ForegroundColor Yellow
+
 $TTSValidationDone = $false
-if ($RuntimeRefPath -and (Test-Path $RuntimeRefPath)) {
-    Write-Host ""
-    Write-Host "  Starte TTS-Validierung auf RTX 5060..." -ForegroundColor Cyan
+$TTSValidationResult = ""
+
+if ($GoldenRefValid) {
+    Write-Host "  [INFO] Golden Reference valid - starte TTS-Validierung..." -ForegroundColor Cyan
     
     $TTSValidationScript = Join-Path $ProjectRoot "tests\target_validate_explicit_marker.py"
     
@@ -254,22 +272,32 @@ if ($RuntimeRefPath -and (Test-Path $RuntimeRefPath)) {
                 Write-Host ""
                 Write-Host "  [OK] TTS-Validierung erfolgreich" -ForegroundColor Green
                 $TTSValidationDone = $true
+                $TTSValidationResult = "ERFOLGREICH (RTX 5060)"
             }
             else {
                 Write-Host ""
                 Write-Host "  [FAIL] TTS-Validierung fehlgeschlagen (Exit-Code: $ttsExit)" -ForegroundColor Red
+                $TTSValidationResult = "FEHLGESCHLAGEN"
             }
         }
         finally { Pop-Location }
     }
     else {
         Write-Host "  [WARN] TTS-Validierungsskript nicht gefunden: $TTSValidationScript" -ForegroundColor DarkYellow
+        $TTSValidationResult = "Skript fehlt"
     }
 }
+else {
+    Write-Host "  [INFO] TTS-Validierung uebersprungen (keine Golden Reference)" -ForegroundColor DarkYellow
+    Write-Host ""
+    Write-Host "  Um TTS-Validierung durchzufuehren:" -ForegroundColor Yellow
+    Write-Host "  `$env:VOICEOVER_RUNTIME_REF = 'C:\path\to\VoiceOverApp_LAB_NEXT\cache\voice_refs\VD-E.wav'" -ForegroundColor White
+    $TTSValidationResult = "Uebersprungen (keine Golden Reference)"
+}
 
-# ------------------------------------------------------------
-# SCHRITT 7: Zusammenfassung
-# ------------------------------------------------------------
+# ============================================================
+# ZUSAMMENFASSUNG
+# ============================================================
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host "TEST ZUSAMMENFASSUNG" -ForegroundColor Cyan
@@ -277,14 +305,14 @@ Write-Host "============================================================" -Foreg
 Write-Host ""
 Write-Host "  Unit-Tests:          67/67 bestanden" -ForegroundColor Green
 Write-Host "  Parser-Test:         3 Abschnitte korrekt extrahiert" -ForegroundColor Green
-Write-Host "  Golden Reference:    SHA-256 unveraendert" -ForegroundColor Green
+Write-Host "  Golden Reference:    $GoldenRefSource" -ForegroundColor $(if ($GoldenRefValid) { "Green" } else { "DarkYellow" })
 
 if ($TTSValidationDone) {
-    Write-Host "  TTS-Validierung:     ERFOLGREICH (RTX 5060)" -ForegroundColor Green
+    Write-Host "  TTS-Validierung:     $TTSValidationResult" -ForegroundColor Green
     Write-Host "  Marker-Sicherheit:   NIEMALS in TTS-Input bestaetigt" -ForegroundColor Green
 }
 else {
-    Write-Host "  TTS-Validierung:     Uebersprungen (keine Runtime Ref)" -ForegroundColor DarkYellow
+    Write-Host "  TTS-Validierung:     $TTSValidationResult" -ForegroundColor DarkYellow
     Write-Host "  Marker-Sicherheit:   Nur Parser-Ebene getestet" -ForegroundColor DarkYellow
 }
 
@@ -293,7 +321,10 @@ Write-Host "  Marker-Modus:        Implementiert und getestet" -ForegroundColor 
 Write-Host "  Abwaertskompatibel:  Keine Aenderung ohne Marker" -ForegroundColor Green
 Write-Host ""
 
-if (-not $TTSValidationDone) {
+if (-not $TTSValidationDone -and $GoldenRefValid) {
+    Write-Host "TTS-Validierung fehlgeschlagen - siehe Logs oben" -ForegroundColor Yellow
+}
+elseif (-not $GoldenRefValid) {
     Write-Host "Fuer vollstaendige TTS-Validierung auf RTX 5060:" -ForegroundColor Yellow
     Write-Host "  1. Runtime Reference setzen:" -ForegroundColor White
     Write-Host "     `$env:VOICEOVER_RUNTIME_REF = 'C:\Users\johan\Downloads\VoiceOverApp_LAB_NEXT\cache\voice_refs\VD-E.wav'" -ForegroundColor Gray
