@@ -6,7 +6,14 @@
 #
 # AUSFUEHRUNG:
 #   $env:VOICEOVER_RUNTIME_REF = "C:\Users\johan\Downloads\VoiceOverApp_LAB_NEXT\cache\voice_refs\VD-E.wav"
+#   $env:VOICEOVER_RUNTIME_ROOT = "C:\Users\johan\Downloads\VoiceOverApp_LAB_NEXT"
 #   .\test_explicit_marker_mode.ps1
+#
+# PYTHON-INTERPRETER DISCOVERY (Prioritaet):
+#   1. VOICEOVER_PYTHON (explizites Override)
+#   2. VOICEOVER_RUNTIME_ROOT/.venv
+#   3. Repository .venv
+#   4. System PATH (Fallback)
 #
 # ERWARTETES ERGEBNIS:
 #   - 67 Unit-Tests bestanden
@@ -14,6 +21,10 @@
 #   - Marker "+++++" erreicht NIEMALS die TTS-Engine
 #   - Golden Reference SHA-256 unveraendert
 #   - (Optional) TTS-Validierung auf RTX 5060
+#
+# EXIT CODES:
+#   0 = Erfolg oder uebersprungen (keine Golden Reference)
+#   1 = Fehler (Unit-Tests fehlgeschlagen, Parser-Fehler, TTS-Validierung fehlgeschlagen)
 # ============================================================
 
 $ErrorActionPreference = "Stop"
@@ -39,24 +50,44 @@ Write-Host "[1/6] Python-Discovery..." -ForegroundColor Yellow
 $PythonCmd = $null
 $PythonSource = ""
 
+# Priority 1: Explicit VOICEOVER_PYTHON override
 if ($env:VOICEOVER_PYTHON -and (Test-Path $env:VOICEOVER_PYTHON)) {
     $PythonCmd = $env:VOICEOVER_PYTHON
-    $PythonSource = "VOICEOVER_PYTHON (explicit)"
+    $PythonSource = "VOICEOVER_PYTHON (explicit override)"
 }
-$RepoVenv = Join-Path $RepoRoot ".venv\Scripts\python.exe"
-if (-not $PythonCmd -and (Test-Path $RepoVenv)) {
-    $PythonCmd = $RepoVenv
-    $PythonSource = "Repository .venv"
+
+# Priority 2: VOICEOVER_RUNTIME_ROOT/.venv
+if (-not $PythonCmd -and $env:VOICEOVER_RUNTIME_ROOT) {
+    $RuntimeVenv = Join-Path $env:VOICEOVER_RUNTIME_ROOT ".venv\Scripts\python.exe"
+    if (Test-Path $RuntimeVenv) {
+        $PythonCmd = $RuntimeVenv
+        $PythonSource = "VOICEOVER_RUNTIME_ROOT/.venv"
+    }
 }
+
+# Priority 3: Repository .venv
+if (-not $PythonCmd) {
+    $RepoVenv = Join-Path $RepoRoot ".venv\Scripts\python.exe"
+    if (Test-Path $RepoVenv) {
+        $PythonCmd = $RepoVenv
+        $PythonSource = "Repository .venv"
+    }
+}
+
+# Priority 4: System PATH (fallback only)
 if (-not $PythonCmd) {
     $PyExe = Get-Command python.exe -ErrorAction SilentlyContinue
     if ($PyExe) { 
         $PythonCmd = $PyExe.Source 
-        $PythonSource = "System PATH"
+        $PythonSource = "System PATH (fallback)"
     }
 }
+
 if (-not $PythonCmd) {
     Write-Host "  [FAIL] Python nicht gefunden." -ForegroundColor Red
+    Write-Host "  Bitte setzen Sie eine der folgenden Umgebungsvariablen:" -ForegroundColor Yellow
+    Write-Host "    `$env:VOICEOVER_PYTHON = 'C:\path\to\python.exe'" -ForegroundColor White
+    Write-Host "    `$env:VOICEOVER_RUNTIME_ROOT = 'C:\path\to\runtime'" -ForegroundColor White
     exit 1
 }
 Write-Host "  [OK] Python: $PythonCmd" -ForegroundColor Green
@@ -248,6 +279,7 @@ Write-Host "[6/6] TTS-Validierung (Optional)..." -ForegroundColor Yellow
 
 $TTSValidationDone = $false
 $TTSValidationResult = ""
+$TTSExitCode = 0
 
 if ($GoldenRefValid) {
     Write-Host "  [INFO] Golden Reference valid - starte TTS-Validierung..." -ForegroundColor Cyan
@@ -264,6 +296,9 @@ if ($GoldenRefValid) {
                 $ttsExit = $LASTEXITCODE
             }
             finally { $ErrorActionPreference = $prevEAP }
+            
+            # Store exit code for propagation
+            $TTSExitCode = $ttsExit
             
             # Display output
             $ttsOutput | ForEach-Object { Write-Host "  $_" -ForegroundColor Gray }
@@ -285,6 +320,7 @@ if ($GoldenRefValid) {
     else {
         Write-Host "  [WARN] TTS-Validierungsskript nicht gefunden: $TTSValidationScript" -ForegroundColor DarkYellow
         $TTSValidationResult = "Skript fehlt"
+        $TTSExitCode = 1
     }
 }
 else {
@@ -293,6 +329,7 @@ else {
     Write-Host "  Um TTS-Validierung durchzufuehren:" -ForegroundColor Yellow
     Write-Host "  `$env:VOICEOVER_RUNTIME_REF = 'C:\path\to\VoiceOverApp_LAB_NEXT\cache\voice_refs\VD-E.wav'" -ForegroundColor White
     $TTSValidationResult = "Uebersprungen (keine Golden Reference)"
+    $TTSExitCode = 0  # Not a failure if skipped intentionally
 }
 
 # ============================================================
@@ -336,4 +373,15 @@ elseif (-not $GoldenRefValid) {
 
 Write-Host "============================================================" -ForegroundColor Cyan
 
-exit 0
+# Exit with appropriate code
+# If TTS validation was attempted and failed, propagate that failure
+# If TTS validation was skipped (no Golden Reference), that's OK (exit 0)
+# If TTS validation succeeded, exit 0
+if ($TTSValidationDone -and $TTSExitCode -ne 0) {
+    # TTS validation was attempted and failed
+    exit $TTSExitCode
+}
+else {
+    # Either validation succeeded or was skipped
+    exit 0
+}
