@@ -1,4 +1,4 @@
-﻿"""VoiceOverApp â€“ Einstiegspunkt.
+"""VoiceOverApp â€“ Einstiegspunkt.
 
 Standard: lokale Web-OberflÃ¤che (START.bat). ZusÃ¤tzlich:
   python app/main.py --headless            Input-Ordner ohne UI verarbeiten
@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+from pathlib import Path
 
 # HF-Cache & Offline-Verhalten zentral setzen, BEVOR torch/hf importieren
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -37,8 +38,21 @@ def _make_engine(engine_name: str, cfg: dict):
     from app.tts.qwen_engine import QwenTTSEngine
     size = recommend_model_size(hw, adv.get("prefer_model_size", "auto"))
     device = adv.get("device", "auto")
-    eng = QwenTTSEngine(model_size=size,
-                        dtype_hint=recommend_torch_dtype(hw))
+    
+    # Resolve models directory from VOICEOVER_RUNTIME_ROOT if set
+    # This allows the normal production path to use models from the runtime
+    # instead of the repository's project/models directory
+    runtime_root = os.environ.get("VOICEOVER_RUNTIME_ROOT")
+    if runtime_root:
+        models_dir = Path(runtime_root) / "models"
+    else:
+        models_dir = None  # Let QwenTTSEngine use default paths.MODELS_DIR
+    
+    eng = QwenTTSEngine(hw=hw,
+                        model_size=size,
+                        models_dir=models_dir,
+                        dtype_hint=recommend_torch_dtype(hw),
+                        device_hint=device if device != "auto" else None)
     return eng, hw
 
 
