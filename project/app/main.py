@@ -1,4 +1,4 @@
-﻿"""VoiceOverApp â€“ Einstiegspunkt.
+"""VoiceOverApp â€“ Einstiegspunkt.
 
 Standard: lokale Web-OberflÃ¤che (START.bat). ZusÃ¤tzlich:
   python app/main.py --headless            Input-Ordner ohne UI verarbeiten
@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+from pathlib import Path
 
 # HF-Cache & Offline-Verhalten zentral setzen, BEVOR torch/hf importieren
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -27,19 +28,86 @@ from app.logging_setup import get_logger, setup_logging  # noqa: E402
 
 
 def _make_engine(engine_name: str, cfg: dict):
+    """Engine-Auswahl nach production config und voice_id (§12/§13).
+    
+    Verwendet VoiceRegistry um die korrekte Engine basierend auf backend_mode zu erstellen:
+    - clone (VD-E) → VoiceCloneEngine mit Base model
+    - customvoice → QwenTTSEngine mit CustomVoice model
+    """
     from app.hardware.detector import (detect_hardware, recommend_model_size,
                                        recommend_torch_dtype)
+    from app.security.identity_lock import load_production
+    from app.voices.registry import VoiceRegistry
+    
     hw = detect_hardware()
     adv = cfg.get("advanced", {})
+    
     if engine_name == "test_double":
         from app.tts.test_double import TestDoubleEngine
         return TestDoubleEngine(), hw
-    from app.tts.qwen_engine import QwenTTSEngine
-    size = recommend_model_size(hw, adv.get("prefer_model_size", "auto"))
-    device = adv.get("device", "auto")
-    eng = QwenTTSEngine(model_size=size,
-                        dtype_hint=recommend_torch_dtype(hw))
-    return eng, hw
+    
+    # Resolve models directory from VOICEOVER_RUNTIME_ROOT if set
+    runtime_root = os.environ.get("VOICEOVER_RUNTIME_ROOT")
+    if runtime_root:
+        models_dir = Path(runtime_root) / "models"
+    else:
+        models_dir = None  # Let engine use default paths.MODELS_DIR
+    
+    # Load production config to get voice_id
+    production = load_production()
+    voice_id = production.get("voice_id", "vd_e")
+    
+    # Look up voice profile
+    registry = VoiceRegistry()
+    entry = registry.get(voice_id)
+    if entry is None:
+        raise RuntimeError(f"Unbekannte Stimme: {voice_id!r}")
+    
+    # Create engine based on backend_mode
+    if entry.backend_mode == "clone":
+        # VD-E clone backend (§12/§24)
+        from app.security.identity_lock import assert_vd_e_usable
+        assert_vd_e_usable(production)  # Verify identity before loading
+        
+        from app.tts.qwen_engine import VoiceCloneEngine
+        
+        # Resolve reference path from VOICEOVER_RUNTIME_REF or identity_lock
+        runtime_ref = os.environ.get("VOICEOVER_RUNTIME_REF")
+        if runtime_ref:
+            reference_path = Path(runtime_ref)
+        else:
+            # Fall back to identity_lock's resolution
+            from app.security.identity_lock import check_identity
+            status = check_identity(production)
+            if status.ok and status.path:
+                reference_path = Path(status.path)
+            else:
+                reference_path = None
+        
+        eng = VoiceCloneEngine(
+            hw=hw,
+            candidate_id="VD-E",
+            description="produktion",
+            models_dir=models_dir,
+            attn_implementation=adv.get("attn_implementation") or None,
+            allow_design=False,  # LOCKED: VD-E darf NICHT neu designt werden
+            reference_path=reference_path
+        )
+        return eng, hw
+    
+    else:
+        # CustomVoice backend (§13)
+        from app.tts.qwen_engine import QwenTTSEngine
+        size = recommend_model_size(hw, adv.get("prefer_model_size", "auto"))
+        device = adv.get("device", "auto")
+        
+        eng = QwenTTSEngine(hw=hw,
+                            model_size=size,
+                            models_dir=models_dir,
+                            dtype_hint=recommend_torch_dtype(hw),
+                            device_hint=device if device != "auto" else None,
+                            attn_implementation=adv.get("attn_implementation") or None)
+        return eng, hw
 
 
 def cmd_headless(args) -> int:
