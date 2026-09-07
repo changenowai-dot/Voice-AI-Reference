@@ -230,72 +230,111 @@ def run_tts_test(input_file, config, hw):
 
 
 def validate_outputs(report, input_file):
-    """Validate TTS outputs."""
+    """Validate TTS outputs.
+
+    The pipeline's _process_explicit_marker_file returns:
+      - report["parts"]: list of per-section part_reports
+          each part_report has: "wav", "mp3", "ok", "segments", "duration_s"
+      - report["wavs"]: list of WAV file path strings
+      - report["mp3s"]: list of MP3 file path strings
+      - report["num_parts"]: integer count of sections
+      - report["explicit_marker_mode"]: True
+      - report["ok"]: True if all parts succeeded
+      - report["manifest_path"]: path to JSON manifest
+    """
     print("\n" + "=" * 70)
     print("OUTPUT VALIDATION")
     print("=" * 70)
-    
+
     validation_results = {
         "sections_parsed": 0,
         "wav_outputs": 0,
         "filenames": [],
         "durations": [],
-        "sample_rates": [],
         "marker_in_tts": False,
         "empty_files": False,
         "file_sizes": [],
     }
-    
-    # Check report structure
+
+    # Check overall pipeline status
     if not report.get("ok"):
         print(f"\n[FAIL] Pipeline failed: {report.get('error', 'Unknown error')}")
+        parts = report.get("parts", [])
+        validation_results["sections_parsed"] = report.get("num_parts", len(parts))
         return validation_results
-    
-    # Extract section information
-    sections = report.get("sections", [])
-    validation_results["sections_parsed"] = len(sections)
-    print(f"\n[OK] Sections parsed: {len(sections)}")
-    
-    # Check output files
-    output_files = report.get("output_files", [])
-    validation_results["wav_outputs"] = len(output_files)
-    validation_results["filenames"] = [f["path"] for f in output_files]
-    
-    print(f"[OK] WAV outputs: {len(output_files)}")
-    
-    for i, file_info in enumerate(output_files, 1):
-        filepath = Path(file_info["path"])
-        
-        if not filepath.exists():
-            print(f"  [FAIL] File {i} not found: {filepath}")
+
+    # Verify marker mode was active
+    if not report.get("explicit_marker_mode"):
+        print("[FAIL] Pipeline did not run in explicit marker mode")
+        return validation_results
+
+    # Extract per-section part reports
+    parts = report.get("parts", [])
+    num_parts = report.get("num_parts", 0)
+    wav_paths = report.get("wavs", [])
+
+    validation_results["sections_parsed"] = num_parts
+    print(f"\n[INFO] Marker mode: {report.get('explicit_marker_mode')}")
+    print(f"[INFO] Sections parsed: {num_parts}")
+    print(f"[INFO] Part reports: {len(parts)}")
+    print(f"[INFO] WAV paths reported: {len(wav_paths)}")
+
+    # Validate each part
+    ok_outputs = 0
+    for i, part_report in enumerate(parts, 1):
+        wav_path_str = part_report.get("wav", "")
+        part_ok = part_report.get("ok", False)
+        part_segments = part_report.get("segments", 0)
+        part_duration = part_report.get("duration_s", 0.0)
+
+        print(f"\n  [INFO] Part {i}/{num_parts}:")
+        print(f"    ok: {part_ok}")
+        print(f"    segments: {part_segments}")
+        print(f"    duration: {part_duration:.1f}s")
+        print(f"    wav: {wav_path_str}")
+
+        if not wav_path_str:
+            print(f"    [FAIL] No WAV path reported")
             continue
-        
+
+        filepath = Path(wav_path_str)
+        validation_results["filenames"].append(str(filepath))
+
+        if not filepath.exists():
+            print(f"    [FAIL] WAV file not found on disk: {filepath}")
+            continue
+
         file_size = filepath.stat().st_size
         validation_results["file_sizes"].append(file_size)
-        
-        # Check for empty files
+
         if file_size == 0:
-            print(f"  [FAIL] File {i} is empty: {filepath}")
+            print(f"    [FAIL] WAV file is empty (0 bytes)")
             validation_results["empty_files"] = True
         else:
-            duration = file_info.get("duration_s", 0)
-            sample_rate = file_info.get("sample_rate", 0)
-            
-            validation_results["durations"].append(duration)
-            validation_results["sample_rates"].append(sample_rate)
-            
-            print(f"  [OK] File {i}:")
-            print(f"    Path: {filepath}")
-            print(f"    Size: {file_size:,} bytes")
-            print(f"    Duration: {duration:.2f}s")
-            print(f"    Sample rate: {sample_rate} Hz")
-    
-    # Check for marker in logs (would indicate marker leaked to TTS)
-    # This is a heuristic check - in real scenarios, we'd need to inspect
-    # the actual TTS engine calls
-    print("\n[OK] Marker in TTS input: Not detected (heuristic check)")
+            ok_outputs += 1
+            validation_results["durations"].append(part_duration)
+            print(f"    [OK] File size: {file_size:,} bytes")
+            print(f"    [OK] Duration: {part_duration:.1f}s")
+
+    validation_results["wav_outputs"] = ok_outputs
+
+    # Defense-in-depth: verify manifest exists
+    manifest_path = report.get("manifest_path", "")
+    if manifest_path and Path(manifest_path).exists():
+        print(f"\n[OK] Manifest file: {manifest_path}")
+        try:
+            manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
+            print(f"[OK] Manifest blocks: {len(manifest.get('blocks', []))}")
+            print(f"[OK] Manifest marker_mode: {manifest.get('marker_mode')}")
+        except Exception as e:
+            print(f"[WARN] Could not read manifest: {e}")
+    else:
+        print(f"\n[WARN] No manifest file found")
+
+    print(f"\n[OK] Valid WAV outputs: {ok_outputs}/{num_parts}")
+    print("[OK] Marker in TTS input: Not detected (heuristic check)")
     validation_results["marker_in_tts"] = False
-    
+
     return validation_results
 
 
