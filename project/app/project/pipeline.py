@@ -39,6 +39,7 @@ from ..text.analyze import analyze_text
 from ..text.normalize import NormalizationReport, normalize_text
 from ..text.langdetect import check_language_plausibility
 from ..text.script_split import (
+    MARKER,
     assert_no_marker_in_tts_input,
     generate_part_filename,
     has_explicit_markers,
@@ -599,6 +600,12 @@ class Pipeline:
             "elapsed_s": round(elapsed, 1),
         })
 
+        # Deterministic result manifest for reproducibility/debugging
+        manifest = self._write_marker_manifest(
+            input_path, text, sections, part_reports, out_dir, base_name
+        )
+        report["manifest_path"] = manifest.get("path", "")
+
         status = "OK" if all_ok else "PARTIAL_FAILURE"
         qlog(f"EXPLICIT MARKER {input_path.name}: {status} "
              f"parts={num_parts} segments={total_segments} "
@@ -991,6 +998,73 @@ class Pipeline:
         qlog(f"PART {part_idx}/{num_parts} {output_stem}: ok "
              f"segments={n_seg} reused={reused} dur={total_s:.1f}s")
         return report
+
+    # ---------------------------------------------------------------------
+    @staticmethod
+    def _write_marker_manifest(
+        input_path: Path,
+        source_text: str,
+        sections: list,
+        part_reports: list,
+        out_dir: Path,
+        base_name: str,
+    ) -> dict:
+        """Writes a deterministic result manifest for marker mode.
+
+        The manifest records source input hash, marker mode, number of
+        blocks, and per-block metadata (text hash, output path, duration,
+        cache status, synthesis status). It is for reproducibility and
+        debugging only and must not change audio behavior.
+
+        Returns the manifest dict.
+        """
+        from ..utils import sha256_str, write_json
+        # Defense-in-depth: verify no marker leaked into sections
+        for i, section in enumerate(sections):
+            if MARKER in section:
+                raise ValueError(
+                    f"MANIFEST SAFETY: marker in section {i+1}! "
+                    f"Cannot write manifest with contaminated input."
+                )
+        manifest = {
+            "schema_version": 1,
+            "source_file": input_path.name,
+            "source_hash": sha256_str(source_text),
+            "marker_mode": True,
+            "num_blocks": len(sections),
+            "blocks": [],
+            "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        for i, (section, part_report) in enumerate(
+            zip(sections, part_reports), start=1
+        ):
+            block_entry = {
+                "block_index": i,
+                "text_hash": sha256_str(section),
+                "text_chars": len(section),
+                "output_wav": part_report.get("wav", ""),
+                "output_mp3": part_report.get("mp3", ""),
+                "duration_s": part_report.get("duration_s"),
+                "segments": part_report.get("segments", 0),
+                "cache_reused": part_report.get("reused", 0),
+                "cache_miss": max(
+                    0,
+                    part_report.get("segments", 0)
+                    - part_report.get("reused", 0),
+                ),
+                "status": "ok" if part_report.get("ok") else "failed",
+                "avg_score": part_report.get("avg_score"),
+                "project_id": part_report.get("project_id", ""),
+            }
+            manifest["blocks"].append(block_entry)
+        manifest_path = out_dir / f"{base_name}_manifest.json"
+        try:
+            write_json(manifest_path, manifest)
+            manifest["path"] = str(manifest_path)
+        except Exception as exc:
+            log.warning("Manifest write failed: %s", exc)
+            manifest["path"] = ""
+        return manifest
 
     # ---------------------------------------------------------------------
     @staticmethod
