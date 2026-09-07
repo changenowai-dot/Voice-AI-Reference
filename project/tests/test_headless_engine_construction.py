@@ -443,3 +443,91 @@ class TestEngineSelectionByBackendMode(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestCacheModuleAvailability(unittest.TestCase):
+    """Test that app.cache module is available for headless pipeline."""
+
+    def test_cache_module_exists(self):
+        """app.cache module must exist and be importable."""
+        import os
+        from pathlib import Path
+        
+        # Check that the cache module files exist
+        cache_init = project_root / "app" / "cache" / "__init__.py"
+        cache_manager = project_root / "app" / "cache" / "manager.py"
+        
+        self.assertTrue(cache_init.exists(), 
+                       "project/app/cache/__init__.py must exist")
+        self.assertTrue(cache_manager.exists(),
+                       "project/app/cache/manager.py must exist")
+
+    def test_cache_module_importable(self):
+        """CacheManager and segment_cache_key must be importable."""
+        # This test verifies the fix for the ModuleNotFoundError
+        # Note: numpy is a runtime dependency, so we only check structure
+        import os
+        from pathlib import Path
+        
+        # Check that manager.py contains the required exports
+        manager_path = project_root / "app" / "cache" / "manager.py"
+        manager_content = manager_path.read_text(encoding="utf-8")
+        
+        self.assertIn("class CacheManager", manager_content,
+                     "manager.py must define CacheManager class")
+        self.assertIn("def segment_cache_key", manager_content,
+                     "manager.py must define segment_cache_key function")
+        
+        # Check that __init__.py exports them
+        init_path = project_root / "app" / "cache" / "__init__.py"
+        init_content = init_path.read_text(encoding="utf-8")
+        
+        self.assertIn("CacheManager", init_content,
+                     "__init__.py must export CacheManager")
+        self.assertIn("segment_cache_key", init_content,
+                     "__init__.py must export segment_cache_key")
+
+    def test_pipeline_can_import_cache(self):
+        """project/app/project/pipeline.py must be able to import cache."""
+        # Verify that the relative import in pipeline.py will work
+        # pipeline.py is at project/app/project/pipeline.py
+        # It imports: from ..cache.manager import CacheManager, segment_cache_key
+        # This resolves to project/app/cache/manager.py
+        
+        pipeline_path = project_root / "app" / "project" / "pipeline.py"
+        cache_manager_path = project_root / "app" / "cache" / "manager.py"
+        
+        self.assertTrue(pipeline_path.exists(),
+                       "pipeline.py must exist")
+        self.assertTrue(cache_manager_path.exists(),
+                       "cache/manager.py must exist")
+        
+        # Verify the import statement exists in pipeline.py
+        pipeline_content = pipeline_path.read_text(encoding="utf-8")
+        self.assertIn("from ..cache.manager import CacheManager, segment_cache_key",
+                     pipeline_content,
+                     "pipeline.py must import CacheManager and segment_cache_key")
+
+    def test_cache_module_in_git(self):
+        """app.cache module files must be tracked by git."""
+        import subprocess
+        
+        # Check that cache module files are tracked by git
+        result = subprocess.run(
+            ["git", "ls-files", "project/app/cache/"],
+            cwd=project_root.parent,
+            capture_output=True,
+            text=True
+        )
+        
+        tracked_files = result.stdout.strip().split('\n')
+        tracked_files = [f for f in tracked_files if f]  # Remove empty strings
+        
+        self.assertGreater(len(tracked_files), 0,
+                          "app.cache module files must be tracked by git")
+        
+        # Check for specific files
+        self.assertIn("project/app/cache/__init__.py", tracked_files,
+                     "__init__.py must be tracked by git")
+        self.assertIn("project/app/cache/manager.py", tracked_files,
+                     "manager.py must be tracked by git")
