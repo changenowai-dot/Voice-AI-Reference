@@ -120,12 +120,12 @@ def setup_environment():
     print("=" * 70)
     print("\n[INFO] Checking VD-E identity...")
     identity_status = check_identity()
-    print(f"[INFO] Status: {identity_status.status}")
-    print(f"[INFO] Reference path: {identity_status.reference_path}")
-    print(f"[INFO] Expected SHA-256: {identity_status.expected_sha256}")
-    print(f"[INFO] Actual SHA-256: {identity_status.actual_sha256}")
+    print(f"[INFO] Level: {identity_status.level}")
+    print(f"[INFO] Reference path: {identity_status.path}")
+    print(f"[INFO] Expected SHA-256: {identity_status.expected}")
+    print(f"[INFO] Actual SHA-256: {identity_status.actual}")
     
-    if not identity_status.valid:
+    if not identity_status.ok:
         print(f"\n[FAIL] IDENTITY CHECK FAILED: {identity_status.message}")
         print("\n[INFO] This likely means:")
         print("  - VOICEOVER_RUNTIME_REF is not set, or")
@@ -353,7 +353,7 @@ def main():
         # Check if Golden Reference is valid
         from app.security.identity_lock import check_identity
         identity_status = check_identity()
-        golden_ref_valid = identity_status.valid
+        golden_ref_valid = identity_status.ok
         
         # Create test input
         input_file = create_test_input()
