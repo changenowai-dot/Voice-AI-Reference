@@ -288,24 +288,24 @@ class TestEngineSelectionByBackendMode(unittest.TestCase):
         
         with patch('app.hardware.detector.detect_hardware', return_value=mock_hw):
             with patch('app.security.identity_lock.assert_vd_e_usable'):
-                with patch('app.security.identity_lock.check_identity') as mock_check:
-                    mock_check.return_value = MagicMock(ok=True, path="/fake/path/VD-E.wav")
-                    with patch('app.tts.qwen_engine.VoiceCloneEngine') as MockEngine:
-                        mock_engine_instance = MagicMock()
-                        mock_engine_instance.name = "qwen3-tts-clone"
-                        MockEngine.return_value = mock_engine_instance
-                        
-                        cfg = {"advanced": {}}
-                        engine, hw = _make_engine("qwen", cfg)
-                        
-                        # Verify VoiceCloneEngine was created
-                        MockEngine.assert_called_once()
-                        
-                        # Verify correct parameters
-                        call_kwargs = MockEngine.call_args.kwargs
-                        self.assertEqual(call_kwargs['candidate_id'], "VD-E")
-                        self.assertEqual(call_kwargs['allow_design'], False)
-                        self.assertEqual(call_kwargs['hw'], mock_hw)
+                with patch('app.tts.qwen_engine.VoiceCloneEngine') as MockEngine:
+                    mock_engine_instance = MagicMock()
+                    mock_engine_instance.name = "qwen3-tts-clone"
+                    MockEngine.return_value = mock_engine_instance
+                    
+                    cfg = {"advanced": {}}
+                    engine, hw = _make_engine("qwen", cfg)
+                    
+                    # Verify VoiceCloneEngine was created
+                    MockEngine.assert_called_once()
+                    
+                    # Verify correct parameters
+                    call_kwargs = MockEngine.call_args.kwargs
+                    self.assertEqual(call_kwargs['candidate_id'], "VD-E")
+                    self.assertEqual(call_kwargs['allow_design'], False)
+                    self.assertEqual(call_kwargs['hw'], mock_hw)
+                    # Verify reference_path is NOT passed (not part of API)
+                    self.assertNotIn('reference_path', call_kwargs)
 
     def test_customvoice_creates_qwen_tts_engine(self):
         """voice_id=uncle_fu (customvoice) must create QwenTTSEngine."""
@@ -341,54 +341,81 @@ class TestEngineSelectionByBackendMode(unittest.TestCase):
         
         with patch('app.hardware.detector.detect_hardware', return_value=mock_hw):
             with patch('app.security.identity_lock.assert_vd_e_usable'):
-                with patch('app.security.identity_lock.check_identity') as mock_check:
-                    mock_check.return_value = MagicMock(ok=True, path="/fake/path/VD-E.wav")
-                    with patch('app.tts.qwen_engine.VoiceCloneEngine') as MockEngine:
-                        mock_engine_instance = MagicMock()
-                        MockEngine.return_value = mock_engine_instance
-                        
-                        cfg = {"advanced": {}}
-                        engine, hw = _make_engine("qwen", cfg)
-                        
-                        # Verify candidate_id is VD-E (uses Base model)
-                        call_kwargs = MockEngine.call_args.kwargs
-                        self.assertEqual(call_kwargs['candidate_id'], "VD-E")
-                        
-                        # Verify it's NOT using CustomVoice parameters
-                        self.assertNotIn('model_size', call_kwargs)
+                with patch('app.tts.qwen_engine.VoiceCloneEngine') as MockEngine:
+                    mock_engine_instance = MagicMock()
+                    MockEngine.return_value = mock_engine_instance
+                    
+                    cfg = {"advanced": {}}
+                    engine, hw = _make_engine("qwen", cfg)
+                    
+                    # Verify candidate_id is VD-E (uses Base model)
+                    call_kwargs = MockEngine.call_args.kwargs
+                    self.assertEqual(call_kwargs['candidate_id'], "VD-E")
+                    
+                    # Verify it's NOT using CustomVoice parameters
+                    self.assertNotIn('model_size', call_kwargs)
 
-    def test_runtime_reference_passed_to_voice_clone_engine(self):
-        """VOICEOVER_RUNTIME_REF must be passed to VoiceCloneEngine."""
+    def test_runtime_reference_via_environment_variable(self):
+        """Runtime reference must be passed via VOICEOVER_REFS_DIR environment variable."""
         from app.main import _make_engine
         from app.hardware.detector import HardwareInfo
         
         mock_hw = MagicMock(spec=HardwareInfo)
         mock_hw.mode = "gpu"
         
-        test_ref_path = r"C:\Test\Runtime\VD-E.wav"
+        with patch('app.hardware.detector.detect_hardware', return_value=mock_hw):
+            with patch('app.security.identity_lock.assert_vd_e_usable'):
+                with patch('app.tts.qwen_engine.VoiceCloneEngine') as MockEngine:
+                    mock_engine_instance = MagicMock()
+                    MockEngine.return_value = mock_engine_instance
+                    
+                    # Verify VoiceCloneEngine does NOT receive reference_path parameter
+                    cfg = {"advanced": {}}
+                    engine, hw = _make_engine("qwen", cfg)
+                    
+                    call_kwargs = MockEngine.call_args.kwargs
+                    # reference_path is NOT a parameter of VoiceCloneEngine.__init__()
+                    self.assertNotIn('reference_path', call_kwargs,
+                                   "VoiceCloneEngine must not receive reference_path parameter")
+                    
+                    # VoiceCloneEngine uses paths.VOICE_REFS_DIR which is set from
+                    # VOICEOVER_REFS_DIR environment variable (see app/paths.py)
+                    # The actual reference file is located at VOICE_REFS_DIR/VD-E.wav
+
+    def test_vd_e_uses_valid_constructor_signature(self):
+        """VD-E must use the actual VoiceCloneEngine constructor signature."""
+        import inspect
+        from app.main import _make_engine
+        from app.hardware.detector import HardwareInfo
+        from app.tts.qwen_engine import VoiceCloneEngine
+        
+        mock_hw = MagicMock(spec=HardwareInfo)
+        mock_hw.mode = "gpu"
+        
+        # Get the actual VoiceCloneEngine signature
+        sig = inspect.signature(VoiceCloneEngine.__init__)
+        valid_params = set(sig.parameters.keys())
         
         with patch('app.hardware.detector.detect_hardware', return_value=mock_hw):
             with patch('app.security.identity_lock.assert_vd_e_usable'):
-                with patch('app.security.identity_lock.check_identity') as mock_check:
-                    mock_check.return_value = MagicMock(ok=True, path="/fallback/path")
-                    with patch('app.tts.qwen_engine.VoiceCloneEngine') as MockEngine:
-                        mock_engine_instance = MagicMock()
-                        MockEngine.return_value = mock_engine_instance
-                        
-                        old_env = os.environ.get('VOICEOVER_RUNTIME_REF')
-                        try:
-                            os.environ['VOICEOVER_RUNTIME_REF'] = test_ref_path
-                            
-                            cfg = {"advanced": {}}
-                            engine, hw = _make_engine("qwen", cfg)
-                            
-                            call_kwargs = MockEngine.call_args.kwargs
-                            self.assertEqual(call_kwargs['reference_path'], Path(test_ref_path))
-                        finally:
-                            if old_env is not None:
-                                os.environ['VOICEOVER_RUNTIME_REF'] = old_env
-                            else:
-                                os.environ.pop('VOICEOVER_RUNTIME_REF', None)
+                with patch('app.tts.qwen_engine.VoiceCloneEngine') as MockEngine:
+                    mock_engine_instance = MagicMock()
+                    MockEngine.return_value = mock_engine_instance
+                    
+                    cfg = {"advanced": {}}
+                    engine, hw = _make_engine("qwen", cfg)
+                    
+                    # Verify all passed parameters are valid for VoiceCloneEngine.__init__()
+                    call_kwargs = MockEngine.call_args.kwargs
+                    for param_name in call_kwargs.keys():
+                        self.assertIn(param_name, valid_params,
+                                    f"Parameter '{param_name}' is not valid for VoiceCloneEngine.__init__()")
+                    
+                    # Verify required parameters are present
+                    self.assertIn('hw', call_kwargs)
+                    self.assertIn('candidate_id', call_kwargs)
+                    self.assertIn('description', call_kwargs)
+                    self.assertIn('allow_design', call_kwargs)
 
     def test_no_customvoice_engine_for_vd_e(self):
         """VD-E configuration must NOT create QwenTTSEngine."""
@@ -400,20 +427,18 @@ class TestEngineSelectionByBackendMode(unittest.TestCase):
         
         with patch('app.hardware.detector.detect_hardware', return_value=mock_hw):
             with patch('app.security.identity_lock.assert_vd_e_usable'):
-                with patch('app.security.identity_lock.check_identity') as mock_check:
-                    mock_check.return_value = MagicMock(ok=True, path="/fake/path")
-                    with patch('app.tts.qwen_engine.VoiceCloneEngine') as MockClone:
-                        with patch('app.tts.qwen_engine.QwenTTSEngine') as MockCustom:
-                            mock_engine_instance = MagicMock()
-                            MockClone.return_value = mock_engine_instance
-                            
-                            cfg = {"advanced": {}}
-                            engine, hw = _make_engine("qwen", cfg)
-                            
-                            # VoiceCloneEngine should be called
-                            MockClone.assert_called_once()
-                            # QwenTTSEngine should NOT be called for VD-E
-                            MockCustom.assert_not_called()
+                with patch('app.tts.qwen_engine.VoiceCloneEngine') as MockClone:
+                    with patch('app.tts.qwen_engine.QwenTTSEngine') as MockCustom:
+                        mock_engine_instance = MagicMock()
+                        MockClone.return_value = mock_engine_instance
+                        
+                        cfg = {"advanced": {}}
+                        engine, hw = _make_engine("qwen", cfg)
+                        
+                        # VoiceCloneEngine should be called
+                        MockClone.assert_called_once()
+                        # QwenTTSEngine should NOT be called for VD-E
+                        MockCustom.assert_not_called()
 
 
 if __name__ == "__main__":

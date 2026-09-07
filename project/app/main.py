@@ -71,18 +71,9 @@ def _make_engine(engine_name: str, cfg: dict):
         
         from app.tts.qwen_engine import VoiceCloneEngine
         
-        # Resolve reference path from VOICEOVER_RUNTIME_REF or identity_lock
-        runtime_ref = os.environ.get("VOICEOVER_RUNTIME_REF")
-        if runtime_ref:
-            reference_path = Path(runtime_ref)
-        else:
-            # Fall back to identity_lock's resolution
-            from app.security.identity_lock import check_identity
-            status = check_identity(production)
-            if status.ok and status.path:
-                reference_path = Path(status.path)
-            else:
-                reference_path = None
+        # VoiceCloneEngine uses paths.VOICE_REFS_DIR to locate the reference
+        # VOICE_REFS_DIR is set from VOICEOVER_REFS_DIR environment variable
+        # (see app/paths.py), which allows runtime override of the reference location
         
         eng = VoiceCloneEngine(
             hw=hw,
@@ -90,8 +81,7 @@ def _make_engine(engine_name: str, cfg: dict):
             description="produktion",
             models_dir=models_dir,
             attn_implementation=adv.get("attn_implementation") or None,
-            allow_design=False,  # LOCKED: VD-E darf NICHT neu designt werden
-            reference_path=reference_path
+            allow_design=False  # LOCKED: VD-E darf NICHT neu designt werden
         )
         return eng, hw
     
