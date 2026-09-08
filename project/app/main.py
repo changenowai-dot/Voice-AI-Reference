@@ -78,28 +78,60 @@ def _make_engine(engine_name: str, cfg: dict):
     
     # Create engine based on backend_mode
     if entry.backend_mode == "clone":
-        # VD-E clone backend (§12/§24)
-        from app.security.identity_lock import assert_vd_e_usable
-        log.debug("[DIAG-B] Calling assert_vd_e_usable()")
-        assert_vd_e_usable(production)  # Verify identity before loading
-        log.debug("[DIAG-B] assert_vd_e_usable() passed")
-        
         from app.tts.qwen_engine import VoiceCloneEngine
-        
-        # VoiceCloneEngine uses paths.VOICE_REFS_DIR to locate the reference
-        # VOICE_REFS_DIR is set from VOICEOVER_REFS_DIR environment variable
-        # (see app/paths.py), which allows runtime override of the reference location
-        
-        log.debug("[DIAG-D] Creating VoiceCloneEngine (candidate_id=VD-E, allow_design=False)")
+        # VD-E: strikter Identity-Lock (§12/§24)
+        if entry.voice_id == "vd_e":
+            from app.security.identity_lock import assert_vd_e_usable
+            log.debug("[DIAG-B] Calling assert_vd_e_usable() for VD-E")
+            assert_vd_e_usable(production)
+            log.debug("[DIAG-B] assert_vd_e_usable() passed")
+            log.debug("[DIAG-D] Creating VoiceCloneEngine (candidate_id=VD-E, allow_design=False)")
+            eng = VoiceCloneEngine(
+                hw=hw,
+                candidate_id="VD-E",
+                description="produktion",
+                models_dir=models_dir,
+                attn_implementation=adv.get("attn_implementation") or None,
+                allow_design=False
+            )
+            log.debug("[DIAG-D] VoiceCloneEngine VD-E created")
+            return eng, hw
+        # Neue englische Teststimmen (en_male_deep_*, en_female_calm_*):
+        # VoiceDesign->Clone, Referenz wird bei Bedarf erzeugt (allow_design=True
+        # wenn Datei fehlt, danach wiederverwendet). Kein globaler VD-E-Lock.
+        from app.prosody.instruct import ENGLISH_VOICEDESIGN_DESCRIPTIONS, VOICEDESIGN_DESCRIPTIONS
+        desc_entry = (ENGLISH_VOICEDESIGN_DESCRIPTIONS.get(entry.voice_id)
+                      or VOICEDESIGN_DESCRIPTIONS.get(entry.voice_id) or {})
+        description = desc_entry.get("description") or entry.description or "English narrator"
+        # Referenzpfad aus Registry (z. B. cache/voice_refs/en_male_deep_01.wav)
+        ref_path = None
+        if entry.reference_path:
+            from app import paths as _p
+            ref_path = _p.ROOT / entry.reference_path
+            if not ref_path.exists():
+                # File fehlt → Design erlauben, sonst sperren
+                allow = True
+                log.info("Clone-Stimme %s: Referenz fehlt, VoiceDesign wird erzeugt: %s",
+                         entry.voice_id, ref_path)
+            else:
+                allow = False
+        else:
+            allow = True
+        log.debug("[DIAG-D] Creating VoiceCloneEngine (candidate_id=%s, allow_design=%s)",
+                  entry.voice_id, allow)
+        # candidate_id für Dateinamen: en_male_deep_01 (lowercase) -> file en_male_deep_01.wav
+        # VoiceCloneEngine erwartet candidate_id passend zum Dateinamen ohne Pfad
+        candidate_id = entry.voice_id if entry.voice_id.startswith("en_") else "VD-E"
         eng = VoiceCloneEngine(
             hw=hw,
-            candidate_id="VD-E",
-            description="produktion",
+            candidate_id=candidate_id,
+            description=description,
             models_dir=models_dir,
             attn_implementation=adv.get("attn_implementation") or None,
-            allow_design=False  # LOCKED: VD-E darf NICHT neu designt werden
+            allow_design=allow,
+            reference_path=ref_path if ref_path and ref_path.exists() else None
         )
-        log.debug("[DIAG-D] VoiceCloneEngine created successfully")
+        log.debug("[DIAG-D] VoiceCloneEngine %s created", entry.voice_id)
         return eng, hw
     
     else:

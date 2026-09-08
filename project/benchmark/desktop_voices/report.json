@@ -1,0 +1,883 @@
+{
+  "timestamp": "2026-09-08 20:43:22",
+  "voices": [
+    {
+      "voice_id": "vd_e",
+      "display_name": "VD-E",
+      "gender": "male",
+      "class": "Empfohlen",
+      "note": "Produktionsstandard (locked)",
+      "de": {
+        "audio_ok": 2,
+        "errors": 0,
+        "regenerations": 0,
+        "segments": 2,
+        "qc": 98.0,
+        "pronunciation": 96.7,
+        "naturalness": 95.3,
+        "prosody": 100.0,
+        "integrity": 100.0,
+        "results": [
+          {
+            "qc": 99.3,
+            "pronunciation": 96.7,
+            "naturalness": 99.3,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 4.524,
+            "issues": []
+          },
+          {
+            "qc": 96.8,
+            "pronunciation": 96.6,
+            "naturalness": 91.3,
+            "prosody": 99.9,
+            "integrity": 100.0,
+            "duration_s": 22.381,
+            "issues": [
+              "mechanical_rhythm"
+            ]
+          }
+        ]
+      },
+      "en": {
+        "audio_ok": 2,
+        "errors": 0,
+        "regenerations": 0,
+        "segments": 2,
+        "qc": 99.8,
+        "pronunciation": 98.8,
+        "naturalness": 99.8,
+        "prosody": 100.0,
+        "integrity": 100.0,
+        "results": [
+          {
+            "qc": 99.6,
+            "pronunciation": 98.2,
+            "naturalness": 99.6,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 5.0,
+            "issues": []
+          },
+          {
+            "qc": 99.9,
+            "pronunciation": 99.3,
+            "naturalness": 99.9,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 21.19,
+            "issues": []
+          }
+        ]
+      },
+      "de_score": 98.0,
+      "en_score": 99.8
+    },
+    {
+      "voice_id": "uncle_fu",
+      "display_name": "Uncle_Fu",
+      "gender": "male",
+      "class": "Sehr gut",
+      "note": "",
+      "de": {
+        "audio_ok": 2,
+        "errors": 0,
+        "regenerations": 0,
+        "segments": 2,
+        "qc": 98.0,
+        "pronunciation": 96.7,
+        "naturalness": 95.3,
+        "prosody": 100.0,
+        "integrity": 100.0,
+        "results": [
+          {
+            "qc": 99.3,
+            "pronunciation": 96.7,
+            "naturalness": 99.3,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 4.524,
+            "issues": []
+          },
+          {
+            "qc": 96.8,
+            "pronunciation": 96.6,
+            "naturalness": 91.3,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 22.381,
+            "issues": [
+              "mechanical_rhythm"
+            ]
+          }
+        ]
+      },
+      "en": {
+        "audio_ok": 2,
+        "errors": 0,
+        "regenerations": 0,
+        "segments": 2,
+        "qc": 99.7,
+        "pronunciation": 98.8,
+        "naturalness": 99.7,
+        "prosody": 100.0,
+        "integrity": 100.0,
+        "results": [
+          {
+            "qc": 99.6,
+            "pronunciation": 98.2,
+            "naturalness": 99.6,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 5.0,
+            "issues": []
+          },
+          {
+            "qc": 99.8,
+            "pronunciation": 99.3,
+            "naturalness": 99.8,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 21.19,
+            "issues": []
+          }
+        ]
+      },
+      "de_score": 98.0,
+      "en_score": 99.7
+    },
+    {
+      "voice_id": "dylan",
+      "display_name": "Dylan",
+      "gender": "male",
+      "class": "Sehr gut",
+      "note": "",
+      "de": {
+        "audio_ok": 2,
+        "errors": 0,
+        "regenerations": 0,
+        "segments": 2,
+        "qc": 98.0,
+        "pronunciation": 96.7,
+        "naturalness": 95.3,
+        "prosody": 100.0,
+        "integrity": 100.0,
+        "results": [
+          {
+            "qc": 99.3,
+            "pronunciation": 96.7,
+            "naturalness": 99.3,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 4.524,
+            "issues": []
+          },
+          {
+            "qc": 96.8,
+            "pronunciation": 96.6,
+            "naturalness": 91.3,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 22.381,
+            "issues": [
+              "mechanical_rhythm"
+            ]
+          }
+        ]
+      },
+      "en": {
+        "audio_ok": 2,
+        "errors": 0,
+        "regenerations": 0,
+        "segments": 2,
+        "qc": 99.7,
+        "pronunciation": 98.8,
+        "naturalness": 99.7,
+        "prosody": 100.0,
+        "integrity": 100.0,
+        "results": [
+          {
+            "qc": 99.6,
+            "pronunciation": 98.2,
+            "naturalness": 99.6,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 5.0,
+            "issues": []
+          },
+          {
+            "qc": 99.8,
+            "pronunciation": 99.3,
+            "naturalness": 99.8,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 21.19,
+            "issues": []
+          }
+        ]
+      },
+      "de_score": 98.0,
+      "en_score": 99.7
+    },
+    {
+      "voice_id": "ryan",
+      "display_name": "Ryan",
+      "gender": "male",
+      "class": "Sehr gut",
+      "note": "",
+      "de": {
+        "audio_ok": 2,
+        "errors": 0,
+        "regenerations": 0,
+        "segments": 2,
+        "qc": 98.0,
+        "pronunciation": 96.7,
+        "naturalness": 95.3,
+        "prosody": 100.0,
+        "integrity": 100.0,
+        "results": [
+          {
+            "qc": 99.3,
+            "pronunciation": 96.7,
+            "naturalness": 99.3,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 4.524,
+            "issues": []
+          },
+          {
+            "qc": 96.8,
+            "pronunciation": 96.6,
+            "naturalness": 91.3,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 22.381,
+            "issues": [
+              "mechanical_rhythm"
+            ]
+          }
+        ]
+      },
+      "en": {
+        "audio_ok": 2,
+        "errors": 0,
+        "regenerations": 0,
+        "segments": 2,
+        "qc": 99.7,
+        "pronunciation": 98.8,
+        "naturalness": 99.7,
+        "prosody": 100.0,
+        "integrity": 100.0,
+        "results": [
+          {
+            "qc": 99.6,
+            "pronunciation": 98.2,
+            "naturalness": 99.6,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 5.0,
+            "issues": []
+          },
+          {
+            "qc": 99.8,
+            "pronunciation": 99.3,
+            "naturalness": 99.8,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 21.19,
+            "issues": []
+          }
+        ]
+      },
+      "de_score": 98.0,
+      "en_score": 99.7
+    },
+    {
+      "voice_id": "aiden",
+      "display_name": "Aiden",
+      "gender": "male",
+      "class": "Sehr gut",
+      "note": "",
+      "de": {
+        "audio_ok": 2,
+        "errors": 0,
+        "regenerations": 0,
+        "segments": 2,
+        "qc": 98.0,
+        "pronunciation": 96.7,
+        "naturalness": 95.2,
+        "prosody": 99.8,
+        "integrity": 100.0,
+        "results": [
+          {
+            "qc": 99.2,
+            "pronunciation": 96.7,
+            "naturalness": 99.2,
+            "prosody": 99.7,
+            "integrity": 100.0,
+            "duration_s": 4.524,
+            "issues": []
+          },
+          {
+            "qc": 96.8,
+            "pronunciation": 96.6,
+            "naturalness": 91.3,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 22.381,
+            "issues": [
+              "mechanical_rhythm"
+            ]
+          }
+        ]
+      },
+      "en": {
+        "audio_ok": 2,
+        "errors": 0,
+        "regenerations": 0,
+        "segments": 2,
+        "qc": 99.7,
+        "pronunciation": 98.8,
+        "naturalness": 99.7,
+        "prosody": 100.0,
+        "integrity": 100.0,
+        "results": [
+          {
+            "qc": 99.6,
+            "pronunciation": 98.2,
+            "naturalness": 99.6,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 5.0,
+            "issues": []
+          },
+          {
+            "qc": 99.8,
+            "pronunciation": 99.3,
+            "naturalness": 99.8,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 21.19,
+            "issues": []
+          }
+        ]
+      },
+      "de_score": 98.0,
+      "en_score": 99.7
+    },
+    {
+      "voice_id": "serena",
+      "display_name": "Serena",
+      "gender": "female",
+      "class": "Sehr gut",
+      "note": "",
+      "de": {
+        "audio_ok": 2,
+        "errors": 0,
+        "regenerations": 0,
+        "segments": 2,
+        "qc": 98.0,
+        "pronunciation": 96.7,
+        "naturalness": 95.3,
+        "prosody": 100.0,
+        "integrity": 100.0,
+        "results": [
+          {
+            "qc": 99.3,
+            "pronunciation": 96.7,
+            "naturalness": 99.3,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 4.524,
+            "issues": []
+          },
+          {
+            "qc": 96.8,
+            "pronunciation": 96.6,
+            "naturalness": 91.3,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 22.381,
+            "issues": [
+              "mechanical_rhythm"
+            ]
+          }
+        ]
+      },
+      "en": {
+        "audio_ok": 2,
+        "errors": 0,
+        "regenerations": 0,
+        "segments": 2,
+        "qc": 99.7,
+        "pronunciation": 98.8,
+        "naturalness": 99.7,
+        "prosody": 100.0,
+        "integrity": 100.0,
+        "results": [
+          {
+            "qc": 99.6,
+            "pronunciation": 98.2,
+            "naturalness": 99.6,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 5.0,
+            "issues": []
+          },
+          {
+            "qc": 99.8,
+            "pronunciation": 99.3,
+            "naturalness": 99.8,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 21.19,
+            "issues": []
+          }
+        ]
+      },
+      "de_score": 98.0,
+      "en_score": 99.7
+    },
+    {
+      "voice_id": "vivian",
+      "display_name": "Vivian",
+      "gender": "female",
+      "class": "Sehr gut",
+      "note": "",
+      "de": {
+        "audio_ok": 2,
+        "errors": 0,
+        "regenerations": 0,
+        "segments": 2,
+        "qc": 98.0,
+        "pronunciation": 96.7,
+        "naturalness": 95.3,
+        "prosody": 100.0,
+        "integrity": 100.0,
+        "results": [
+          {
+            "qc": 99.3,
+            "pronunciation": 96.7,
+            "naturalness": 99.3,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 4.524,
+            "issues": []
+          },
+          {
+            "qc": 96.8,
+            "pronunciation": 96.6,
+            "naturalness": 91.3,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 22.381,
+            "issues": [
+              "mechanical_rhythm"
+            ]
+          }
+        ]
+      },
+      "en": {
+        "audio_ok": 2,
+        "errors": 0,
+        "regenerations": 0,
+        "segments": 2,
+        "qc": 99.7,
+        "pronunciation": 98.8,
+        "naturalness": 99.7,
+        "prosody": 100.0,
+        "integrity": 100.0,
+        "results": [
+          {
+            "qc": 99.6,
+            "pronunciation": 98.2,
+            "naturalness": 99.6,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 5.0,
+            "issues": []
+          },
+          {
+            "qc": 99.8,
+            "pronunciation": 99.3,
+            "naturalness": 99.8,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 21.19,
+            "issues": []
+          }
+        ]
+      },
+      "de_score": 98.0,
+      "en_score": 99.7
+    },
+    {
+      "voice_id": "sohee",
+      "display_name": "Sohee",
+      "gender": "female",
+      "class": "Sehr gut",
+      "note": "",
+      "de": {
+        "audio_ok": 2,
+        "errors": 0,
+        "regenerations": 0,
+        "segments": 2,
+        "qc": 98.0,
+        "pronunciation": 96.7,
+        "naturalness": 95.3,
+        "prosody": 100.0,
+        "integrity": 100.0,
+        "results": [
+          {
+            "qc": 99.3,
+            "pronunciation": 96.7,
+            "naturalness": 99.3,
+            "prosody": 99.9,
+            "integrity": 100.0,
+            "duration_s": 4.524,
+            "issues": []
+          },
+          {
+            "qc": 96.8,
+            "pronunciation": 96.6,
+            "naturalness": 91.3,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 22.381,
+            "issues": [
+              "mechanical_rhythm"
+            ]
+          }
+        ]
+      },
+      "en": {
+        "audio_ok": 2,
+        "errors": 0,
+        "regenerations": 0,
+        "segments": 2,
+        "qc": 99.7,
+        "pronunciation": 98.8,
+        "naturalness": 99.7,
+        "prosody": 100.0,
+        "integrity": 100.0,
+        "results": [
+          {
+            "qc": 99.6,
+            "pronunciation": 98.2,
+            "naturalness": 99.6,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 5.0,
+            "issues": []
+          },
+          {
+            "qc": 99.8,
+            "pronunciation": 99.3,
+            "naturalness": 99.8,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 21.19,
+            "issues": []
+          }
+        ]
+      },
+      "de_score": 98.0,
+      "en_score": 99.7
+    },
+    {
+      "voice_id": "en_male_deep_01",
+      "display_name": "EN Male Deep 01",
+      "gender": "male",
+      "class": "Sehr gut",
+      "note": "",
+      "de": {
+        "audio_ok": 2,
+        "errors": 0,
+        "regenerations": 0,
+        "segments": 2,
+        "qc": 96.9,
+        "pronunciation": 96.7,
+        "naturalness": 91.3,
+        "prosody": 100.0,
+        "integrity": 100.0,
+        "results": [
+          {
+            "qc": 96.9,
+            "pronunciation": 96.7,
+            "naturalness": 91.3,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 4.524,
+            "issues": [
+              "mechanical_rhythm"
+            ]
+          },
+          {
+            "qc": 96.9,
+            "pronunciation": 96.6,
+            "naturalness": 91.3,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 22.381,
+            "issues": [
+              "mechanical_rhythm"
+            ]
+          }
+        ]
+      },
+      "en": {
+        "audio_ok": 2,
+        "errors": 0,
+        "regenerations": 0,
+        "segments": 2,
+        "qc": 99.8,
+        "pronunciation": 98.8,
+        "naturalness": 99.8,
+        "prosody": 100.0,
+        "integrity": 100.0,
+        "results": [
+          {
+            "qc": 99.6,
+            "pronunciation": 98.2,
+            "naturalness": 99.6,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 5.0,
+            "issues": []
+          },
+          {
+            "qc": 99.9,
+            "pronunciation": 99.3,
+            "naturalness": 99.9,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 21.19,
+            "issues": []
+          }
+        ]
+      },
+      "de_score": 96.9,
+      "en_score": 99.8
+    },
+    {
+      "voice_id": "en_male_deep_02",
+      "display_name": "EN Male Deep 02",
+      "gender": "male",
+      "class": "Sehr gut",
+      "note": "",
+      "de": {
+        "audio_ok": 2,
+        "errors": 0,
+        "regenerations": 0,
+        "segments": 2,
+        "qc": 98.1,
+        "pronunciation": 96.7,
+        "naturalness": 95.3,
+        "prosody": 100.0,
+        "integrity": 100.0,
+        "results": [
+          {
+            "qc": 99.3,
+            "pronunciation": 96.7,
+            "naturalness": 99.3,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 4.524,
+            "issues": []
+          },
+          {
+            "qc": 96.9,
+            "pronunciation": 96.6,
+            "naturalness": 91.3,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 22.381,
+            "issues": [
+              "mechanical_rhythm"
+            ]
+          }
+        ]
+      },
+      "en": {
+        "audio_ok": 2,
+        "errors": 0,
+        "regenerations": 0,
+        "segments": 2,
+        "qc": 99.8,
+        "pronunciation": 98.8,
+        "naturalness": 99.8,
+        "prosody": 100.0,
+        "integrity": 100.0,
+        "results": [
+          {
+            "qc": 99.6,
+            "pronunciation": 98.2,
+            "naturalness": 99.6,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 5.0,
+            "issues": []
+          },
+          {
+            "qc": 99.9,
+            "pronunciation": 99.3,
+            "naturalness": 99.9,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 21.19,
+            "issues": []
+          }
+        ]
+      },
+      "de_score": 98.1,
+      "en_score": 99.8
+    },
+    {
+      "voice_id": "en_female_calm_01",
+      "display_name": "EN Female Calm 01",
+      "gender": "female",
+      "class": "Sehr gut",
+      "note": "",
+      "de": {
+        "audio_ok": 2,
+        "errors": 0,
+        "regenerations": 0,
+        "segments": 2,
+        "qc": 98.1,
+        "pronunciation": 96.7,
+        "naturalness": 95.3,
+        "prosody": 100.0,
+        "integrity": 100.0,
+        "results": [
+          {
+            "qc": 99.3,
+            "pronunciation": 96.7,
+            "naturalness": 99.3,
+            "prosody": 99.9,
+            "integrity": 100.0,
+            "duration_s": 4.524,
+            "issues": []
+          },
+          {
+            "qc": 96.9,
+            "pronunciation": 96.6,
+            "naturalness": 91.3,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 22.381,
+            "issues": [
+              "mechanical_rhythm"
+            ]
+          }
+        ]
+      },
+      "en": {
+        "audio_ok": 2,
+        "errors": 0,
+        "regenerations": 0,
+        "segments": 2,
+        "qc": 99.8,
+        "pronunciation": 98.8,
+        "naturalness": 99.8,
+        "prosody": 100.0,
+        "integrity": 100.0,
+        "results": [
+          {
+            "qc": 99.6,
+            "pronunciation": 98.2,
+            "naturalness": 99.6,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 5.0,
+            "issues": []
+          },
+          {
+            "qc": 99.9,
+            "pronunciation": 99.3,
+            "naturalness": 99.9,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 21.19,
+            "issues": []
+          }
+        ]
+      },
+      "de_score": 98.1,
+      "en_score": 99.8
+    },
+    {
+      "voice_id": "en_female_calm_02",
+      "display_name": "EN Female Calm 02",
+      "gender": "female",
+      "class": "Sehr gut",
+      "note": "",
+      "de": {
+        "audio_ok": 2,
+        "errors": 0,
+        "regenerations": 0,
+        "segments": 2,
+        "qc": 98.1,
+        "pronunciation": 96.7,
+        "naturalness": 95.3,
+        "prosody": 100.0,
+        "integrity": 100.0,
+        "results": [
+          {
+            "qc": 99.3,
+            "pronunciation": 96.7,
+            "naturalness": 99.3,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 4.524,
+            "issues": []
+          },
+          {
+            "qc": 96.9,
+            "pronunciation": 96.6,
+            "naturalness": 91.3,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 22.381,
+            "issues": [
+              "mechanical_rhythm"
+            ]
+          }
+        ]
+      },
+      "en": {
+        "audio_ok": 2,
+        "errors": 0,
+        "regenerations": 0,
+        "segments": 2,
+        "qc": 99.8,
+        "pronunciation": 98.8,
+        "naturalness": 99.8,
+        "prosody": 100.0,
+        "integrity": 100.0,
+        "results": [
+          {
+            "qc": 99.6,
+            "pronunciation": 98.2,
+            "naturalness": 99.6,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 5.0,
+            "issues": []
+          },
+          {
+            "qc": 99.9,
+            "pronunciation": 99.3,
+            "naturalness": 99.9,
+            "prosody": 100.0,
+            "integrity": 100.0,
+            "duration_s": 21.19,
+            "issues": []
+          }
+        ]
+      },
+      "de_score": 98.1,
+      "en_score": 99.8
+    }
+  ]
+}

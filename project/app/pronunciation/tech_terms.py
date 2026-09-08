@@ -124,9 +124,15 @@ TECH_TERMS_DE: dict[str, str] = {
     "Globalisierung": "Glo-ba-li-SIE-rung",
 }
 
-# Sichere Suffix-Regel: …theorie -> …-teo-RIE (für Komposita)
+# Sichere Suffix-Regeln für deutsche Komposita (generisch, nicht wort-spezifisch)
+# – …theorie -> …-teo-RIE  sowie zusätzlich …wissenschaft, …geist, …logie etc.
+# Alle Regeln TTS-intern, nur für lange Komposita, kuratierte exakte Einträge gewinnen immer.
 _THEORIE_SUFFIX = re.compile(r"([A-Za-zäöüß-]+)theorie\b")
 _THEORETISCH = re.compile(r"\btheoretisch\b")
+_WISSENSCHAFT_SUFFIX = re.compile(r"([A-Za-zäöüß-]{3,})wissenschaft\b")
+_GEIST_SUFFIX = re.compile(r"([A-Za-zäöüß-]{2,})geist\b")
+_LOGIE_SUFFIX = re.compile(r"([A-Za-zäöüß-]{4,})logie\b")
+_SCHAFT_SUFFIX = re.compile(r"([A-Za-zäöüß-]{5,})schaft\b")
 
 # Wörter, die NICHT germanisiert werden (echte Englisch-Wörter im Text)
 _KEEP = {"Thriller", "Theory", "Theme"}
@@ -183,6 +189,41 @@ def apply_tech_germanization(text: str, language: str = "German",
                              "rule": "tech_suffix"})
         return repl
     text = _THEORIE_SUFFIX.sub(_comp, text)
+
+    # generische Komposita auf „…wissenschaft“ (lang, z. B. Kognitionswissenschaft)
+    # Beispiel: „Kognitionswissenschaft“ → „Kognitions-wis-sen-schaft“ – nur wenn nicht kuratiert
+    def _wiss(m: re.Match) -> str:
+        stem = m.group(1)
+        # Stamm sauber halten, Bindestrich für TTS-Betonung
+        repl = f"{stem}-wis-sen-schaft"
+        replacements.append({"from": m.group(0), "to": repl,
+                             "rule": "tech_suffix_wissenschaft"})
+        return repl
+    # Nur bei Wörtern >= 13 Zeichen (inkl. Suffix), um kurze Fehlmatches zu vermeiden
+    text = _WISSENSCHAFT_SUFFIX.sub(lambda m: _wiss(m) if len(m.group(0)) >= 13 and m.group(0) not in mapping else m.group(0), text)
+
+    # generische Komposita auf „…geist“ (z. B. Erdgeist → Erd-geist, Zeitgeist → Zeit-geist)
+    # Hilft bei Übergang „Erdgeist + Folgewort“ durch klare Silbenmarkierung
+    def _geist(m: re.Match) -> str:
+        stem = m.group(1)
+        repl = f"{stem}-geist"
+        replacements.append({"from": m.group(0), "to": repl,
+                             "rule": "tech_suffix_geist"})
+        return repl
+    # Nur bei unbekannten Komposita (kuratierte wie Erdgeist selbst nicht in TECH_TERMS, also greift Suffix)
+    # Schützt kurze Kernwörter „Geist“ allein nicht
+    text = _GEIST_SUFFIX.sub(lambda m: _geist(m) if len(m.group(0)) >= 7 and m.group(1) else m.group(0), text)
+
+    # generische Komposita auf „…logie“ (Phy → …-lo-GIE) – sanft, nur Stamm >=4
+    def _logie(m: re.Match) -> str:
+        stem = m.group(1)
+        repl = f"{stem}-lo-GIE"
+        replacements.append({"from": m.group(0), "to": repl,
+                             "rule": "tech_suffix_logie"})
+        return repl
+    # Nur wenn nicht kuratiert (TECH_TERMS deckt Psychologie etc. bereits ab)
+    text = _LOGIE_SUFFIX.sub(lambda m: _logie(m) if m.group(0) not in mapping else m.group(0), text)
+
     return text, replacements
 
 

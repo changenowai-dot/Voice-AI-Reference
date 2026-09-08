@@ -58,6 +58,17 @@ class TestDoubleEngine(TTSEngine):
         base_f0 = 100.0 + (seed % 700) / 10.0          # 100–170 Hz
         if request.speaker in ("Serena", "Vivian", "Sohee", "Ono_Anna"):
             base_f0 += 60.0
+        # Neue englische Teststimmen: gender-spezifische F0-Hebung
+        sp = request.speaker.lower()
+        if "female" in sp or "en_female" in sp:
+            base_f0 += 55.0
+            # weiblich calm 01 tiefer (warm_low), calm 02 heller (bright_calm)
+            if "calm_02" in sp or "bright" in sp:
+                base_f0 += 12.0
+        if "male_deep_01" in sp:
+            base_f0 = 88.0 + (seed % 300) / 10.0      # 88–118 Hz tiefster
+        elif "male_deep_02" in sp:
+            base_f0 = 102.0 + (seed % 300) / 10.0     # 102–132 Hz warm
 
         # Satzmelodie: leichter Abfall über das Segment + Fragemelodie
         progress = t / max(speaking_s, 1e-6)
@@ -94,31 +105,54 @@ class TestDoubleEngine(TTSEngine):
 class TestDoubleCloneEngine(TestDoubleEngine):
     """Prüfstand-Clone-Engine (VD-E-Pfad-Mechanik, §12): gleiche
     deterministische „Stimme“ für alle Segmente, allow_design=False
-    wird respektiert, Sprecher-Wechsel ausgeschlossen (§3)."""
+    wird respektiert, Sprecher-Wechsel ausgeschlossen (§3).
+
+    Für VD-E gilt strikter Lock; für neue Teststimmen (en_male_deep_*
+    etc.) wird die voice_id als deterministischer Sprecher-Schlüssel
+    verwendet, Referenzpfad ist per voice_id unterscheidbar und
+    allow_design hat pro Stimme eigene Semantik.
+    """
 
     name = "test-double-clone"
     ENGINE_VERSION = "td-clone-v1"
 
-    def __init__(self, sample_rate: int = 24000, allow_design: bool = True):
+    def __init__(self, sample_rate: int = 24000, allow_design: bool = True,
+                 voice_id: str | None = None, candidate_id: str | None = None):
         super().__init__(sample_rate)
         self.allow_design = allow_design
-        self._speaker_key = "VD-E-TEST"
+        # voice_id bzw. candidate_id steuert die deterministische „Stimme“
+        self.voice_id = voice_id or candidate_id or "VD-E"
+        # legacy _speaker_key für Kompatibilität
+        if self.voice_id == "VD-E" or self.voice_id == "vd_e":
+            self._speaker_key = "VD-E-TEST"
+        else:
+            # Hash-basierter aber unterschiedlicher F0-Hash je Stimme
+            # en_male_deep_01 -> tiefer F0 (100-120), en_female_calm_02 -> höher (165-195)
+            self._speaker_key = f"TEST-{self.voice_id.upper()}"
+        self.candidate_id = candidate_id or voice_id
 
     def load(self) -> None:
         from .. import paths
-        if not self.allow_design:
+        # VD-E strikt locked; andere Stimmen dürfen im Prüfstand ohne Datei laden
+        # (echte Produktion prüft Datei-Existenz separat in jobs/runner)
+        if not self.allow_design and self.voice_id in ("VD-E", "vd_e", "VD-E-TEST"):
             ref = paths.VOICE_REFS_DIR / "VD-E.wav"
             if not ref.exists():
                 from .engine_base import TTSError
                 raise TTSError(
                     f"VD-E-Referenz fehlt: {ref}. Neuerzeugung gesperrt "
                     "(LOCKED PRODUCTION, §12/§24).")
+        if not self.allow_design and self.voice_id.startswith("en_"):
+            # Für en_* Clone-Teststimmen: Referenz sollte existieren, aber im Prüfstand
+            # erlauben wir fehlende Datei (deterministische Synthese ohne Prompt)
+            # – Produktion (jobs/runner) prüft strikter.
+            pass
         self._loaded = True
 
     def synthesize(self, request):
         req = SynthesisRequest(
             text=request.text, language=request.language,
-            speaker=self._speaker_key,       # Identität konstant
+            speaker=self._speaker_key,       # Identität konstant je Stimme
             instruct=request.instruct,
             sampling=request.sampling, seed=request.seed,
             max_seconds_hint=request.max_seconds_hint)

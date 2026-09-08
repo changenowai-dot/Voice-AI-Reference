@@ -129,7 +129,13 @@ def apply_production(cfg: dict, production: dict) -> dict:
 
 
 def build_engine(spec: JobSpec, production: dict):
-    """Engine-Auswahl nach voice_id (§12: vd_e = eigener Pfad)."""
+    """Engine-Auswahl nach voice_id (§12: vd_e = eigener Pfad).
+
+    Unterstützt:
+    - vd_e (LOCKED, Identity-Lock, allow_design=False)
+    - vier neue englische Teststimmen en_male_deep_*/en_female_calm_* (Clone,
+      VoiceDesign->Base, Referenz wird bei Bedarf erzeugt)
+    """
     from ..voices.registry import VoiceRegistry
     registry = VoiceRegistry()
     entry = registry.get(spec.voice_id)
@@ -137,29 +143,76 @@ def build_engine(spec: JobSpec, production: dict):
         raise RuntimeError(f"Unbekannte Stimme: {spec.voice_id!r}")
 
     if entry.backend_mode == "clone":
-        # §12/§24: Identity-Lock VOR allem; nie neu designen
-        from ..security.identity_lock import assert_vd_e_usable
-        status = assert_vd_e_usable(production)
-        emit("stage", stage="voice_load", voice="VD-E",
-             detail="Identität geprüft: " + status.message)
+        # VD-E: strikter Identity-Lock
+        if entry.voice_id == "vd_e":
+            from ..security.identity_lock import assert_vd_e_usable
+            status = assert_vd_e_usable(production)
+            emit("stage", stage="voice_load", voice="VD-E",
+                 detail="Identität geprüft: " + status.message)
+            if spec.engine == "test_double":
+                from ..tts.test_double import TestDoubleCloneEngine
+                return TestDoubleCloneEngine(allow_design=False, voice_id="VD-E",
+                                             candidate_id="VD-E"), entry
+            from ..hardware.detector import detect_hardware
+            from ..tts.qwen_engine import VoiceCloneEngine
+            hw = detect_hardware()
+            adv_cfg = {}
+            try:
+                from .. import config as cfgmod
+                adv_cfg = cfgmod.load_config().get("advanced", {})
+            except Exception:                              # noqa: BLE001
+                pass
+            return VoiceCloneEngine(
+                hw, candidate_id="VD-E",
+                description="produktion",
+                attn_implementation=adv_cfg.get("attn_implementation") or None,
+                allow_design=False), entry
+        # Neue englische Teststimmen (clone, VoiceDesign->Base)
         if spec.engine == "test_double":
             from ..tts.test_double import TestDoubleCloneEngine
-            return TestDoubleCloneEngine(allow_design=False), entry
+            # TestDouble: deterministische Stimme je voice_id, Referenz-Existenz
+            # wird im Prüfstand nicht strikt verlangt (echte Produktion geprüft separat)
+            return TestDoubleCloneEngine(allow_design=True,
+                                         voice_id=entry.voice_id,
+                                         candidate_id=entry.voice_id), entry
+        # Echte Produktion: Qwen VoiceCloneEngine mit Design->Clone
         from ..hardware.detector import detect_hardware
         from ..tts.qwen_engine import VoiceCloneEngine
+        from ..prosody.instruct import ENGLISH_VOICEDESIGN_DESCRIPTIONS, VOICEDESIGN_DESCRIPTIONS
         hw = detect_hardware()
         adv_cfg = {}
         try:
             from .. import config as cfgmod
             adv_cfg = cfgmod.load_config().get("advanced", {})
-        except Exception:                              # noqa: BLE001
+        except Exception:  # noqa: BLE001
             pass
+        # Beschreibung für VoiceDesign (falls Referenz neu erzeugt werden muss)
+        desc_entry = (ENGLISH_VOICEDESIGN_DESCRIPTIONS.get(entry.voice_id)
+                      or VOICEDESIGN_DESCRIPTIONS.get(entry.voice_id) or {})
+        description = desc_entry.get("description") or entry.description or "English narrator"
+        # Referenzpfad prüfen: existiert bereits -> allow_design=False, sonst True (einmalig Design)
+        from .. import paths as _p
+        ref_path = None
+        allow_design = True
+        if entry.reference_path:
+            rp = _p.ROOT / entry.reference_path
+            if rp.exists():
+                ref_path = rp
+                allow_design = False
+                emit("stage", stage="voice_load", voice=entry.display_name,
+                     detail=f"Referenz vorhanden: {rp.name}")
+            else:
+                emit("stage", stage="voice_load", voice=entry.display_name,
+                     detail=f"Referenz fehlt – wird einmalig via VoiceDesign erzeugt")
+                allow_design = True
+        candidate_id = entry.voice_id  # Dateiname ohne Pfad: en_male_deep_01.wav
         return VoiceCloneEngine(
-            hw, candidate_id="VD-E",
-            description="produktion",  # nur Deskriptor; Referenz ist
-                                      # vorhanden und gesperrt
+            hw, candidate_id=candidate_id,
+            description=description,
+            models_dir=None,
             attn_implementation=adv_cfg.get("attn_implementation") or None,
-            allow_design=False), entry
+            allow_design=allow_design,
+            reference_path=ref_path), entry
 
     # CustomVoice (§13): Verfügbarkeit PRÜFEN, kein Fallback
     if spec.engine == "test_double":
@@ -239,11 +292,24 @@ def run_job(spec: JobSpec) -> int:
         cfg["language"] = spec.language
         cfg["speed"] = spec.speed
         cfg["volume_db"] = spec.volume_db
+        # Voice-spezifischer deterministischer Seed:
+        # VD-E: 52001 (LOCKED); neue Englisch-Teststimmen: ihr registry-seed (52011…)
+        # CustomVoice: hash-basiert (None)
+        prod_seed = None
+        if spec.voice_id == "vd_e":
+            prod_seed = production.get("seed")
+        else:
+            # Für en_* Clone-Teststimmen: registry settings seed nutzen
+            from ..voices.registry import VoiceRegistry as _VR
+            try:
+                _e = _VR().get(spec.voice_id)
+                prod_seed = (_e.settings.get("seed") if hasattr(_e, "settings") else None) \
+                    or (_VR()._profiles.get(spec.voice_id, {}).get("settings", {}).get("seed"))
+            except Exception:
+                prod_seed = None
         cfg["voice"] = {"id": spec.voice_id,
-                        "speaker": None,          # setzt build_engine-Kontext
-                        "production_seed":
-                            production.get("seed")
-                            if spec.voice_id == "vd_e" else None}
+                        "speaker": None,
+                        "production_seed": prod_seed}
         if spec.output_dir:
             cfg["output_dir"] = str(Path(spec.output_dir))
         out_dir = Path(spec.output_dir) if spec.output_dir else paths.OUTPUT_DIR
@@ -258,9 +324,14 @@ def run_job(spec: JobSpec) -> int:
              detail="Modell wird geladen (einmalig)")
         engine.load()
         ensure_speaker_available(engine, entry)
-        cfg["voice"]["speaker"] = (entry.speaker_name if
-                                   entry.backend_mode == "customvoice"
-                                   else "VD-E")
+        if entry.backend_mode == "customvoice":
+            cfg["voice"]["speaker"] = entry.speaker_name
+        else:
+            # Clone: VD-E bleibt "VD-E", neue Teststimmen nutzen voice_id als Cache-Speaker-Key
+            if entry.voice_id == "vd_e":
+                cfg["voice"]["speaker"] = "VD-E"
+            else:
+                cfg["voice"]["speaker"] = entry.voice_id
         emit("stage", stage="model_ready")
 
         # 4) Pipeline mit Fortschritts-Events (§17)

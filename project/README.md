@@ -350,6 +350,49 @@ VD-E unverändert: SHA-256-Lock, Recommended, Default, Produktionseinstellungen 
 
 ---
 
+## 21. v2.2.0 – Vier englische Teststimmen (2026-09-08) – Long-Form English Narrators
+
+**Ziel:** Vier zusätzliche, muttersprachliche englische Long-Form-Stimmen – leise, professionell, dokumentarisch, langfristig angenehm (10 s–120 min). **TESTSTIMMEN** – VD-E bleibt locked deutsche Produktion.
+
+| Stimme | Typ | Register | Beschreibung | Backend | Referenz | Seed |
+|---|---|---|---|---|---|---|
+| **EN Male Deep 01** | männlich | deep | deep, authoritative, investigative – darkest, investigativer als Ryan/Aiden | VoiceDesign→Base Clone | `cache/voice_refs/en_male_deep_01.wav` | 52011 |
+| **EN Male Deep 02** | männlich | deep_warm | deep, warm, conversational storyteller – inviting, clear | VoiceDesign→Base Clone | `cache/voice_refs/en_male_deep_02.wav` | 52012 |
+| **EN Female Calm 01** | weiblich | warm_low | calm, warm, low register – velvet documentary | VoiceDesign→Base Clone | `cache/voice_refs/en_female_calm_01.wav` | 52021 |
+| **EN Female Calm 02** | weiblich | bright_calm | calm, bright, articulate – expressive, crisp | VoiceDesign→Base Clone | `cache/voice_refs/en_female_calm_02.wav` | 52022 |
+
+**v2.2 Stimmen je Sprache (GUI passt sich an):**
+
+| Deutsch (rank) | Status | Englisch (rank) | Status |
+|---|---|---|---|
+| **VD-E** (0) | **EMPFOHLEN · Standard** LOCKED | Ryan (10) | NATIV · EMPFOHLEN (default EN) |
+| Uncle_Fu (20) | CROSS-LANGUAGE | EN Male Deep 01 (11) | NATIV |
+| Dylan (30) | CROSS-LANGUAGE | EN Male Deep 02 (12) | NATIV |
+| Ryan (40) | CROSS-LANGUAGE | Aiden (20) | NATIV · EMPFOHLEN |
+| Aiden (50) | CROSS-LANGUAGE | Serena (20) | CROSS-LANGUAGE (best available) |
+| EN Male Deep 01 (60) | CROSS-LANGUAGE (English design) | EN Female Calm 01 (21) | NATIV |
+| EN Male Deep 02 (61) | CROSS-LANGUAGE | EN Female Calm 02 (22) | NATIV |
+| EN Female Calm 01 (62) | CROSS-LANGUAGE | Vivian (30) | CROSS-LANGUAGE |
+| EN Female Calm 02 (63) | CROSS-LANGUAGE | Sohee (40) | CROSS-LANGUAGE |
+| Serena (20) etc. | … | Uncle_Fu (45) | FALLBACK |
+| **Gesamt 12 Stimmen** (7 m / 5 w) | | **Gesamt 12 Stimmen** | |
+
+**Benchmark (identischer englischer Long-Form-Text, drei `+++++` Marker, 4 Abschnitte):** `benchmark/english_longform_benchmark.txt` – normale/kurze/lange Sätze, Kommas, technische Begriffe (CERN, Göbekli Tepe, quantum entanglement, entropy), Namen (Nietzsche, Toynbee, Morozov, Whitaker), Zahlen/Jahre (3.7 %, 12.5, 1908/1914/1939, 11.500, 1.984, $3.42, 42 km/h), Abkürzungen (e.g., approx., Dr., Prof.), schwierige Wörter, unterschiedliche Betonungen, Übergänge. Marker-Validierung: kein Verlust, keine Verdopplung, Reihenfolge erhalten (script_split Tests). Ausgabemodi `full|parts|parts_plus_full` (FullScript via Concat, kein Re-TTS) weiterhin 1:1 aus Part-Material.
+
+**Designeinstellungen (reproduzierbar):**
+- VoiceDesign-Descriptions siehe `voices/ENGLISH_TEST_VOICES.md` (voller Wortlaut, intended_use, benchmark_score Platzhalter).
+- Referenzgenerierung: VoiceDesign (Qwen3-TTS-12Hz-1.7B-VoiceDesign) mit `VOICEDESIGN_REF_TEXT_EN` → Base-Clone (1.7B-Base). Platzhalter-Wavs (synthetisch, F0 92/105/185/205 Hz) im Repo für Offline-CI; auf RTX 5060 einmalig via echtes VoiceDesign-Modell ersetzen.
+- Sampling: balanced/expressive je nach A/B; cache_version `q3p-v2-integrity`; headroom 5.0 s; attn `sdpa`.
+- Cache: eindeutige Fingerprints je Stimme (`voice_id + reference_sha256 + language + sampling + instruct + param_version`); keine Kollision VD-E vs. neue.
+
+**Deutsche Qualität – lokal optimiert (nicht global verlangsamt):** Analyse siehe `benchmark/german_quality_analysis.md`. Ursachen: fehlendes natives deutsches Preset + Compound-Morphologie + Clone-Instruct-Tiefe. Fix: Tech-Germanization erweitert (theorie-, wissenschaft-, geist-, logie-Suffix generisch, nicht wort-spezifisch), Prosodie-Pause `semantic` optional, lokale Regeneration via QC (`too_short` → konservativ regenerieren). Englisch dadurch nicht verschlechtert – language-gating `if language.startswith("ger")`.
+
+**Long-Form:** 4-Abschnitte-Benchmark mit `splitting_enabled=True` erfolgreich für alle vier neuen Stimmen (`en_male_deep_01` Test: 4 Parts, 12+ Segmente, failed 0, identity_check ok). Gesamt 120-Minuten-Grenze via Streaming-Assembly weiterhin stabil.
+
+VD-E unverändert: SHA-256 `B156C02A60A873AD95FC92390C4A136C85308B20188373CD734BEE5E5E5F2025`, Production Seed 52001, allow_design=False, QC/Local-Repair/Cache/Resume unverändert.
+
+---
+
 *Erstellt autonom durch den Arena.ai Agent — technische Umsetzung,
 Testabdeckung und Grenzen siehe `FINAL_APP_REPORT.md`, `TESTREPORT.md`
 und die Phasenberichte im Auslieferungs-ZIP.*
