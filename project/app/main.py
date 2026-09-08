@@ -335,6 +335,10 @@ def main() -> int:
                              "Standard ist die Desktop-GUI")
     parser.add_argument("--headless", action="store_true",
                         help="ohne GUI: input/ verarbeiten (CLI-Pipeline)")
+    parser.add_argument("--input", type=str,
+                        help="Eingabedatei oder -ordner für headless-Modus")
+    parser.add_argument("--output", type=str,
+                        help="Ausgabeverzeichnis für headless-Modus")
     parser.add_argument("--files", nargs="*", help="bestimmte Dateien")
     parser.add_argument("--engine", default="qwen",
                         choices=["qwen", "test_double"],
@@ -454,7 +458,7 @@ def route_mode(args) -> str:
     """
     if getattr(args, "webserver", False) or getattr(args, "ui", False):
         return "webserver"
-    cli_flags = ("headless", "files", "job", "benchmark", "download_models",
+    cli_flags = ("headless", "input", "output", "files", "job", "benchmark", "download_models",
                  "info", "version", "german_baseline",
                  "german_baseline_force", "german_ab", "german_speakers",
                  "phase2_run", "phase2_pauses", "phase2_pick",
