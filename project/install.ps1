@@ -245,14 +245,21 @@ try {
         transformers = $TransformersVersion.Trim()
         app = "1.0.0"
     }
-    $Metadata | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $VersionsPath -Encoding UTF8
+    $jsonText = $Metadata | ConvertTo-Json -Depth 5
+    [System.IO.File]::WriteAllText($VersionsPath, $jsonText, (New-Object System.Text.UTF8Encoding $false))
     if ($LASTEXITCODE -ne 0) { throw "ConvertTo-Json/Set-Content failed (Exit $LASTEXITCODE)" }
     if (-not (Test-Path -LiteralPath $VersionsPath -PathType Leaf)) { throw "versions.json was not created: $VersionsPath" }
 
     # JSON validieren
-    $codeValidate = 'import json,sys; json.load(open(sys.argv[1],encoding="utf-8")); print("JSON_OK")'
+    $codeValidate = 'import json,sys; json.load(open(sys.argv[1],encoding="utf-8-sig")); print("JSON_OK")'
     $validateOut = & $Vpy -c $codeValidate $VersionsPath 2>$null
-    if ($LASTEXITCODE -ne 0 -or $validateOut -notmatch "JSON_OK") { throw "versions.json JSON validation failed (Exit $LASTEXITCODE, out=$validateOut)" }
+    if ($LASTEXITCODE -ne 0 -or $validateOut -notmatch "JSON_OK") {
+        # Diagnose: zeige Datei-Inhalt (erste 500 Zeichen) fuer Debugging
+        $dbgContent = Get-Content -LiteralPath $VersionsPath -Raw -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($dbgContent) { $dbgSnippet = $dbgContent.Substring(0, [Math]::Min(500, $dbgContent.Length)) } else { $dbgSnippet = "(leer/nicht lesbar)" }
+        Log "versions.json Inhalt (Snippet): $dbgSnippet" "Yellow"
+        throw "versions.json JSON validation failed (Exit $LASTEXITCODE, out=$validateOut)"
+    }
     Log "versions.json OK: $VersionsPath" "Green"
 
     # environment.json: falls bereits vorhanden pruefen, sonst minimal erzeugen (optional, kein Pflichtfeld)
