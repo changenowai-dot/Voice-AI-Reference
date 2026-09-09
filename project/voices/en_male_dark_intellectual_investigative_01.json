@@ -19,7 +19,7 @@
   "recommended": false,
   "default": false,
   "intended_use": "long-form documentary, history, science, psychology, philosophy, investigative",
-  "status": "test_voice_round02_fast_audition",
+  "status": "rejected_human",
   "register": "dark_intellectual_investigative",
   "style": "dark_intellectual_investigative",
   "per_language": {
@@ -50,5 +50,10 @@
     "visible_position": 3
   },
   "reference_sha256": "ARENA_VOICE-20",
-  "reference_generated": "real speech via Arena voice-20 – fast_audition_round02 identical short text 15-25s; not TestDouble sine"
+  "reference_generated": "real speech via Arena voice-20 – fast_audition_round02 identical short text 15-25s; not TestDouble sine",
+  "human_selected": false,
+  "production_candidate": false,
+  "rejected": true,
+  "rejected_reason": "Not selected in round02 visible position 3/10 (2026-09-09) — retains history, not production candidate",
+  "rejected_position": 3
 }

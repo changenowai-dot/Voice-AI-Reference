@@ -1,0 +1,54 @@
+{
+  "voice_id": "de_male_dark_documentary_01",
+  "display_name": "DE Male Dark Documentary",
+  "gender": "male",
+  "provider": "arena-tts",
+  "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "German",
+  "native_status": "native",
+  "category": "narrator",
+  "description": "dark documentary – tief, ernst, glaubwürdig, dokumentarisch, kontrolliert",
+  "backend_mode": "clone",
+  "speaker_name": null,
+  "reference_path": "benchmark/fast_audition_de/02_de_male_dark_documentary.mp3",
+  "production_locked": false,
+  "recommended": false,
+  "default": false,
+  "intended_use": "long-form documentary, history, science, psychology, philosophy",
+  "status": "test_voice_de_fast_audition",
+  "register": "dark_documentary",
+  "style": "dark_documentary",
+  "per_language": {
+    "German": {
+      "native_status": "native",
+      "rank": 11,
+      "recommended": false,
+      "default": false,
+      "description": "dark documentary – tief, ernst, glaubwürdig, dokumentarisch, kontrolliert"
+    },
+    "English": {
+      "native_status": "cross_language",
+      "rank": 91,
+      "recommended": false,
+      "default": false,
+      "description": "dark_documentary – German design (cross-language)"
+    }
+  },
+  "settings": {
+    "seed": 53002,
+    "variant": "DE_MALE_DARK_DOCUMENTARY_01",
+    "cache_version": "q3p-v2-integrity",
+    "language": "German",
+    "engine": "VoiceCloneEngine",
+    "backend": "clone",
+    "arena_voice_id": "voice-29",
+    "visible_position": 2,
+    "round": "de_fast_audition"
+  },
+  "reference_sha256": "ARENA_VOICE-29",
+  "reference_generated": "real speech via Arena voice-29 – de_fast_audition identical German short text; not TestDouble sine"
+}

@@ -16,17 +16,17 @@
   "speaker_name": null,
   "reference_path": "benchmark/fast_audition_round02/08_warm_grounded_humanist.mp3",
   "production_locked": false,
-  "recommended": false,
+  "recommended": true,
   "default": false,
   "intended_use": "long-form documentary, history, science, psychology, philosophy, investigative",
-  "status": "test_voice_round02_fast_audition",
+  "status": "saved_human_shortlist",
   "register": "warm_grounded_humanist",
   "style": "warm_grounded_humanist",
   "per_language": {
     "English": {
       "native_status": "native",
       "rank": 34,
-      "recommended": false,
+      "recommended": true,
       "default": false,
       "description": "warm grounded humanist – empathetic, sincere, mature, comforting and human"
     },
@@ -50,5 +50,10 @@
     "visible_position": 8
   },
   "reference_sha256": "ARENA_VOICE-25",
-  "reference_generated": "real speech via Arena voice-25 – fast_audition_round02 identical short text 15-25s; not TestDouble sine"
+  "reference_generated": "real speech via Arena voice-25 – fast_audition_round02 identical short text 15-25s; not TestDouble sine",
+  "human_selected": true,
+  "production_candidate": true,
+  "human_shortlist": true,
+  "human_listening_position": 8,
+  "shortlist_note": "SAVED HUMAN SHORTLIST — visible position 8/10 in fast_audition_round02 (2026-09-09), voice-25 — production_candidate true, later intensive testing"
 }

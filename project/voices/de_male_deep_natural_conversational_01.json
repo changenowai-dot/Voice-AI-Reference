@@ -1,0 +1,54 @@
+{
+  "voice_id": "de_male_deep_natural_conversational_01",
+  "display_name": "DE Male Deep Natural Conversational",
+  "gender": "male",
+  "provider": "arena-tts",
+  "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "German",
+  "native_status": "native",
+  "category": "narrator",
+  "description": "deep natural conversational – tief, natürlich, direkt, modern, sehr menschlich",
+  "backend_mode": "clone",
+  "speaker_name": null,
+  "reference_path": "benchmark/fast_audition_de/05_de_male_deep_natural_conversational.mp3",
+  "production_locked": false,
+  "recommended": false,
+  "default": false,
+  "intended_use": "long-form documentary, history, science, psychology, philosophy",
+  "status": "test_voice_de_fast_audition",
+  "register": "deep_natural_conversational",
+  "style": "deep_natural_conversational",
+  "per_language": {
+    "German": {
+      "native_status": "native",
+      "rank": 14,
+      "recommended": false,
+      "default": false,
+      "description": "deep natural conversational – tief, natürlich, direkt, modern, sehr menschlich"
+    },
+    "English": {
+      "native_status": "cross_language",
+      "rank": 94,
+      "recommended": false,
+      "default": false,
+      "description": "deep_natural_conversational – German design (cross-language)"
+    }
+  },
+  "settings": {
+    "seed": 53005,
+    "variant": "DE_MALE_DEEP_NATURAL_CONVERSATIONAL_01",
+    "cache_version": "q3p-v2-integrity",
+    "language": "German",
+    "engine": "VoiceCloneEngine",
+    "backend": "clone",
+    "arena_voice_id": "voice-32",
+    "visible_position": 5,
+    "round": "de_fast_audition"
+  },
+  "reference_sha256": "ARENA_VOICE-32",
+  "reference_generated": "real speech via Arena voice-32 – de_fast_audition identical German short text; not TestDouble sine"
+}
