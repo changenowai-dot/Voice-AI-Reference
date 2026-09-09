@@ -209,19 +209,67 @@ if (-not $SkipModels) {
 }
 
 # ------------------------------------------------ 7) Abschluss-Checks --
-Log "Schreibe versions.json + environment.json ..." "Gray"
+Log "Schreibe versions.json ..." "Gray"
+$VersionsPath = Join-Path $Root "versions.json"
+$EnvironmentPath = Join-Path $Root "environment.json"
 try {
     $appMain = Join-Path $Root "app\main.py"
     & $Vpy $appMain --info | Add-Content -Path $InstallLog -Encoding UTF8
-} catch {}
+} catch {
+    Log "WARN: app/main.py --info fehlgeschlagen: $_" "Yellow"
+}
+
+# Sichere Metadaten-Erzeugung: kleine Einzelbefehle statt fragiler One-Liner
 try {
-    $codeVer = 'import json,torch,transformers,platform,datetime; d={"created":datetime.datetime.now().isoformat(),"python":platform.python_version(),"torch":torch.__version__,"torch_cuda":torch.version.cuda,"transformers":transformers.__version__,"app":"1.0.0"}; json.dump(d,open("versions.json","w"),indent=2)'
-    & $Vpy -c $codeVer
-    if ($LASTEXITCODE -ne 0) { Log "versions.json Schreiben fehlgeschlagen (Exit $LASTEXITCODE)." "Yellow" }
-} catch { Log "versions.json Fehler: $_" "Yellow" }
+    $codePy = 'import platform; print(platform.python_version())'
+    $PythonVersion = & $Vpy -c $codePy 2>$null
+    if ($LASTEXITCODE -ne 0 -or -not $PythonVersion) { throw "python_version failed (Exit $LASTEXITCODE)" }
+
+    $codeTorch = 'import torch; print(torch.__version__)'
+    $TorchVersion = & $Vpy -c $codeTorch 2>$null
+    if ($LASTEXITCODE -ne 0 -or -not $TorchVersion) { throw "torch_version failed (Exit $LASTEXITCODE)" }
+
+    $codeCuda = 'import torch; v=torch.version.cuda; print(v if v else "none")'
+    $TorchCuda = & $Vpy -c $codeCuda 2>$null
+    if ($LASTEXITCODE -ne 0 -or -not $TorchCuda) { $TorchCuda = "none" }
+
+    $codeTrans = 'import transformers; print(transformers.__version__)'
+    $TransformersVersion = & $Vpy -c $codeTrans 2>$null
+    if ($LASTEXITCODE -ne 0 -or -not $TransformersVersion) { throw "transformers_version failed (Exit $LASTEXITCODE)" }
+
+    $Metadata = [ordered]@{
+        created = (Get-Date).ToString("o")
+        python = $PythonVersion.Trim()
+        torch = $TorchVersion.Trim()
+        torch_cuda = $TorchCuda.Trim()
+        transformers = $TransformersVersion.Trim()
+        app = "1.0.0"
+    }
+    $Metadata | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $VersionsPath -Encoding UTF8
+    if ($LASTEXITCODE -ne 0) { throw "ConvertTo-Json/Set-Content failed (Exit $LASTEXITCODE)" }
+    if (-not (Test-Path -LiteralPath $VersionsPath -PathType Leaf)) { throw "versions.json was not created: $VersionsPath" }
+
+    # JSON validieren
+    $codeValidate = 'import json,sys; json.load(open(sys.argv[1],encoding="utf-8")); print("JSON_OK")'
+    $validateOut = & $Vpy -c $codeValidate $VersionsPath 2>$null
+    if ($LASTEXITCODE -ne 0 -or $validateOut -notmatch "JSON_OK") { throw "versions.json JSON validation failed (Exit $LASTEXITCODE, out=$validateOut)" }
+    Log "versions.json OK: $VersionsPath" "Green"
+
+    # environment.json: falls bereits vorhanden pruefen, sonst minimal erzeugen (optional, kein Pflichtfeld)
+    if (Test-Path -LiteralPath $EnvironmentPath -PathType Leaf) {
+        $envValidate = & $Vpy -c $codeValidate $EnvironmentPath 2>$null
+        if ($LASTEXITCODE -ne 0 -or $envValidate -notmatch "JSON_OK") { throw "environment.json JSON validation failed" }
+        Log "environment.json OK (bestehend)" "Gray"
+    } else {
+        Log "environment.json nicht vorhanden - wird bei Bedarf vom System-Benchmark erzeugt (optional)" "Gray"
+    }
+} catch {
+    Log "FEHLER: Metadaten-Erzeugung fehlgeschlagen: $_" "Red"
+    throw "Metadata generation failed: $_"
+}
 
 New-Item -ItemType File -Path (Join-Path $Root ".installed") -Force | Out-Null
 Log "=== Installation abgeschlossen ===" "Green"
 Log "Start: Doppelklick auf START.bat" "Green"
-# Kein automatischer Read-Host in Headless-Aufruf; nur interaktiv warten wenn Konsole vorhanden
+# Nur interaktiv warten
 if ($Host.Name -match "ConsoleHost") { Read-Host "Enter zum Beenden" | Out-Null }
