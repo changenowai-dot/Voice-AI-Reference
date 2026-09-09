@@ -247,25 +247,28 @@ try {
     }
     $jsonText = $Metadata | ConvertTo-Json -Depth 5
     [System.IO.File]::WriteAllText($VersionsPath, $jsonText, (New-Object System.Text.UTF8Encoding $false))
-    if ($LASTEXITCODE -ne 0) { throw "ConvertTo-Json/Set-Content failed (Exit $LASTEXITCODE)" }
     if (-not (Test-Path -LiteralPath $VersionsPath -PathType Leaf)) { throw "versions.json was not created: $VersionsPath" }
 
-    # JSON validieren
+    # JSON validieren - robust: stderr miterfassen, ExitCode sofort sichern, Array-Handling
     $codeValidate = 'import json,sys; json.load(open(sys.argv[1],encoding="utf-8-sig")); print("JSON_OK")'
-    $validateOut = & $Vpy -c $codeValidate $VersionsPath 2>$null
-    if ($LASTEXITCODE -ne 0 -or $validateOut -notmatch "JSON_OK") {
-        # Diagnose: zeige Datei-Inhalt (erste 500 Zeichen) fuer Debugging
-        $dbgContent = Get-Content -LiteralPath $VersionsPath -Raw -ErrorAction SilentlyContinue | Select-Object -First 1
+    $validateOut = & $Vpy -c $codeValidate $VersionsPath 2>&1
+    $validateExit = $LASTEXITCODE
+    $validateText = ($validateOut -join "`n").Trim()
+    if ($validateExit -ne 0 -or $validateText -notmatch "JSON_OK") {
+        $dbgContent = Get-Content -LiteralPath $VersionsPath -Raw -ErrorAction SilentlyContinue
         if ($dbgContent) { $dbgSnippet = $dbgContent.Substring(0, [Math]::Min(500, $dbgContent.Length)) } else { $dbgSnippet = "(leer/nicht lesbar)" }
         Log "versions.json Inhalt (Snippet): $dbgSnippet" "Yellow"
-        throw "versions.json JSON validation failed (Exit $LASTEXITCODE, out=$validateOut)"
+        Log "Validation stdout+stderr: $validateText" "Yellow"
+        throw "versions.json JSON validation failed (Exit $validateExit, out=$validateText)"
     }
     Log "versions.json OK: $VersionsPath" "Green"
 
     # environment.json: falls bereits vorhanden pruefen, sonst minimal erzeugen (optional, kein Pflichtfeld)
     if (Test-Path -LiteralPath $EnvironmentPath -PathType Leaf) {
-        $envValidate = & $Vpy -c $codeValidate $EnvironmentPath 2>$null
-        if ($LASTEXITCODE -ne 0 -or $envValidate -notmatch "JSON_OK") { throw "environment.json JSON validation failed" }
+        $envValidateOut = & $Vpy -c $codeValidate $EnvironmentPath 2>&1
+        $envValidateExit = $LASTEXITCODE
+        $envValidateText = ($envValidateOut -join "`n").Trim()
+        if ($envValidateExit -ne 0 -or $envValidateText -notmatch "JSON_OK") { throw "environment.json JSON validation failed (Exit $envValidateExit, out=$envValidateText)" }
         Log "environment.json OK (bestehend)" "Gray"
     } else {
         Log "environment.json nicht vorhanden - wird bei Bedarf vom System-Benchmark erzeugt (optional)" "Gray"
