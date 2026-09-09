@@ -1,0 +1,38 @@
+{
+  "voice_id": "ryan",
+  "display_name": "Ryan",
+  "gender": "male",
+  "provider": "qwen3-tts",
+  "model": "Qwen3-TTS-12Hz-1.7B-CustomVoice",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "English",
+  "native_status": "native",
+  "category": "narrator",
+  "description": "native English, dynamisch, rhythmisch, klarer Long-Form-Narrator",
+  "backend_mode": "customvoice",
+  "speaker_name": "Ryan",
+  "reference_path": null,
+  "production_locked": false,
+  "recommended": true,
+  "default": false,
+  "per_language": {
+    "English": {
+      "native_status": "native",
+      "rank": 10,
+      "recommended": true,
+      "default": true,
+      "description": "nativ Englisch, dynamisch, rhythmisch"
+    },
+    "German": {
+      "native_status": "cross_language",
+      "rank": 40,
+      "recommended": false,
+      "default": false,
+      "description": "dynamisch, klar"
+    }
+  },
+  "settings": {}
+}

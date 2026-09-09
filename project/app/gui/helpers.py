@@ -1,0 +1,65 @@
+"""GUI-Helfer (pur, ohne Tk – testbar)."""
+from __future__ import annotations
+
+import re
+
+CHARS_PER_SECOND = {"German": 14.0, "English": 15.0}
+SEGMENT_CHARS = 420
+
+
+def text_stats(text: str, language: str = "German") -> dict:
+    chars = len(text)
+    words = len(re.findall(r"\S+", text))
+    rate = CHARS_PER_SECOND.get(language, 14.0)
+    est_seconds = chars / rate if chars else 0.0
+    est_segments = max(1, -(-chars // SEGMENT_CHARS)) if chars else 0
+    return {"chars": chars, "words": words,
+            "est_seconds": round(est_seconds, 1),
+            "est_minutes": round(est_seconds / 60.0, 1),
+            "est_segments": int(est_segments)}
+
+
+def format_duration(seconds: float) -> str:
+    s = int(round(seconds))
+    h, rem = divmod(s, 3600)
+    m, sec = divmod(rem, 60)
+    if h:
+        return f"{h}:{m:02d}:{sec:02d}"
+    return f"{m}:{sec:02d}"
+
+
+def format_eta(elapsed_s: float, percent: float) -> str:
+    if percent is None or percent <= 1 or percent >= 99.5:
+        return ""
+    remaining = elapsed_s * (100.0 / max(percent, 0.5) - 1.0)
+    if remaining < 5 or remaining > 6 * 3600:
+        return ""
+    return format_duration(remaining)
+
+
+def voice_sort_key(voice: dict) -> int:
+    """VD-E zuerst, dann Rest alphabetisch (GUI-Reihenfolge)."""
+    if voice.get("voice_id") == "vd_e":
+        return 0
+    return 1
+
+
+SPEECH_STAGES_DE = {
+    "startup": "Backend wird gestartet",
+    "text_ready": "Text vorbereitet",
+    "voice_load": "Stimme wird geladen",
+    "model_load": "Modell wird geladen (einmalig)",
+    "model_ready": "Modell bereit",
+    "tts": "Sprachsynthese läuft",
+    "assembling": "Segmente werden zusammengefügt",
+    "speed": "Tempo wird angepasst",
+    "mastering": "Mastering (YouTube-Lautheit)",
+    "done": "Fertig",
+    "benchmark_done": "Benchmark abgeschlossen",
+}
+
+
+def stage_label(stage: str | None) -> str:
+    if not stage:
+        return ""
+    return SPEECH_STAGES_DE.get(stage, stage)

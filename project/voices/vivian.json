@@ -1,0 +1,39 @@
+{
+  "voice_id": "vivian",
+  "display_name": "Vivian",
+  "gender": "female",
+  "provider": "qwen3-tts",
+  "model": "Qwen3-TTS-12Hz-1.7B-CustomVoice",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "Chinese",
+  "native_status": "cross_language",
+  "category": "narrator",
+  "description": "hell, klar, jung, leicht edgy",
+  "backend_mode": "customvoice",
+  "speaker_name": "Vivian",
+  "reference_path": null,
+  "production_locked": false,
+  "recommended": false,
+  "default": false,
+  "per_language": {
+    "German": {
+      "native_status": "cross_language",
+      "rank": 30,
+      "recommended": false,
+      "default": false,
+      "description": "hell, klar, jung, leicht edgy"
+    },
+    "English": {
+      "native_status": "cross_language",
+      "rank": 30,
+      "recommended": false,
+      "default": false,
+      "note": "best available (kein natives englisch-weibliches Preset)",
+      "description": "hell, klar, jung"
+    }
+  },
+  "settings": {}
+}

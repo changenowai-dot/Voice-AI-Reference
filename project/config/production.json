@@ -1,0 +1,20 @@
+{
+  "voice_id": "vd_e",
+  "mode": "voicedesign_base_clone",
+  "variant": "BASE",
+  "seed": 52001,
+  "automatic_voice_switch": false,
+  "automatic_voice_fallback": false,
+  "automatic_voice_regeneration": false,
+  "pronunciation_support": true,
+  "prosody_support": true,
+  "expressive_sampling": true,
+  "sampling_set": "expressive",
+  "persistent_pronunciation_dictionary": true,
+  "cache_version": "q3p-v2-integrity",
+  "max_token_headroom_s": 5.0,
+  "reference_path": "cache/voice_refs/VD-E.wav",
+  "reference_sha256": "B156C02A60A873AD95FC92390C4A136C85308B20188373CD734BEE5E5E5F2025",
+  "locked": true,
+  "note": "LOCKED PRODUCTION SETTINGS - VD-E. Nicht über die GUI bearbeitbar (§3/§25). Änderungen nur mit Backup + Benchmark (§40)."
+}

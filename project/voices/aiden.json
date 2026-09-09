@@ -1,0 +1,38 @@
+{
+  "voice_id": "aiden",
+  "display_name": "Aiden",
+  "gender": "male",
+  "provider": "qwen3-tts",
+  "model": "Qwen3-TTS-12Hz-1.7B-CustomVoice",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "English",
+  "native_status": "native",
+  "category": "narrator",
+  "description": "native English, sonnig, klar, amerikanischer Midrange",
+  "backend_mode": "customvoice",
+  "speaker_name": "Aiden",
+  "reference_path": null,
+  "production_locked": false,
+  "recommended": true,
+  "default": false,
+  "per_language": {
+    "English": {
+      "native_status": "native",
+      "rank": 20,
+      "recommended": true,
+      "default": false,
+      "description": "nativ Englisch, sonnig, amerikanisch"
+    },
+    "German": {
+      "native_status": "cross_language",
+      "rank": 50,
+      "recommended": false,
+      "default": false,
+      "description": "sonnig, klar"
+    }
+  },
+  "settings": {}
+}

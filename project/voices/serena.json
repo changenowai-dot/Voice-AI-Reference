@@ -1,0 +1,39 @@
+{
+  "voice_id": "serena",
+  "display_name": "Serena",
+  "gender": "female",
+  "provider": "qwen3-tts",
+  "model": "Qwen3-TTS-12Hz-1.7B-CustomVoice",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "Chinese",
+  "native_status": "cross_language",
+  "category": "narrator",
+  "description": "warm, sanft, ruhig – Storytelling",
+  "backend_mode": "customvoice",
+  "speaker_name": "Serena",
+  "reference_path": null,
+  "production_locked": false,
+  "recommended": false,
+  "default": false,
+  "per_language": {
+    "German": {
+      "native_status": "cross_language",
+      "rank": 20,
+      "recommended": false,
+      "default": false,
+      "description": "warm, sanft, ruhig"
+    },
+    "English": {
+      "native_status": "cross_language",
+      "rank": 20,
+      "recommended": false,
+      "default": false,
+      "note": "best available (kein natives englisch-weibliches Preset)",
+      "description": "warm, sanft, ruhig"
+    }
+  },
+  "settings": {}
+}

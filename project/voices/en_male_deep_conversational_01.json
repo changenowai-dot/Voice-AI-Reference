@@ -1,0 +1,52 @@
+{
+  "voice_id": "en_male_deep_conversational_01",
+  "display_name": "EN Male Deep Conversational 01",
+  "gender": "male",
+  "provider": "arena-tts",
+  "model": "Arena TTS (real speech) \u2013 placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "English",
+  "native_status": "native",
+  "category": "narrator",
+  "description": "deep conversational \u2013 deep natural conversational direct modern",
+  "backend_mode": "clone",
+  "speaker_name": null,
+  "reference_path": "benchmark/male_deep_candidates/08_deep_conversational/part1.mp3",
+  "production_locked": false,
+  "recommended": false,
+  "default": false,
+  "intended_use": "long-form documentary, history, science, psychology, philosophy, investigative",
+  "status": "test_voice_premium_10",
+  "register": "deep_conversational",
+  "style": "deep_conversational",
+  "per_language": {
+    "English": {
+      "native_status": "native",
+      "rank": 22,
+      "recommended": false,
+      "default": false,
+      "description": "deep conversational \u2013 deep natural conversational direct modern"
+    },
+    "German": {
+      "native_status": "cross_language",
+      "rank": 92,
+      "recommended": false,
+      "default": false,
+      "description": "deep_conversational \u2013 English design (cross-language)"
+    }
+  },
+  "settings": {
+    "seed": 52022,
+    "variant": "EN_MALE_DEEP_CONVERSATIONAL_01",
+    "cache_version": "q3p-v2-integrity",
+    "language": "English",
+    "engine": "VoiceCloneEngine",
+    "backend": "clone",
+    "arena_voice_id": "voice-13"
+  },
+  "reference_sha256": "ARENA_VOICE-13",
+  "reference_generated": "real speech via Arena voice-13 \u2013 4 parts benchmark + FullScript scheduled; not TestDouble sine"
+}

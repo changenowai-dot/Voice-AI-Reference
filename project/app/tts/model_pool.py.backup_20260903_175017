@@ -1,0 +1,102 @@
+"""Qwen-Modell-Pool (Phase 2): lädt maximal EIN Modell gleichzeitig.
+
+8 GB VRAM erlauben nur ein ~3,4-GB-Modell (bf16) zur Zeit. Der Pool
+tauscht Modelle deterministisch (CustomVoice <-> VoiceDesign <-> Base)
+und gibt VRAM beim Wechsel frei (Anforderung 4/§32).
+"""
+from __future__ import annotations
+
+import gc
+import time
+from pathlib import Path
+
+from .. import paths
+from ..hardware.detector import HardwareInfo
+from ..logging_setup import get_logger
+
+log = get_logger("modelpool")
+
+MODEL_REPOS = {
+    "customvoice": "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+    "voicedesign": "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+    "base": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+    "customvoice_0.6b": "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice",
+}
+
+
+class QwenModelPool:
+    """LLRU-Modellpool: get(kind) lädt/tauscht, unload() räumt komplett."""
+
+    def __init__(self, hw: HardwareInfo, models_dir: Path | None = None,
+                 attn_implementation: str | None = None):
+        self.hw = hw
+        self.models_dir = Path(models_dir) if models_dir else paths.MODELS_DIR
+        self.attn_implementation = attn_implementation
+        self._current_kind: str | None = None
+        self._model = None
+
+    # ------------------------------------------------------------------
+    def _resolve(self, kind: str) -> str:
+        repo = MODEL_REPOS[kind]
+        local = self.models_dir / repo.split("/")[-1]
+        if (local / "config.json").exists():
+            return str(local)
+        return repo                      # HF-Download bei Bedarf
+
+    def get(self, kind: str):
+        if kind not in MODEL_REPOS:
+            raise ValueError(f"Unbekannter Modelltyp: {kind}")
+        if self._model is not None and self._current_kind == kind:
+            return self._model
+        self.unload()
+        import torch
+        from qwen_tts import Qwen3TTSModel
+        use_gpu = self.hw.mode.startswith("gpu")
+        dtype = torch.bfloat16 if use_gpu else torch.float32
+        if use_gpu and self.hw.device_capability is not None and \
+                tuple(self.hw.device_capability) < (8, 0):
+            dtype = torch.float16
+        path = self._resolve(kind)
+        log.info("Lade Modell %s (%s) auf %s", kind, path,
+                 "CUDA" if use_gpu else "CPU")
+        kwargs = dict(device_map="cuda:0" if use_gpu else "cpu", dtype=dtype)
+        if self.attn_implementation:
+            kwargs["attn_implementation"] = self.attn_implementation
+        t0 = time.perf_counter()
+        try:
+            self._model = Qwen3TTSModel.from_pretrained(path, **kwargs)
+        except Exception as e:
+            low = str(e).lower()
+            if use_gpu and ("out of memory" in low or "oom" in low):
+                log.warning("GPU-Ladung fehlgeschlagen (%s) – CPU-Fallback", e)
+                gc.collect()
+                self._model = Qwen3TTSModel.from_pretrained(
+                    path, device_map="cpu", dtype=torch.float32)
+            else:
+                raise
+        self._current_kind = kind
+        log.info("Modell %s geladen in %.1f s", kind, time.perf_counter() - t0)
+        return self._model
+
+    @property
+    def current_kind(self) -> str | None:
+        return self._current_kind
+
+    def unload(self) -> None:
+        if self._model is None:
+            return
+        self._model = None
+        self._current_kind = None
+        gc.collect()
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                torch.cuda.synchronize()
+        except Exception:
+            pass
+        log.info("Modell entladen (VRAM freigegeben)")
+
+    def info(self) -> dict:
+        return {"current": self._current_kind,
+                "repos": MODEL_REPOS}

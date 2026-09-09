@@ -1,0 +1,11 @@
+{
+    "text":  "Dies ist ein kurzer echter End-to-End Test der VD-E Stimme über den vollständigen GUI-Backend-Pfad.",
+    "language":  "German",
+    "voice_id":  "vd_e",
+    "speed":  1,
+    "output_dir":  "C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\Apps\\VoiceoverAPPnew\\VoiceOverApp_2.0.0_GUI\\output\\runner_real_test",
+    "formats":  [
+                    "wav",
+                    "mp3"
+                ]
+}

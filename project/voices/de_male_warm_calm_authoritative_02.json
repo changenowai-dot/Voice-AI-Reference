@@ -1,0 +1,57 @@
+{
+  "voice_id": "de_male_warm_calm_authoritative_02",
+  "display_name": "DE Male Warm Calm Authoritative 02",
+  "gender": "male",
+  "provider": "arena-tts",
+  "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "German",
+  "native_status": "native",
+  "category": "narrator",
+  "description": "warm calm authoritative — warm, ruhig, souverän, glaubwürdig",
+  "backend_mode": "clone",
+  "speaker_name": null,
+  "reference_path": "benchmark/german_recovery_audition/02_de_male_warm_calm_authoritative_02.mp3",
+  "production_locked": false,
+  "recommended": false,
+  "default": false,
+  "intended_use": "long-form documentary, history, science, psychology, philosophy",
+  "status": "new_candidate_german_recovery",
+  "register": "warm_calm_authoritative",
+  "style": "warm_calm_authoritative",
+  "per_language": {
+    "German": {
+      "native_status": "native",
+      "rank": 16,
+      "recommended": false,
+      "default": false,
+      "description": "warm calm authoritative — warm, ruhig, souverän, glaubwürdig"
+    },
+    "English": {
+      "native_status": "cross_language",
+      "rank": 96,
+      "recommended": false,
+      "default": false,
+      "description": "warm_calm_authoritative – German design (cross-language)"
+    }
+  },
+  "settings": {
+    "seed": 53014,
+    "variant": "DE_MALE_WARM_CALM_AUTHORITATIVE_02",
+    "cache_version": "q3p-v2-integrity",
+    "language": "German",
+    "engine": "VoiceCloneEngine",
+    "backend": "clone",
+    "arena_voice_id": "voice-36",
+    "visible_position": 2,
+    "round": "german_recovery_audition",
+    "recovery": true,
+    "source": "new_candidate — no suitable historical German voice found after thorough search (only 7 historical existed, all excluded per task)"
+  },
+  "reference_sha256": "ARENA_VOICE-36",
+  "reference_generated": "real speech via Arena voice-36 – german_recovery_audition identical German short text; not TestDouble sine",
+  "source_detail": "NEW CANDIDATE — created because thorough search in project/voices, benchmark, voice_generation_recipes.json, git history found zero additional historical German candidates beyond the 7 already tested (voice-28..34). All 7 are therefore NEW, not RECOVERED."
+}

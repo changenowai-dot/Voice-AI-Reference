@@ -1,0 +1,52 @@
+{
+  "voice_id": "en_female_calm_02",
+  "display_name": "EN Female Calm 02",
+  "gender": "female",
+  "provider": "qwen3-tts",
+  "model": "Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone)",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "English",
+  "native_status": "native",
+  "category": "narrator",
+  "description": "calm, bright, articulate – English native, expressive",
+  "backend_mode": "clone",
+  "speaker_name": null,
+  "reference_path": "cache/voice_refs/en_female_calm_02.wav",
+  "production_locked": false,
+  "recommended": false,
+  "default": false,
+  "intended_use": "long-form science, psychology, technology, education",
+  "status": "test_voice",
+  "register": "bright_calm",
+  "style": "articulate_expressive",
+  "per_language": {
+    "English": {
+      "native_status": "native",
+      "rank": 22,
+      "recommended": true,
+      "default": false,
+      "description": "calm, bright, articulate – expressive, crisp precision"
+    },
+    "German": {
+      "native_status": "cross_language",
+      "rank": 63,
+      "recommended": false,
+      "default": false,
+      "description": "bright, calm – English design (cross-language)"
+    }
+  },
+  "settings": {
+    "seed": 52022,
+    "variant": "EN_CALM_02",
+    "cache_version": "q3p-v2-integrity",
+    "language": "English",
+    "engine": "VoiceCloneEngine",
+    "backend": "clone"
+  },
+  "reference_sha256": "88F4E5DD1BAA412764059273FA232F4AB1A2057D918C1F135093ABC181BF8366",
+  "reference_generated": "synthetic placeholder (TestDouble-like, for sandbox; on RTX 5060 replace via VoiceDesign model)",
+  "reference_f0_hz": 205
+}

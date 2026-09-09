@@ -1,0 +1,54 @@
+{
+  "voice_id": "en_male_warm_storytelling_authoritative_01",
+  "display_name": "EN Male Warm Storytelling Authoritative 01",
+  "gender": "male",
+  "provider": "qwen3-tts",
+  "model": "Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone)",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "English",
+  "native_status": "native",
+  "category": "narrator",
+  "description": "warm storytelling authoritative – English native long-form",
+  "backend_mode": "clone",
+  "speaker_name": null,
+  "reference_path": "cache/voice_refs/en_male_warm_storytelling_authoritative_01.wav",
+  "production_locked": false,
+  "recommended": false,
+  "default": false,
+  "intended_use": "long-form documentary, history, science, psychology – warm storytelling with authority",
+  "status": "test_voice",
+  "register": "warm_storytelling",
+  "style": "warm_storytelling_authoritative",
+  "per_language": {
+    "English": {
+      "native_status": "native",
+      "rank": 14,
+      "recommended": false,
+      "default": false,
+      "description": "warm storytelling authoritative – natural phrasing, subtle warmth, human rhythm, professional"
+    },
+    "German": {
+      "native_status": "cross_language",
+      "rank": 65,
+      "recommended": false,
+      "default": false,
+      "description": "warm storytelling – English design (cross-language)"
+    }
+  },
+  "settings": {
+    "seed": 52014,
+    "variant": "EN_WARM_STORY_01",
+    "cache_version": "q3p-v2-integrity",
+    "language": "English",
+    "engine": "VoiceCloneEngine",
+    "backend": "clone",
+    "model_pool": "base",
+    "reference_text": "VOICEDESIGN_REF_TEXT_EN"
+  },
+  "reference_sha256": "PLACEHOLDER_EN_MALE_WARM_STORY_01",
+  "reference_generated": "real speech via Arena TTS voice-05 (warm storytelling authoritative), to be replaced by RTX 5060 VoiceDesign->Clone on target hardware; not synthetic sine",
+  "reference_f0_hz": null
+}

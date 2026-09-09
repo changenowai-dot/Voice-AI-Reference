@@ -1,0 +1,173 @@
+# ============================================================
+#  VoiceOverApp - install.ps1
+#  Prueft und installiert automatisch:
+#    - Python 3.10-3.13 (winget, falls fehlt)
+#    - Virtuelle Umgebung (.venv)
+#    - PyTorch mit CUDA 12.8 (RTX 50xx/Blackwell-tauglich, cu128)
+#      mit CPU-Fallback
+#    - Python-Pakete (requirements.txt inkl. qwen-tts)
+#    - FFmpeg (winget oder Download nach tools/)
+#    - Qwen3-TTS-Modelle (Hugging Face, Apache-2.0)
+#  Vorhandene Komponenten werden wiederverwendet.
+#  Alles kostenlos, keine API-Keys, keine Abos.
+# ============================================================
+param(
+    [switch]$SkipModels,
+    [switch]$CpuOnly
+)
+$ErrorActionPreference = "Continue"
+$Root = Split-Path -Parent $MyInvocation.MyCommand.Path
+Set-Location $Root
+New-Item -ItemType Directory -Force -Path "logs" | Out-Null
+$InstallLog = Join-Path $Root "logs\install.log"
+
+function Log([string]$msg, [string]$color = "Gray") {
+    $stamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    Write-Host $msg -ForegroundColor $color
+    Add-Content -Path $InstallLog -Value "[$stamp] $msg" -Encoding UTF8
+}
+
+Log "=== VoiceOverApp Installation ===" "Cyan"
+
+# ------------------------------------------------------------ 1) Python --
+function Find-Python {
+    $cands = @()
+    if (Test-Path ".venv\Scripts\python.exe") { return ".venv\Scripts\python.exe" }
+    $py = Get-Command py -ErrorAction SilentlyContinue
+    if ($py) {
+        foreach ($v in @("3.12", "3.11", "3.13", "3.10")) {
+            $test = & py -$v -c "import sys; print(sys.executable)" 2>$null
+            if ($test -and -not $test.Contains("WindowsApps")) { return "py -$v" }
+        }
+    }
+    foreach ($name in @("python3.12", "python3.11", "python3.13", "python", "python3")) {
+        $g = Get-Command $name -ErrorAction SilentlyContinue
+        if ($g -and $g.Source -and -not $g.Source.Contains("WindowsApps")) {
+            return $name
+        }
+    }
+    return $null
+}
+
+$Python = Find-Python
+if (-not $Python) {
+    Log "Kein Python 3.10-3.13 gefunden - installiere Python 3.12 via winget ..." "Yellow"
+    try {
+        winget install --id Python.Python.3.12 -e --accept-source-agreements --accept-package-agreements --silent | Out-Null
+    } catch {
+        Log "winget fehlgeschlagen ($_). Bitte Python 3.12 von python.org installieren und erneut starten." "Red"
+        Read-Host "Enter zum Beenden"; exit 1
+    }
+    # neue Konsole noetig, damit 'py' gefunden wird -> ueber venv-pfad suchen
+    $found = Get-ChildItem "$env:LOCALAPPDATA\Programs\Python" -Filter python.exe -Recurse -ErrorAction SilentlyContinue |
+             Where-Object { $_.DirectoryName -match "Python312|Python311|Python313" } | Select-Object -First 1
+    if ($found) { $Python = $found.FullName }
+    if (-not $Python) {
+        Log "Python wurde installiert, ist aber nicht im PFAD. Bitte dieses Fenster schliessen und START.bat erneut starten." "Yellow"
+        Read-Host "Enter zum Beenden"; exit 1
+    }
+}
+Log "Python: $Python"
+
+# ------------------------------------------------- 2) Virtuelle Umgebung --
+if (-not (Test-Path ".venv\Scripts\python.exe")) {
+    Log "Erstelle virtuelle Umgebung .venv ..." "Yellow"
+    if ($Python -like "py *") { & $Python.Split(" ")[0] $Python.Split(" ")[1] -m venv .venv }
+    else { & $Python -m venv .venv }
+    if (-not (Test-Path ".venv\Scripts\python.exe")) {
+        Log "venv konnte nicht erstellt werden." "Red"; Read-Host "Enter"; exit 1
+    }
+}
+$Vpy = ".venv\Scripts\python.exe"
+$Pip = @("$Vpy", "-m", "pip")
+
+Log "pip aktualisieren ..."
+& $Pip -m pip install --upgrade pip --quiet 2>>$null
+
+# ------------------------------------------------------- 3) PyTorch/CUDA --
+$needTorch = $true
+try {
+    $hasTorch = & $Vpy -c "import torch; print(torch.__version__)" 2>$null
+    if ($hasTorch) {
+        $needTorch = $false
+        Log "PyTorch bereits installiert: $hasTorch"
+    }
+} catch {}
+
+function Has-NvidiaGPU {
+    try { nvidia-smi *> $null; return ($LASTEXITCODE -eq 0) }
+    catch { return $false }
+}
+
+if ($needTorch) {
+    $gpu = Has-NvidiaGPU
+    if ($gpu -and -not $CpuOnly) {
+        Log "Installiere PyTorch mit CUDA 12.8 (cu128) - Download ca. 3 GB, einmalig ..." "Yellow"
+        & $Pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu128 --quiet
+        if ($LASTEXITCODE -ne 0) {
+            Log "CUDA-Installation fehlgeschlagen - weiche auf CPU-Version aus." "Yellow"
+            & $Pip install torch torchaudio --quiet
+        }
+    } else {
+        Log "Keine NVIDIA-GPU erkannt (oder -CpuOnly) - installiere CPU-PyTorch ..." "Yellow"
+        & $Pip install torch torchaudio --quiet
+    }
+}
+$t = & $Vpy -c "import torch;print(torch.__version__, torch.version.cuda)" 2>$null
+Log "PyTorch aktiv: $t"
+
+# --------------------------------------------------- 4) Pakete (app) ----
+Log "Installiere Python-Pakete (qwen-tts, transformers 4.57.3, ...) ..." "Yellow"
+& $Pip -m pip install -r requirements.txt --quiet
+if ($LASTEXITCODE -ne 0) {
+    Log "Paketinstallation fehlgeschlagen - Details:" "Red"
+    & $Pip install -r requirements.txt
+    Log "Bitte Fehler oben pruefen und erneut ausfuehren." "Red"
+    Read-Host "Enter"; exit 1
+}
+
+# ------------------------------------------------------------ 5) FFmpeg --
+$ff = Get-Command ffmpeg -ErrorAction SilentlyContinue
+$ffLocal = Test-Path "tools\ffmpeg\ffmpeg.exe"
+if (-not $ff -and -not $ffLocal) {
+    Log "FFmpeg fehlt - versuche winget ..." "Yellow"
+    try {
+        winget install --id Gyan.FFmpeg -e --accept-source-agreements --accept-package-agreements --silent | Out-Null
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+    } catch { Log "winget-FFmpeg fehlgeschlagen ($_)" "Yellow" }
+    $ff = Get-Command ffmpeg -ErrorAction SilentlyContinue
+    if (-not $ff) {
+        Log "Lade FFmpeg direkt nach tools\ffmpeg ..." "Yellow"
+        try {
+            New-Item -ItemType Directory -Force -Path "tools" | Out-Null
+            $zip = Join-Path $env:TEMP "ffmpeg.zip"
+            Invoke-WebRequest -Uri "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip" -OutFile $zip -UseBasicParsing
+            Expand-Archive -Path $zip -DestinationPath "tools\_ff" -Force
+            $exe = Get-ChildItem "tools\_ff" -Recurse -Filter "ffmpeg.exe" | Select-Object -First 1
+            New-Item -ItemType Directory -Force -Path "tools\ffmpeg" | Out-Null
+            Move-Item $exe.FullName "tools\ffmpeg\ffmpeg.exe" -Force
+            Remove-Item "tools\_ff" -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item $zip -Force -ErrorAction SilentlyContinue
+        } catch { Log "FFmpeg-Download fehlgeschlagen ($_). MP3-Ausgabe deaktiviert (WAV funktioniert)." "Yellow" }
+    }
+}
+
+# ------------------------------------------------------ 6) Modelle ------
+if (-not $SkipModels) {
+    Log "Lade Qwen3-TTS-Modelle (1.7B CustomVoice + Tokenizer, ca. 4 GB) ..." "Yellow"
+    Log "(Fortschritt siehe Konsole; Abbruch jederzeit mit Strg+C, Resume beim naechsten Lauf)"
+    & $Vpy app\main.py --download-models
+    if ($LASTEXITCODE -ne 0) {
+        Log "Modell-Download fehlgeschlagen - Internetverbindung pruefen und erneut starten." "Red"
+    }
+}
+
+# ------------------------------------------------ 7) Abschluss-Checks --
+Log "Schreibe versions.json + environment.json ..."
+& $Vpy app\main.py --info | Add-Content -Path $InstallLog -Encoding UTF8
+& $Vpy -c "import json,torch,transformers,platform;d={'created':__import__('datetime').datetime.now().isoformat(),'python':platform.python_version(),'torch':torch.__version__,'torch_cuda':torch.version.cuda,'transformers':transformers.__version__,'app':'1.0.0'};json.dump(d,open('versions.json','w'),indent=2)"
+
+New-Item -ItemType File -Path ".installed" -Force | Out-Null
+Log "=== Installation abgeschlossen ===" "Green"
+Log "Start: Doppelklick auf START.bat"
+Read-Host "Enter zum Beenden"

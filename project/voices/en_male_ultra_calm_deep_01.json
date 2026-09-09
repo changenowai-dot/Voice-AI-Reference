@@ -1,0 +1,52 @@
+{
+  "voice_id": "en_male_ultra_calm_deep_01",
+  "display_name": "EN Male Ultra Calm Deep 01",
+  "gender": "male",
+  "provider": "arena-tts",
+  "model": "Arena TTS (real speech) \u2013 placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "English",
+  "native_status": "native",
+  "category": "narrator",
+  "description": "ultra calm deep \u2013 very deep low dark warm extremely calm",
+  "backend_mode": "clone",
+  "speaker_name": null,
+  "reference_path": "benchmark/male_deep_candidates/01_ultra_calm_deep/part1.mp3",
+  "production_locked": false,
+  "recommended": false,
+  "default": false,
+  "intended_use": "long-form documentary, history, science, psychology, philosophy, investigative",
+  "status": "test_voice_premium_10",
+  "register": "ultra_calm_deep",
+  "style": "ultra_calm_deep",
+  "per_language": {
+    "English": {
+      "native_status": "native",
+      "rank": 15,
+      "recommended": false,
+      "default": false,
+      "description": "ultra calm deep \u2013 very deep low dark warm extremely calm"
+    },
+    "German": {
+      "native_status": "cross_language",
+      "rank": 85,
+      "recommended": false,
+      "default": false,
+      "description": "ultra_calm_deep \u2013 English design (cross-language)"
+    }
+  },
+  "settings": {
+    "seed": 52015,
+    "variant": "EN_MALE_ULTRA_CALM_DEEP_01",
+    "cache_version": "q3p-v2-integrity",
+    "language": "English",
+    "engine": "VoiceCloneEngine",
+    "backend": "clone",
+    "arena_voice_id": "voice-06"
+  },
+  "reference_sha256": "ARENA_VOICE-06",
+  "reference_generated": "real speech via Arena voice-06 \u2013 4 parts benchmark + FullScript scheduled; not TestDouble sine"
+}

@@ -1,0 +1,60 @@
+{
+  "voice_id": "de_female_deep_calm_intelligent_01",
+  "display_name": "DE Female Deep Calm Intelligent",
+  "gender": "female",
+  "provider": "arena-tts",
+  "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "German",
+  "native_status": "native",
+  "category": "narrator",
+  "description": "deep calm intelligent – ruhig, klar, intelligent, elegant, natürlich",
+  "backend_mode": "clone",
+  "speaker_name": null,
+  "reference_path": "benchmark/fast_audition_de/07_de_female_deep_calm_intelligent.mp3",
+  "production_locked": false,
+  "recommended": false,
+  "default": false,
+  "intended_use": "long-form documentary, history, science, psychology, philosophy",
+  "status": "good_archived",
+  "register": "deep_calm_intelligent",
+  "style": "deep_calm_intelligent",
+  "per_language": {
+    "German": {
+      "native_status": "native",
+      "rank": 21,
+      "recommended": false,
+      "default": false,
+      "description": "deep calm intelligent – ruhig, klar, intelligent, elegant, natürlich"
+    },
+    "English": {
+      "native_status": "cross_language",
+      "rank": 101,
+      "recommended": false,
+      "default": false,
+      "description": "deep_calm_intelligent – German design (cross-language)"
+    }
+  },
+  "settings": {
+    "seed": 53012,
+    "variant": "DE_FEMALE_DEEP_CALM_INTELLIGENT_01",
+    "cache_version": "q3p-v2-integrity",
+    "language": "German",
+    "engine": "VoiceCloneEngine",
+    "backend": "clone",
+    "arena_voice_id": "voice-34",
+    "visible_position": 7,
+    "round": "de_fast_audition"
+  },
+  "reference_sha256": "ARENA_VOICE-34",
+  "reference_generated": "real speech via Arena voice-34 – de_fast_audition identical German short text; not TestDouble sine",
+  "human_selected": true,
+  "production_candidate": false,
+  "archived_good": true,
+  "human_listening_position": 7,
+  "original_position": 7,
+  "note": "GOOD BUT NOT IN CURRENT VERIFICATION — Original Position 7, voice-34 — not deleted, recipe/audio retained, not in active shortlist, can be reactivated"
+}

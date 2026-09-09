@@ -1,0 +1,59 @@
+{
+  "voice_id": "en_male_warm_grounded_humanist_01",
+  "display_name": "EN Male Warm Grounded Humanist",
+  "gender": "male",
+  "provider": "arena-tts",
+  "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "English",
+  "native_status": "native",
+  "category": "narrator",
+  "description": "warm grounded humanist – empathetic, sincere, mature, comforting and human",
+  "backend_mode": "clone",
+  "speaker_name": null,
+  "reference_path": "benchmark/fast_audition_round02/08_warm_grounded_humanist.mp3",
+  "production_locked": false,
+  "recommended": true,
+  "default": false,
+  "intended_use": "long-form documentary, history, science, psychology, philosophy, investigative",
+  "status": "saved_human_shortlist",
+  "register": "warm_grounded_humanist",
+  "style": "warm_grounded_humanist",
+  "per_language": {
+    "English": {
+      "native_status": "native",
+      "rank": 34,
+      "recommended": true,
+      "default": false,
+      "description": "warm grounded humanist – empathetic, sincere, mature, comforting and human"
+    },
+    "German": {
+      "native_status": "cross_language",
+      "rank": 114,
+      "recommended": false,
+      "default": false,
+      "description": "warm_grounded_humanist – English design (cross-language)"
+    }
+  },
+  "settings": {
+    "seed": 52034,
+    "variant": "EN_MALE_WARM_GROUNDED_HUMANIST_01",
+    "cache_version": "q3p-v2-integrity",
+    "language": "English",
+    "engine": "VoiceCloneEngine",
+    "backend": "clone",
+    "arena_voice_id": "voice-25",
+    "round": "fast_audition_round02",
+    "visible_position": 8
+  },
+  "reference_sha256": "ARENA_VOICE-25",
+  "reference_generated": "real speech via Arena voice-25 – fast_audition_round02 identical short text 15-25s; not TestDouble sine",
+  "human_selected": true,
+  "production_candidate": true,
+  "human_shortlist": true,
+  "human_listening_position": 8,
+  "shortlist_note": "SAVED HUMAN SHORTLIST — visible position 8/10 in fast_audition_round02 (2026-09-09), voice-25 — production_candidate true, later intensive testing"
+}
