@@ -35,6 +35,43 @@ STATUS_LABELS = {
     "fallback": "CROSS-LANGUAGE FALLBACK",
 }
 
+# === 3-Tier Library (2026-09-09) — ACTIVE / BACKUPS / REJECTED ===
+# ACTIVE: human-selected/shortlist/favorite/preserved — in Haupt-GUI, Favoriten, Standard-Auswahl
+# BACKUPS: test_voice / test_voice_premium_10 / good_archived — in separatem Backup-Bereich, nicht als Favorit
+# REJECTED: rejected_human — niemals in ACTIVE-UI/Shortlist/Favoriten (nur Historie, Reproduktion)
+ACTIVE_STATUSES = {"locked_human_favorite", "saved_human_shortlist", "preserved_female_calm", "test_voice_preserved", "active"}
+BACKUP_STATUSES = {"good_archived", "test_voice", "test_voice_premium_10", "archived", "backup"}
+REJECTED_STATUSES = {"rejected_human", "rejected"}
+# Any status containing these substrings also counts: we also inspect human_selected/production_candidate flags
+
+def tier_for(data: dict) -> str:
+    """Bestimme Tier aus status + flags (ehrlich, kein Raten)."""
+    st = str(data.get("status","") or "")
+    # VD-E golden locked is always ACTIVE regardless of status field
+    if data.get("voice_id")=="vd_e" or data.get("production_locked") is True and data.get("voice_id")=="vd_e":
+        return "ACTIVE"
+    if data.get("production_locked") is True and "rejected" not in st:
+        # Locked favorites (vd_e, voice-09, voice-12) are always ACTIVE
+        return "ACTIVE"
+    # explicit
+    if st in REJECTED_STATUSES or "rejected" in st:
+        return "REJECTED"
+    if st in ACTIVE_STATUSES or st in ("saved_human_shortlist","locked_human_favorite"):
+        return "ACTIVE"
+    # new_candidate German recovery is ACTIVE-candidate but not yet shortlist — treat as ACTIVE pool for pre-selection (visible, not auto-favorite)
+    if st == "new_candidate_german_recovery" or st.startswith("new_candidate"):
+        return "ACTIVE"  # candidate tier (needs Human Rank)
+    if st in BACKUP_STATUSES:
+        return "BACKUPS"
+    # fallback via flags: human_selected+production_candidate == ACTIVE shortlist, good_archived == BACKUPS even if human_selected
+    if data.get("human_selected") is True and data.get("production_candidate") is True:
+        return "ACTIVE"
+    if str(data.get("status","")).endswith("_archived"):
+        return "BACKUPS"
+    # default: treat unknown as BACKUPS (safe, not ACTIVE)
+    return "BACKUPS"
+
+
 _DE = "German"
 _EN = "English"
 
@@ -591,24 +628,57 @@ class VoiceRegistry:
                 (entry.voice_id == "vd_e" and language == _DE)),
         )
 
-    def entries_for_language(self, language: str) -> list[VoiceProfileEntry]:
+    def entries_for_language(self, language: str, tier: str | None = None) -> list[VoiceProfileEntry]:
         """Stimmen einer Sprache, gruppenweise nach Rang sortiert
-        (männlich zuerst; VD-E bei Deutsch immer ganz oben, §6)."""
+        (männlich zuerst; VD-E bei Deutsch immer ganz oben, §6).
+        tier: None=alle (ohne REJECTED zu bevorzugen ist responsibility des Callers),
+              "ACTIVE"/"BACKUPS"/"REJECTED"/"CANDIDATE" filtert strikt.
+              Standard-GUI soll ACTIVE (inkl. new_candidate) zeigen, REJECTED nie
+              in Favoriten/Shortlist. Backups séparat.
+        """
         entries = [self.for_language(e, language)
                    for e in self.entries()
                    if language in e.language_support]
+        if tier:
+            t = tier.upper()
+            filtered=[]
+            for e in entries:
+                d=self._profiles.get(e.voice_id,{})
+                tt=tier_for(d)
+                # CANDIDATE is subset of ACTIVE (new_candidate*)
+                if t=="CANDIDATE":
+                    if str(d.get("status","")).startswith("new_candidate"):
+                        filtered.append(e)
+                elif tt==t:
+                    filtered.append(e)
+            entries=filtered
         male = sorted([e for e in entries if e.gender == "male"],
                       key=lambda e: (e.rank, e.display_name))
         female = sorted([e for e in entries if e.gender == "female"],
                         key=lambda e: (e.rank, e.display_name))
         return male + female
 
+    def entries_for_tier(self, tier: str) -> list[VoiceProfileEntry]:
+        """Alle Stimmen eines Tiers, sprachunabhängig (für Manifest/Validator)."""
+        out=[]
+        for e in self.entries():
+            d=self._profiles.get(e.voice_id,{})
+            if tier_for(d).upper()==tier.upper():
+                out.append(e)
+        return sorted(out, key=lambda x: (x.display_name, x.voice_id))
+
+    def tier_of(self, voice_id: str) -> str:
+        d=self._profiles.get(voice_id,{})
+        return tier_for(d) if d else "UNKNOWN"
+
+
     def default_voice_id(self, language: str = _DE) -> str:
         """VD-E bleibt bei Deutsch Standard; sonst beste empfohlene
-        Stimme der Sprache (native bevorzugt)."""
+        Stimme der Sprache (native bevorzugt). REJECTED wird nie zurückgegeben."""
         if language == _DE and self.get("vd_e") is not None:
             return "vd_e"
-        entries = self.entries_for_language(language)
+        # filter REJECTED out for default
+        entries = [e for e in self.entries_for_language(language) if self.tier_of(e.voice_id)!="REJECTED"]
         for e in entries:
             if e.default_for_language:
                 return e.voice_id

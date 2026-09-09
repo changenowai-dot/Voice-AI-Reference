@@ -44,6 +44,37 @@ Dieser Leitfaden erklärt einem neuen AI-Agenten **exakt**, wie die guten Englis
 
 Rejected but retained: voice-18/19/20/21/26 (`rejected_human`, not production candidate).
 
+### German Shortlist dieser Repo (konkret, fast_audition_de — 7er, davon 3 verifiziert)
+
+| voice_id | seed | pos | gender | description | status |
+|---|---|---|---|---|---|
+| de_male_warm_storytelling_authoritative_01 (BEST MALE, voice-30) | 53003 | Pos3 | male | warm storytelling authority – tief, warm, menschlich, erzählerisch | saved_human_shortlist, current_best_male_german true, verifiziert |
+| de_male_deep_natural_conversational_01 (BETTER male, voice-32) | 53005 | Pos5 | male | deep natural conversational – tief, natürlich, direkt, modern | saved_human_shortlist |
+| de_female_deep_warm_documentary_01 (BEST FEMALE, voice-33) | 53011 | Pos6 | female | deep warm documentary – warm, tief, ruhig, reif | saved_human_shortlist, current_best_female_german true, verifiziert |
+| de_female_deep_calm_intelligent_01 (Backup, voice-34) | 53012 | Pos4 (second) | female | deep calm intelligent – tief, ruhig, intelligent | good_archived (backup, nicht active, human_selected true, production_candidate false) |
+Rejected German: voice-28/29/31 (`rejected_human`, pos1/2/4 der fast_audition_de).
+
+### German Recovery Audition 2026-09-09 — 7 NEW CANDIDATES (identisch `Jede Entdeckung...`, 15-25 s, arena_placeholder, 1 Clip/Voice)
+
+| voice_id | seed | pos | gender | concept |
+|---|---|---|---|---|
+| de_male_deep_gravitas_02 (voice-35) | 53013 | Pos1 | male | deep gravitas — sehr tief, wuchtig, seriös, dokumentarisch |
+| de_male_warm_calm_authoritative_02 (voice-36) | 53014 | Pos2 | male | warm calm authoritative 02 — warm, ruhig, autoritativ |
+| de_male_intellectual_precise_01 (voice-37) | 53015 | Pos3 | male | intellectual precise — intelligent, präzise, analytisch |
+| de_male_natural_storyteller_01 (voice-38) | 53016 | Pos4 | male | natural storyteller — natürlich, erzählerisch, nahbar |
+| de_male_cinematic_restrained_01 (voice-39) | 53017 | Pos5 | male | cinematic restrained — filmisch, zurückhaltend, tief |
+| de_female_warm_empathetic_01 (voice-40) | 53018 | Pos6 | female | warm empathetic — warm, empathisch, nahbar |
+| de_female_clear_natural_01 (voice-41) | 53019 | Pos7 | female | clear natural — klar, natürlich, hell |
+
+Alle 7: `status new_candidate_german_recovery`, `arena_placeholder`, `reproduction_status prepared_not_runtime_verified`, **exhaustive Suche ergab 0 historische RECOVERED** (daher NEW). Human Rank bislang blank, pending intensiver Test. Letzter 9er-Lauf (Pos3/5/6) konnte nach vollständiger `benchmark/*`+git+JSON-Suche nicht zweifelsfrei rekonstruiert werden (kein Verzeichnis mit 9 deutschen MP3s) — daher kein Auto-Promote; bestehende verifizierte BEST (voice-30/32/33) bleiben unverändert (vgl. MANIFEST "Offene Rekonstruktion").
+
+### English Female Calm 2 (preserved)
+
+| voice_id | gender | provenance | note |
+|---|---|---|---|
+| en_female_calm_01 | female | preserved | ACTIVE female option, nicht Teil der 7-male Shortlist |
+| en_female_calm_02 | female | preserved | s. o. |
+
 ---
 
 ## B. Reference Creation — VoiceDesign-WAV → `cache/voice_refs/`
@@ -118,14 +149,14 @@ prompt = model.create_voice_clone_prompt(ref_audio=str(ref.wav_path), ref_text=r
 3. **Mastering:** `project/app/audio/master.py` → EBU R128 `-14.0 LUFS`, `true_peak -1.5 dBTP` (aus `config.json:target_lufs/true_peak_dbtp`)
 4. **WAV-Export:** `wav_bit_depth 24`, `wav_sample_rate 48000` (config) — für Benchmark-MP3s via Arena `mp3_bitrate 320k`
 5. **Datei-Orte (diese Repo):**
-   - Audition: `project/benchmark/fast_audition/`, `project/benchmark/fast_audition_round02/`, `project/benchmark/fast_audition_de/` (neu), `project/benchmark/male_deep_candidates/`
+   - Audition: `project/benchmark/fast_audition/`, `project/benchmark/fast_audition_round02/`, `project/benchmark/fast_audition_de/`, `project/benchmark/german_recovery_audition/` (2026-09-09, 7), `project/benchmark/german_second_audition/` (4), `project/benchmark/fast_audition_de_verification/` (3), `project/benchmark/male_deep_candidates/`
    - Referenzen: `cache/voice_refs/<candidate>.wav` (produktion) / `project/VD-E_GOLDEN_REFERENCE/VD-E.wav` (golden)
 
 ---
 
 ## G. Reproduction Procedure — Voice Recipe → VoiceDesign → Reference → Clone → Final
 
-**Maschinenlesbar:** `project/voices/voice_generation_recipes.json` — enthält für jede gespeicherte Voice (7 English + VD-E + künftig 7 German) alle 30+ Felder aus der Aufgabenliste. Unbekanntes = `unknown / not recorded`.
+**Maschinenlesbar:** `project/voices/voice_generation_recipes.json` — enthält für jede gespeicherte Voice (7 English + VD-E + 7 German fast_audition + 7 German recovery + 2 EN female calm = 24) alle 30+ Felder aus der Aufgabenliste. Unbekanntes = `unknown / not recorded`.
 
 **Schritte (bestehende Tools wiederverwenden, kein neues TTS-System):**
 
@@ -165,7 +196,7 @@ engine.load()  # prüft cache/voice_refs/VD-E.wav SHA
 result = engine.synthesize(req)
 ```
 
-**Helper-Erweiterung (wenn sinnvoll):** `project/tools/reproduce_voice.py` (falls vorhanden) kann `voice_generation_recipes.json` lesen und obigen Ablauf ausführen — kein paralleles System bauen.
+**Helper:** `project/tools/reproduce_voice.py` + `project/tools/reproduce_voice.ps1` lesen `voice_generation_recipes.json` und führen obigen Ablauf aus (dry-run / --reproduce) und obigen Ablauf ausführen — kein paralleles System bauen.
 
 **Seed-Behandlung:** Pro Segment deterministisch (`seed` aus Recipe, z. B. 52031). Für Variation via `variation_for_attempt` bei QC-Retry.
 
@@ -173,11 +204,12 @@ result = engine.synthesize(req)
 
 ## H. Known Limitations / Placeholders — Ehrlichkeit vor Schönfärberei
 
-- **Alle English-Test-MP3s dieser Session (`voice-06`…`voice-27`) sind `arena_placeholder`** (Arena TTS real speech, nicht `actual_qwen` RTX 5060 Qwen3-TTS-Base). Erkennbar an `model: "Arena TTS (real speech) – placeholder …"` + `reference_sha256: "ARENA_VOICE-xx"` + `provenance: arena_placeholder` in `voice_generation_recipes.json` und in `project/voices/*.json` Feld `reference_generated`. **Nie behaupten, sie seien Qwen-RTX-Renders.**
+- **Alle English-Test-MP3s dieser Session (`voice-06`…`voice-27`) und alle German Audition-MP3s (`fast_audition_de 7`, `german_recovery_audition 7`) sind `arena_placeholder`** (Arena TTS real speech, nicht `actual_qwen` RTX 5060 Qwen3-TTS-Base). Erkennbar an `model: "Arena TTS (real speech) – placeholder …"` + `reference_sha256: "ARENA_VOICE-xx"` + `provenance: arena_placeholder` in `voice_generation_recipes.json` und in `project/voices/*.json` Feld `reference_generated`. **Nie behaupten, sie seien Qwen-RTX-Renders.**
 - **Nur VD-E ist `actual_qwen`** (golden reference Wave, SHA256 `B156C02A…`, `cache/voice_refs/VD-E.wav` mit `allow_design=False`).
 - **Cache/Modelle in Arena:** `cache/voice_refs/` ist leer, `nvidia-smi` fehlt, `torch` nicht installiert im Sandbox-Benchmark — echte Qwen-Modelle werden erst nach `install.ps1` + Download von `Qwen/Qwen3-TTS-12Hz-1.7B-*` lokal vorhanden (`MODELS_DIR/hf` oder `MODELS_DIR/<model>`).
 - **Unbekanntes präzise markiert:** In `voice_generation_recipes.json` stehen Felder wie `speed: unknown — global 1.0`, `audio_format.postprocessing: EBU R128 …` nur soweit aus `config.json`/`master.py` belegbar; sonst `not recorded`.
 - **Nicht ändern (global):** German/English Speed, German Prosodie, Qwen-Settings, Cache-Logik, VD-E, Female-Favorites — diese Aufgabe ist **Stimmen-Test**, keine globale Optimierung.
+- **Offene Rekonstruktion 9-way German:** Nach exhaustive Suche (counts, git log, JSON, Agent-Reports) kein 9-MP3-Verzeichnis gefunden — honest report in `VOICE_LIBRARY_MANIFEST.md`. Status der 7 recovery bleibt `new_candidate`, kein Raten. — 
 - **Keine großen Binaries im Git:** Nur kleine Audition-MP3s (60–70 KB je Clip) + Metadaten werden versioniert; Modell-Binaries/caches bleiben lokal.
 
 ---
