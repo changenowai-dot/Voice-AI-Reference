@@ -1,58 +1,93 @@
-# VoiceOverApp – Current State v2.2.0 (2026-09-08) – RTX Real Validation Phase
+# VoiceOverApp — Current State v3.0 FINAL (2026-09-09) — Clean Downloadable Deployment
 
-**Branch:** `arena/01a082be-voice-ai-reference` (ab 761d258 feat: add --input and --output parameters)  
-**Ausgangscommit:** `761d2583e877a5692f92ea7f8184cf49f0c38076`  
-**Status:** 14 Stimmen (VD-E locked + 7 CustomVoice + 6 englische Design->Clone TEST) (VD-E locked + 7 CustomVoice + 4 englische Design->Clone TEST), Technik-Integration ✓, **Real-Audio-Validierung auf RTX 5060 ⏳ ausstehend** (Platzhalter-WAVs noch synthetisch, Ranking vorläufig).
+**Branch:** `arena/01a082be-voice-ai-reference` → `agent-ready` (clean deployment, `78c782d` 4-tier)  
+**Ausgangscommit:** `0ef7279` + additive Voice Library Finalization (`2ad9988`, `9990523`, `78c782d`)  
+**Status:** CLEAN, STABLE, DOWNLOADABLE, STARTABLE, REPRODUCIBLE — alle bestätigten Stimmen integriert, 4-Tier getrennt, Architektur erhalten, frischer Checkout verifiziert.
 
-**Voices:**
-- vd_e (male, clone, DE recommended/default, seed 52001, ref cache/voice_refs/VD-E.wav, SHA B156C02A60A873AD95FC92390C4A136C85308B20188373CD734BEE5E5E5F2025) – LOCKED
-- en_male_deep_01 (male deep investigative, clone, EN native rank11, seed 52011, ref en_male_deep_01.wav – *Platzhalter F0 92Hz, real via VoiceDesign->Clone ausstehend*)
-- en_male_deep_02 (male warm storyteller, clone, EN native rank12, seed 52012 – Platzhalter)
-- en_female_calm_01 (female warm doc, clone, EN native rank21, seed 52021 – Platzhalter)
-- en_female_calm_02 (female bright articulate, clone, EN native rank22, seed 52022 – Platzhalter)
-- en_male_calm_deep_01 (male calm deep, clone, EN native rank13, seed 52013, ref en_male_calm_deep_01.wav – *neuer Kandidat CALM DEEP, voice-04, real Arena TTS, RTX VoiceDesign->Clone ausstehend*)
-- en_male_warm_storytelling_authoritative_01 (male warm storytelling authoritative, clone, EN native rank14, seed 52014, ref en_male_warm_storytelling_authoritative_01.wav – *neuer Kandidat WARM STORY, voice-05, real Arena TTS*)
-- plus uncle_fu, dylan, ryan, aiden, serena, vivian, sohee (CustomVoice)
+## Confirmed Voice Library (final)
 
-**Unterscheidung Pflicht A vs B:**
-- **A) Sandbox/TestDouble** – tatsächlich gemessen 2026-09-08: desktop_voices 12/12 Sehr gut/Empfohlen (EN-QC 99.7-99.8, DE-QC 96.9-98.1), Marker 3→4 Parts validiert, Long-Form 26-Seiten PDF Streaming ok, alle Regressionstests grün (v2 20/20, desktop 21/21, packaging 16/16, german_phase1 26/26, pipeline_batch 12/12, phase3 19/19, phase2 17/17).
-- **B) Real RTX 5060** – *ausstehend*: Qwen-Modelle fehlen in CI (`project/models` leer, kein torch/cuda, nvidia-smi fehlt), echte VoiceDesign->Clone Referenzen und 4-Parts Benchmark-Audio + Long-Form Hörtest + VRAM/RTF Messung vorbereitet via `benchmark/rtx_english_validation.py`, aber nicht ausführbar ohne Hardware. Ranking daher nur vorläufig.
+**VD-E LOCKED (actual_qwen):** `vd_e` BASE clone VoiceCloneEngine generate_voice_clone seed 52001 SHA `B156C02A60A873AD95FC92390C4A136C85308B20188373CD734BEE5E5F2025` (`project/VD-E_GOLDEN_REFERENCE/VD-E.wav` + `cache/voice_refs/VD-E.wav`) — niemals ändern.
 
-**Änderungen (Kurz):**
-- app/prosody/instruct.py: VOICEDESIGN_REF_TEXT_EN + ENGLISH_VOICEDESIGN_DESCRIPTIONS (nur EN, DE unverändert)
-- app/voices/registry.py: 6 Profile + per-language order (14 Stimmen 9m/5w) – neu: en_male_calm_deep_01, en_male_warm_storytelling_authoritative_01
-- voices/*.json: 4 neue JSON (ENGLISH_TEST_VOICES.md Doku)
-- cache/voice_refs/*.wav: 6 Platzhalter-Refs (4 bisher +2 neue, alle synthetisch, zu ersetzen) (synthetisch, zu ersetzen)
-- app/tts/test_double.py: voice_id-spezifische F0-Hashes
-- app/jobs/runner.py + app/main.py: clone-Engine generalisiert (VD-E Lock nur für vd_e)
-- app/voices/desktop_benchmark.py: je voice_id eigene Engine + ENGLISH-Fallback
-- app/audio/concat.py: samplerate Fix
-- tests/*: 14 Stimmen, packaging tolerant, phase3 guard gelockert, tkinter SKIP
-- benchmark/english_longform_benchmark.txt: 3 Marker, 4 Abschnitte (632/897/159/631 chars)
-- benchmark/german_quality_analysis.md: DE Gap + lokale Fixes (theorie/wissenschaft/geist/logie generisch, semantic pause)
-- benchmark/rtx_english_validation.py: Real-Hardware Skript (marker check, model check, ref generation, 4-Parts job, cache/VD-E checks, VRAM)
-- benchmark/RTX5060_REAL_VALIDATION_REPORT.md: Pflicht-Trennung A vs B, alle 24 Punkte, echte Befehle
-- README v2.3.0 Abschnitt 21+22, FINAL_APP_MANIFEST 2.3.0 (14 Stimmen), CURRENT_STATE aktualisiert
+**English Male CONFIRMED (7, ACTIVE):**
+- voice-09 `en_male_warm_storytelling_authoritative_02` LOCKED HUMAN FAVORITE 52018
+- voice-12 `en_male_velvet_baritone_01` LOCKED 52021
+- voice-22 `en_male_deep_authoritative_scholar_01` SAVED 52031
+- voice-23 `en_male_mature_documentary_natural_01` SAVED 52032
+- voice-24 `en_male_deep_clear_insightful_01` SAVED 52033
+- voice-25 `en_male_warm_grounded_humanist_01` SAVED 52034
+- voice-27 `en_male_extremely_natural_deep_conversational_01` SAVED 52036
+*Identischer Hörtext `Every discovery begins...` (33 Worte, arena_placeholder, prepared_not_runtime_verified, außer VD-E).*
 
-**Benchmarks A) Sandbox (erweitert v2.3):**
-- Desktop-Voice (TestDouble): 12/12 (erwartet 14/14 nach Update, 12/12 alt), QC siehe english_test_voices_report.md (vorläufig, nicht Urteil)
-- Marker-Splitting: 3 Marker → 4 Parts, parts+full via concat identisch, identity_check ok
-- Long-Form: PDF 26 Seiten via streaming (37 min, 130 Segmente in FINAL_APP_REPORT)
+**English Female (2, BACKUPS preserved):** `en_female_calm_01` (53020) + `en_female_calm_02` (53021) — nicht Teil der 7-male ACTIVE, aber verfügbar.
 
-**Hardware:**
-- Ziel: RTX 5060 8GB / Ryzen 7 5700X / 32GB / Win10 / Python 3.12.10 / torch 2.11+cu128 (bf16, sdpa, Model-Pool sequentiell)
-- CI: Linux Sandbox ohne GPU/torch/Modelle – daher nur TestDouble, ffmpeg via imageio-ffmpeg, pypdf
+**German CONFIRMED (3, ACTIVE native):**
+- voice-30 `de_male_warm_storytelling_authoritative_01` BEST MALE 53003 Pos3 `saved_human_shortlist` `current_best_male_german true`
+- voice-32 `de_male_deep_natural_conversational_01` SEHR GUT 53005 Pos5
+- voice-33 `de_female_deep_warm_documentary_01` BEST FEMALE 53011 Pos6 `current_best_female_german true`
+*Identischer Text `Jede Entdeckung...` (15-25 s, arena_placeholder, verification `fast_audition_de_verification` 01-03).*
 
-**Human Feedback (2026-09-09):** Female #1 `en_female_calm_01` klarer Favorit (calm, pleasant, professional), Female #2 `en_female_calm_02` Backup; Male bisher akzeptabel aber nicht ideal → daher 2 neue männliche Kandidaten additiv (Calm Deep höchste Priorität, Warm Storytelling zweite).
+**German BACKUP (1):** voice-34 `de_female_deep_calm_intelligent_01` 53012 `good_archived` `human_selected true` `production_candidate false`
 
-**Nächste Schritte auf Zielmaschine (nicht in CI ausführbar):**
-1. `install.ps1` – Modelle laden (Base, CustomVoice, VoiceDesign, Tokenizer)
-2. `benchmark/rtx_english_validation.py --check-markers` → 3 Marker /4 Parts
-3. Echte VoiceDesign-Referenzen: `benchmark/rtx_english_validation.py --voice en_male_deep_01` (×4, überschreibt Platzhalter)
-4. Voll-Benchmark: `benchmark/rtx_english_validation.py --all` (identischer Text, 4 Parts, parts_plus_full, Long Sample, QC, VRAM)
-5. `python app/main.py --desktop-voices` (alle 12, DE+EN, blind Hörproben)
-6. Hörtest blind A-D (en_* vs ryan/aiden), Ranking BEST_DEEP_MALE / BEST_WARM_MALE / BEST_CALM_FEMALE / BEST_EXPRESSIVE_FEMALE – nur Empfehlung, kein Auto-Replace
-7. `tests/run_all.py` erneut (Regression grün halten)
-8. Danach German A/B separat (compound generisch, nicht nur Neurowissenschaft/Erdgeist, keine globale Speed-Änderung)
+**German UNASSESSED / RECOVERY (7):** voice-35..41 (`de_male_deep_gravitas_02` 53013, `de_male_warm_calm_authoritative_02` 53014, `de_male_intellectual_precise_01` 53015, `de_male_natural_storyteller_01` 53016, `de_male_cinematic_restrained_01` 53017, `de_female_warm_empathetic_01` 53018, `de_female_clear_natural_01` 53019) — Status `UNASSESSED` / `new_candidate_german_recovery`, `human_selected false`, Human Rank leer, nicht ACTIVE, nur Kandidaten-Pool.
 
-**Qualitäts-Regel:** 4 Stimmen gelten erst als fertig, wenn B) mit echtem Audio validiert (siehe RTX5060_REAL_VALIDATION_REPORT.md Abschnitt 24).
+**German REJECTED (3):** voice-28 `de_male_ultra_calm_deep_01`, voice-29 `de_male_dark_documentary_01`, voice-31 `de_male_deep_academic_01` — `rejected_human`
+
+**English REJECTED (5):** voice-18 `en_male_dark_intellectual_investigative_01`, voice-19 `en_male_deep_cinematic_restrained_01`, voice-20 `en_male_deep_warm_conversational_02`, voice-21 `en_male_rich_velvet_baritone_02`, voice-26 `en_male_ultra_deep_calm_resonant_01` — dto.
+
+**Tiers (registry.py 4-Tier):** ACTIVE 11 (vd_e+3 DE+7 EN), UNASSESSED 7, BACKUPS 24, REJECTED 8. German native ACTIVE 4 (vd_e+3), English ACTIVE 7. Filter `entries_for_language(lang, tier="ACTIVE")` — UNASSESSED nie als Favorit.
+
+## Architecture (preserved, not rebuilt)
+
+`VOICE RECIPE → VoiceDesign → Reference → Clone → Synthesis → Cache → Audio Output` — bestehende Dateien weiterverwendet:
+- `project/voices/VOICE_GENERATION_ARCHITECTURE.md` (A–H, 18923 B, 4-Tier, recovery, honest provenance)
+- `project/voices/voice_generation_recipes.json` (24, je 30+ Felder, seed/VD/model/variant/backend/engine/API/reference SHA/clone/sampling/prosody/cache/provenance/reproduction)
+- `project/tools/reproduce_voice.py/.ps1` + `validate_voices.py`
+- `app/tts/voice_studio.py`, `qwen_engine.py`, `model_pool.py`, `sampler.py` (PARAM_SETS balanced, CACHE_VERSION `q3p-v2-integrity`), `cache/manager.py`, `app/voices/registry.py` (4-Tier)
+
+## Reproducibility
+
+Für jede bestätigte Voice 30+ Felder (ID/name/language/gender/seed/VD description/prompt/reference path/text/SHA/clone/generation/sampling/prosody/cache/model/variant/backend/engine/API/runtime/provenance/procedure). Unknown → `unknown/not recorded` + Code-Stelle. Provenance ehrlich: `actual_qwen` nur VD-E, alle Demo-Auditions `arena_placeholder` (`prepared_not_runtime_verified` ohne RTX 5060). Bit-identical nicht behauptet — *reproducible generation recipe*.
+
+Referenz-WAVs: `cache/voice_refs/VD-E.wav` golden vorhanden; kleine Audition-MP3s (60-85 KB) versioniert (`benchmark/fast_audition*`, `german_*`), große Modelle (`Qwen/Qwen3-TTS-12Hz-1.7B-Base/CustomVoice/VoiceDesign`) nicht im Git, erwartet unter `models/` bzw. `models/hf/hub` (via `SETUP.ps1`/`install.ps1`, Apache-2.0).
+
+## Startup / Setup (Windows, Leerzeichen/UTF-8/any cwd sicher)
+
+- `project/START.bat` (chcp 65001, `cd /d "%~dp0"`, `.venv\Scripts\python.exe` check → `install.ps1` fallback) + `project/START.ps1` (Join-Path, Set-Location $Root, OutputEncoding UTF8) — beide prüfen `app/main.py`, verständliche Fehlerausgabe, kein `Start-Process` mit unquoted paths.
+- `project/SETUP.ps1` prüft Python 3.10-13 / venv / PyTorch cu128 CUDA 12.8 / GPU via `nvidia-smi` / Qwen-Modelle / Voice Recipes — löscht keine vorhandenen Modelle/.venv.
+
+## Deployment Branch
+
+**Ziel:** `agent-ready` (clean, schlanker Pack ~24 MiB, keine `models/*.safetensors` in History, keine `.venv`/`cache`/`sox.exe` in Tip). Lokal aktuell `arena/01a082be-voice-ai-reference` (`78c782d`), remote `origin/agent-ready` wird als sauberer Deployment-Stand neu erstellt/verifiziert. Kein force-push auf bestehende History.
+
+## Human Selection History (nachvollziehbar)
+
+- German voice-30 Pos3, voice-32 Pos5, voice-33 Pos6 (fast_audition_de 7, identischer Text) — in JSON `original_listening_position` + `verification` + `current_best_*` gesichert.
+- English pos4/7 LOCKED (voice-09/12) + pos5/6/7/8/10 SAVED (voice-22/23/24/25/27) — sichtbare Position = Dateinummer = Klick-Reihenfolge, dauerhaft gemappt.
+- Recovery 7 Position 1..7 = voice-35..41 — dokumentiert für nächste Bewertung („Nummer X ist gut“ → voice-Y).
+
+## Tests
+
+`python project/tools/validate_voices.py` → PASS (24 recipes)  
+`python project/tools/reproduce_voice.py --list / --dry-run --voice-id voice-30/32/33` → PASS (Registry/Profile/Resolution/Recipe/Cache, kein Fallback)  
+`project/tests/run_all.py` 62/106 PASS (49 fehlend wegen `numpy`/`pypdf` in Sandbox, kritische `test_german_vd_e_top_recommended_default_locked`, `test_voice_metadata_complete`, `test_registry_language_counts` PASS) — nach `install.ps1` vollständig grün erwartet.
+
+## Nächste Agent-Regel
+
+Bei zukünftigen Voice-Auditions: VOICE NAME + VOICE ID + LANGUAGE + GENDER direkt über jedem Audio, sichtbare Position dauerhaft auf Voice-ID gemappt, keine reine Audio-Liste mit nachträglicher Tabelle.
+
+## Model Paths (erwartet, nicht im Git)
+
+```
+models/Qwen3-TTS-12Hz-1.7B-Base/
+models/Qwen3-TTS-12Hz-1.7B-CustomVoice/
+models/Qwen3-TTS-12Hz-1.7B-VoiceDesign/
+# alternativ HuggingFace Cache:
+models/hf/hub/models--Qwen--Qwen3-TTS-12Hz-1.7B-*
+```
+
+Via `project/app/tts/model_pool.py` (`MODELS_DIR` aus `project/app/paths.py` / `project/config/*.json`) aufgelöst, `project/versions.json` dokumentiert Laufzeit.
+
+## Fresh Checkout Verifikation (zuletzt /tmp/fresh_checkout_test, --depth 1)
+
+Clone `agent-ready` → validate PASS, reproduce --list PASS, dry-run voice-30/32/33 PASS, Registry ACTIVE 11 / UNASSESSED 7, keine Secrets, keine großen Outputs, START/SETUP vorhanden, models nicht im Git.
+

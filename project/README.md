@@ -8,6 +8,46 @@ Philosophie, Dokumentationen, Mystery, Deep Dives, Hörbuch-Erzählungen)
 
 ---
 
+**Version 3.0 FINAL — 2026-09-09 — Clean Downloadable Deployment** — Branch `agent-ready` (4-Tier Voice Library, reproduzierbar, Windows-startklar)
+
+## 0. Quick Start — Download → Setup → Validieren → Starten (Windows)
+
+```powershell
+# 1) Repository klonen / herunterladen
+git clone --branch agent-ready https://github.com/changenowai-dot/Voice-AI-Reference.git
+cd Voice-AI-Reference/project
+
+# 1b) Alternativ: ZIP herunterladen und entpacken (z. B. nach C:\VoiceOverApp)
+
+# 2) Einmaliges Setup (prüft Python 3.10-13, .venv, PyTorch cu128 CUDA 12.8, qwen-tts, FFmpeg, Modelle)
+powershell -ExecutionPolicy Bypass -File .\SETUP.ps1
+# Modelle erwartet (Apache-2.0, nicht im Git, via SETUP.ps1/install.ps1 nach models/):
+#   models/Qwen3-TTS-12Hz-1.7B-Base/
+#   models/Qwen3-TTS-12Hz-1.7B-CustomVoice/
+#   models/Qwen3-TTS-12Hz-1.7B-VoiceDesign/
+#   # alternativ HuggingFace Cache: models/hf/hub/models--Qwen--*
+
+# 3) Validieren (ohne GPU/Modelle möglich)
+python project/tools/validate_voices.py        # → PASS 24 recipes
+python project/tools/reproduce_voice.py --list
+python project/tools/reproduce_voice.py --dry-run --voice-id de_male_warm_storytelling_authoritative_01
+python project/tools/reproduce_voice.py --dry-run --voice-id en_male_warm_storytelling_authoritative_02
+
+# 4) Starten (Desktop-GUI, kein Browser, kein Port)
+.\START.bat            # Doppelklick — oder:
+.\START.ps1            # PowerShell-Start mit venv-Fallback (UTF-8, Leerzeichen-sicher)
+# → Tkinter-Fenster: PDF/TXT → Sprache & Stimme wählen → Voice-over erstellen
+
+# 5) Echte Reproduktion (nur auf RTX 5060 8GB mit Modellen):
+python project/tools/reproduce_voice.py --reproduce --voice-id de_male_warm_storytelling_authoritative_01 --language German --text "Jede Entdeckung beginnt mit einer Frage..."
+```
+
+- Stimmen-Tiers: **ACTIVE** (bestätigt, 11: vd_e+3 DE+7 EN) / **BACKUPS** (24, u. a. voice-34) / **UNASSESSED** (7 Recovery voice-35..41, Human Rank leer) / **REJECTED** (8). Details `project/voices/VOICE_LIBRARY_MANIFEST.md` + `project/FINAL_VOICE_LIBRARY_REPORT.md`.
+- Stimme direkt über jedem Audio: **VOICE NAME + VOICE ID + LANGUAGE + GENDER** — sichtbare Position = Dateinummer = Klick-Reihenfolge (verbindlich für zukünftige Auditions).
+- Architektur unverändert: `VOICE RECIPE → VoiceDesign → Reference → Clone → Synthesis → Cache → Audio Output` — `project/voices/VOICE_GENERATION_ARCHITECTURE.md` A–H + `voice_generation_recipes.json` (30+ Felder) + `reproduce_voice.py` (vorhandene `voice_studio`/`qwen_engine`/`model_pool`/`sampler`/`cache/manager`).
+
+---
+
 ## 1. Installation
 
 1. Ordner entpacken (z. B. nach `C:\VoiceOverApp`)
