@@ -19,10 +19,10 @@ All clips: Arena TTS real speech (placeholder for RTX 5060 Qwen3-TTS 12Hz VoiceD
 | Number | Voice ID | Concept | Audio file | Duration | Human Rank |
 |--------|----------|---------|------------|----------|------------|
 | 03 | voice-08 | Warm Storyteller (natural, intimate) | `03_warm_storyteller.mp3` |  |  |
-| 04 | voice-09 | **Warm Storytelling Authoritative 02 — HUMAN FAVORITE #1 LOCKED** | `04_warm_storytelling_authoritative_02.mp3` |  |  |
+| 04 | voice-09 | **Warm Storytelling Authoritative 02 — LOCKED HUMAN FAVORITE (Position 4)** | `04_warm_storytelling_authoritative_02.mp3` |  |  |
 | 05 | voice-10 | Deep Academic (intellectual, precise) | `05_deep_academic.mp3` |  |  |
-| 06 | voice-11 | **Investigative Mystery — HUMAN FAVORITE #2 LOCKED** | `06_investigative_mystery.mp3` |  |  |
-| 07 | voice-12 | Velvet Baritone (rich velvet, smooth) | `07_velvet_baritone.mp3` |  |  |
+| 06 | voice-11 | Investigative Mystery (deep, suspenseful) | `06_investigative_mystery.mp3` |  |  |
+| 07 | voice-12 | **Velvet Baritone — LOCKED HUMAN FAVORITE (Position 7)** | `07_velvet_baritone.mp3` |  |  |
 | 08 | voice-13 | Deep Conversational (natural, direct) | `08_deep_conversational.mp3` |  |  |
 | 09 | voice-14 | Commanding Restrained (authority, controlled) | `09_commanding_restrained.mp3` |  |  |
 | 10 | voice-15 | Cinematic Documentary (epic, filmic) | `10_cinematic_documentary.mp3` |  |  |
