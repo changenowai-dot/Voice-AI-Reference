@@ -1,4 +1,4 @@
-# Reproduce a voice from its recipe — PowerShell helper (wraps reproduce_voice.py)
+# Reproduce a voice from its recipe -- PowerShell helper (wraps reproduce_voice.py)
 param(
   [string]$VoiceId,
   [string]$Language = "German",

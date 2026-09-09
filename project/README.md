@@ -28,10 +28,10 @@ powershell -ExecutionPolicy Bypass -File .\SETUP.ps1
 #   # alternativ HuggingFace Cache: models/hf/hub/models--Qwen--*
 
 # 3) Validieren (ohne GPU/Modelle möglich)
-python project/tools/validate_voices.py        # → PASS 24 recipes
-python project/tools/reproduce_voice.py --list
-python project/tools/reproduce_voice.py --dry-run --voice-id de_male_warm_storytelling_authoritative_01
-python project/tools/reproduce_voice.py --dry-run --voice-id en_male_warm_storytelling_authoritative_02
+python .\tools\validate_voices.py        # → PASS 24 recipes
+python .\tools\reproduce_voice.py --list
+python .\tools\reproduce_voice.py --dry-run --voice-id de_male_warm_storytelling_authoritative_01
+python .\tools\reproduce_voice.py --dry-run --voice-id en_male_warm_storytelling_authoritative_02
 
 # 4) Starten (Desktop-GUI, kein Browser, kein Port)
 .\START.bat            # Doppelklick — oder:
@@ -39,7 +39,7 @@ python project/tools/reproduce_voice.py --dry-run --voice-id en_male_warm_storyt
 # → Tkinter-Fenster: PDF/TXT → Sprache & Stimme wählen → Voice-over erstellen
 
 # 5) Echte Reproduktion (nur auf RTX 5060 8GB mit Modellen):
-python project/tools/reproduce_voice.py --reproduce --voice-id de_male_warm_storytelling_authoritative_01 --language German --text "Jede Entdeckung beginnt mit einer Frage..."
+python .\tools\reproduce_voice.py --reproduce --voice-id de_male_warm_storytelling_authoritative_01 --language German --text "Jede Entdeckung beginnt mit einer Frage..."
 ```
 
 - Stimmen-Tiers: **ACTIVE** (bestätigt, 11: vd_e+3 DE+7 EN) / **BACKUPS** (24, u. a. voice-34) / **UNASSESSED** (7 Recovery voice-35..41, Human Rank leer) / **REJECTED** (8). Details `project/voices/VOICE_LIBRARY_MANIFEST.md` + `project/FINAL_VOICE_LIBRARY_REPORT.md`.
