@@ -35,13 +35,15 @@ STATUS_LABELS = {
     "fallback": "CROSS-LANGUAGE FALLBACK",
 }
 
-# === 3-Tier Library (2026-09-09) — ACTIVE / BACKUPS / REJECTED ===
-# ACTIVE: human-selected/shortlist/favorite/preserved — in Haupt-GUI, Favoriten, Standard-Auswahl
-# BACKUPS: test_voice / test_voice_premium_10 / good_archived — in separatem Backup-Bereich, nicht als Favorit
+# === 4-Tier Library (2026-09-09) — ACTIVE / BACKUPS / UNASSESSED / REJECTED ===
+# ACTIVE: human-selected/confirmed shortlist/favorite/preserved — in Haupt-GUI, Favoriten, Standard-Auswahl (nur bestätigte)
+# BACKUPS: good_archived + test_voice* als archivierter Backup-Bereich (z. B. voice-34) — nicht als Favorit
+# UNASSESSED: new_candidate / recovered / unassessed — z. B. german_recovery 7 (voice-35..41) — NICHT als ACTIVE, nur Kandidaten-Pool, Human Rank blank
 # REJECTED: rejected_human — niemals in ACTIVE-UI/Shortlist/Favoriten (nur Historie, Reproduktion)
 ACTIVE_STATUSES = {"locked_human_favorite", "saved_human_shortlist", "preserved_female_calm", "test_voice_preserved", "active"}
 BACKUP_STATUSES = {"good_archived", "test_voice", "test_voice_premium_10", "archived", "backup"}
 REJECTED_STATUSES = {"rejected_human", "rejected"}
+UNASSESSED_STATUSES = {"new_candidate_german_recovery", "new_candidate", "recovered", "unassessed", "candidate"}
 # Any status containing these substrings also counts: we also inspect human_selected/production_candidate flags
 
 def tier_for(data: dict) -> str:
@@ -56,11 +58,11 @@ def tier_for(data: dict) -> str:
     # explicit
     if st in REJECTED_STATUSES or "rejected" in st:
         return "REJECTED"
+    # UNASSESSED: neue/recovered Kandidaten — NICHT ACTIVE, nicht BACKUP, nicht REJECTED (vgl. §5 FINAL CORRECTION)
+    if st in UNASSESSED_STATUSES or st.startswith("new_candidate") or st.startswith("recovered") or st == "unassessed":
+        return "UNASSESSED"
     if st in ACTIVE_STATUSES or st in ("saved_human_shortlist","locked_human_favorite"):
         return "ACTIVE"
-    # new_candidate German recovery is ACTIVE-candidate but not yet shortlist — treat as ACTIVE pool for pre-selection (visible, not auto-favorite)
-    if st == "new_candidate_german_recovery" or st.startswith("new_candidate"):
-        return "ACTIVE"  # candidate tier (needs Human Rank)
     if st in BACKUP_STATUSES:
         return "BACKUPS"
     # fallback via flags: human_selected+production_candidate == ACTIVE shortlist, good_archived == BACKUPS even if human_selected
@@ -633,7 +635,7 @@ class VoiceRegistry:
         (männlich zuerst; VD-E bei Deutsch immer ganz oben, §6).
         tier: None=alle (ohne REJECTED zu bevorzugen ist responsibility des Callers),
               "ACTIVE"/"BACKUPS"/"REJECTED"/"CANDIDATE" filtert strikt.
-              Standard-GUI soll ACTIVE (inkl. new_candidate) zeigen, REJECTED nie
+              Standard-GUI soll ausschließlich ACTIVE (confirmed) zeigen, UNASSESSED nie als Favorite, REJECTED nie
               in Favoriten/Shortlist. Backups séparat.
         """
         entries = [self.for_language(e, language)

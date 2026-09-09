@@ -20,7 +20,7 @@
 
 ---
 
-## Tier 1 — ACTIVE (Human-Selected / Locked, in App auswählbar, Favoriten/Shortlist)
+## Tier 1 — ACTIVE / CONFIRMED (Human-Selected / Locked, in App auswählbar, Favoriten/Shortlist)
 
 ### English — Male Shortlist 7 (A–G) · identischer Hörtext `Every discovery begins...` (33 Worte)
 
@@ -37,11 +37,11 @@
 **Gemeinsame Attribute (ACTIVE English Shortlist):**  
 - `native_language` English (`native` bei male, female calm separate) · `backend clone` · `engine VoiceCloneEngine` · `model_variant` = `EN_...` · `cache_version q3p-v2-integrity` · `sampling balanced` (temp 0.70 top_k 50 top_p 0.90 rep_pen 1.05, 3 attempts seed 5100+7) · `reference_sha` = ARENA_VOICE-xx · VoiceDesign-Referenztext `VOICEDESIGN_REF_TEXT_EN` (`There is a book... Who decides what is real?`) · Audition-Hörtext (identisch für Vergleich) `Every discovery...` — **vom Referenztext getrennt**.
 
-### English — Female Calm 2 (preserved, ACTIVE)
+### English — Female Calm 2 (preserved, BACKUPS — nicht Teil der 7-male ACTIVE Shortlist, aber erhalten)
 
 | Voice ID | Gender | Seed | Provenance | Status | Verwendung |
 |---|---|---|---|---|---|
-| `en_female_calm_01` | female | 53020* | `preserved` | `test_voice` (preserved, nicht neu gerendert) | ACTIVE female option — nicht Teil der 7-male Shortlist, bleibt unverändert |
+| `en_female_calm_01` | female | 53020* | `preserved` | `test_voice` | BACKUPS female option — nicht Teil der 7-male ACTIVE Shortlist, bleibt unverändert, nicht als Favorit |
 | `en_female_calm_02` | female | 53021* | `preserved` | `test_voice` | s. o. |
 
 *Seed für Reproduktionszwecke ergänzt; Original unverändert.
@@ -146,7 +146,7 @@ Siehe **§G** der Architektur für vollständige Schrittfolge mit tatsächlichen
 
 ## Integration in App (Status dieser Repo)
 
-- **Registry:** `project/app/voices/registry.py` — lädt alle `voices/*.json`, gruppiert via `per_language.rank` (männlich zuerst, dann weiblich), `for_language()` berücksichtigt `native_status/rank/recommended/default`, `default_voice_id()` → VD-E bei German. **3-Tier-Filter** (ACTIVE/BACKUPS/REJECTED) serialisiert `status`/`human_selected`/`production_candidate`/`production_locked` und persistiert Auswahl (`project/state/app_state.json`). Rejected (`rejected_human`) wird in `entries_for_language()`/GUI nie als empfohlen/active angezeigt.
+- **Registry:** `project/app/voices/registry.py` — lädt alle `voices/*.json`, gruppiert via `per_language.rank` (männlich zuerst, dann weiblich), `for_language()` berücksichtigt `native_status/rank/recommended/default`, `default_voice_id()` → VD-E bei German. **4-Tier-Filter** (ACTIVE/CONFIRMED, BACKUPS, UNASSESSED, REJECTED) serialisiert `status`/`human_selected`/`production_candidate`/`production_locked` und persistiert Auswahl (`project/state/app_state.json`). Rejected (`rejected_human`) wird in `entries_for_language(tier="ACTIVE")`/GUI nie als empfohlen/active angezeigt; UNASSESSED (`new_candidate_german_recovery`, 7) wird ebenfalls nicht als ACTIVE geführt (nur Kandidaten-Pool).
 - **Voice Resolution:** `project/app/voices/resolution.py` / `selection.py` (falls vorhanden) löst `language+gender+preference` → `voice_id` ohne Fallback auf rejected.
 - **Backend:** `project/app/tts/qwen_engine.py` (CustomVoice/Base), `voice_studio.py` (Design+Clone), `model_pool.py` (Base/CustomVoice/VoiceDesign-Repos), `cache/manager.py` (deterministisch, `CACHE_VERSION q3p-v2-integrity`), `paths.py` (`VOICE_REFS_DIR`), `hardware/detector.py`.
 - **GUI:** Hauptfenster `project/app/gui/main_window.py` gruppiert `Male`/`Female` je Sprache, zeigt `display_name` + `native_status`-Badge, Favoriten-Schlüssel `production_locked`/`saved_human_shortlist` in aktiver Liste, Backup-Bereich separat, Rejected ausgeblendet. Sprache/Gender-Filter + Status-Filter vorhanden.
