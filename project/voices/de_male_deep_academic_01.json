@@ -19,7 +19,7 @@
   "recommended": false,
   "default": false,
   "intended_use": "long-form documentary, history, science, psychology, philosophy",
-  "status": "test_voice_de_fast_audition",
+  "status": "rejected_human",
   "register": "deep_academic",
   "style": "deep_academic",
   "per_language": {
@@ -50,5 +50,11 @@
     "round": "de_fast_audition"
   },
   "reference_sha256": "ARENA_VOICE-31",
-  "reference_generated": "real speech via Arena voice-31 – de_fast_audition identical German short text; not TestDouble sine"
+  "reference_generated": "real speech via Arena voice-31 – de_fast_audition identical German short text; not TestDouble sine",
+  "human_selected": false,
+  "production_candidate": false,
+  "rejected": true,
+  "human_listening_position": 4,
+  "original_position": 4,
+  "rejected_reason": "Not selected — Original Position 4, voice-31 — removed from active shortlist (2026-09-09), retains history/recipes, not deleted"
 }
