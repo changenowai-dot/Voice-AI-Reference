@@ -1,0 +1,54 @@
+{
+  "voice_id": "en_male_dark_intellectual_investigative_01",
+  "display_name": "EN Male Dark Intellectual Investigative",
+  "gender": "male",
+  "provider": "arena-tts",
+  "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "English",
+  "native_status": "native",
+  "category": "narrator",
+  "description": "dark intellectual investigative – deep, quietly intense, precise, thoughtful and credible",
+  "backend_mode": "clone",
+  "speaker_name": null,
+  "reference_path": "benchmark/fast_audition_round02/03_dark_intellectual_investigative.mp3",
+  "production_locked": false,
+  "recommended": false,
+  "default": false,
+  "intended_use": "long-form documentary, history, science, psychology, philosophy, investigative",
+  "status": "test_voice_round02_fast_audition",
+  "register": "dark_intellectual_investigative",
+  "style": "dark_intellectual_investigative",
+  "per_language": {
+    "English": {
+      "native_status": "native",
+      "rank": 29,
+      "recommended": false,
+      "default": false,
+      "description": "dark intellectual investigative – deep, quietly intense, precise, thoughtful and credible"
+    },
+    "German": {
+      "native_status": "cross_language",
+      "rank": 109,
+      "recommended": false,
+      "default": false,
+      "description": "dark_intellectual_investigative – English design (cross-language)"
+    }
+  },
+  "settings": {
+    "seed": 52029,
+    "variant": "EN_MALE_DARK_INTELLECTUAL_INVESTIGATIVE_01",
+    "cache_version": "q3p-v2-integrity",
+    "language": "English",
+    "engine": "VoiceCloneEngine",
+    "backend": "clone",
+    "arena_voice_id": "voice-20",
+    "round": "fast_audition_round02",
+    "visible_position": 3
+  },
+  "reference_sha256": "ARENA_VOICE-20",
+  "reference_generated": "real speech via Arena voice-20 – fast_audition_round02 identical short text 15-25s; not TestDouble sine"
+}

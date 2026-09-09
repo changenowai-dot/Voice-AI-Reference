@@ -1,0 +1,54 @@
+{
+  "voice_id": "en_male_ultra_deep_calm_resonant_01",
+  "display_name": "EN Male Ultra Deep Calm Resonant",
+  "gender": "male",
+  "provider": "arena-tts",
+  "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "English",
+  "native_status": "native",
+  "category": "narrator",
+  "description": "ultra deep calm resonant – profoundly low, warm, serene, highly controlled and intelligible",
+  "backend_mode": "clone",
+  "speaker_name": null,
+  "reference_path": "benchmark/fast_audition_round02/01_ultra_deep_calm_resonant.mp3",
+  "production_locked": false,
+  "recommended": false,
+  "default": false,
+  "intended_use": "long-form documentary, history, science, psychology, philosophy, investigative",
+  "status": "test_voice_round02_fast_audition",
+  "register": "ultra_deep_calm_resonant",
+  "style": "ultra_deep_calm_resonant",
+  "per_language": {
+    "English": {
+      "native_status": "native",
+      "rank": 27,
+      "recommended": false,
+      "default": false,
+      "description": "ultra deep calm resonant – profoundly low, warm, serene, highly controlled and intelligible"
+    },
+    "German": {
+      "native_status": "cross_language",
+      "rank": 107,
+      "recommended": false,
+      "default": false,
+      "description": "ultra_deep_calm_resonant – English design (cross-language)"
+    }
+  },
+  "settings": {
+    "seed": 52027,
+    "variant": "EN_MALE_ULTRA_DEEP_CALM_RESONANT_01",
+    "cache_version": "q3p-v2-integrity",
+    "language": "English",
+    "engine": "VoiceCloneEngine",
+    "backend": "clone",
+    "arena_voice_id": "voice-18",
+    "round": "fast_audition_round02",
+    "visible_position": 1
+  },
+  "reference_sha256": "ARENA_VOICE-18",
+  "reference_generated": "real speech via Arena voice-18 – fast_audition_round02 identical short text 15-25s; not TestDouble sine"
+}

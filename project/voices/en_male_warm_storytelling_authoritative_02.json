@@ -3,7 +3,7 @@
   "display_name": "EN Male Warm Storytelling Authoritative 02",
   "gender": "male",
   "provider": "arena-tts",
-  "model": "Arena TTS (real speech) \u2013 placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+  "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
   "language_support": [
     "German",
     "English"
@@ -11,31 +11,36 @@
   "native_language": "English",
   "native_status": "native",
   "category": "narrator",
-  "description": "warm storytelling authoritative \u2013 superior version of current favorite, deep warm authority clarity",
+  "description": "warm storytelling authoritative – superior version of current favorite, deep warm authority clarity",
   "backend_mode": "clone",
   "speaker_name": null,
   "reference_path": "benchmark/male_deep_candidates/04_warm_storytelling_authoritative/part1.mp3",
-  "production_locked": false,
-  "recommended": false,
+  "production_locked": true,
+  "recommended": true,
   "default": false,
   "intended_use": "long-form documentary, history, science, psychology, philosophy, investigative",
-  "status": "test_voice_premium_10",
+  "status": "locked_human_favorite",
+  "human_favorite": true,
+  "human_favorite_locked": true,
+  "human_listening_position": 4,
+  "human_favorite_note": "LOCKED HUMAN FAVORITE — visible position 4/8 in fast_audition 03-10 (2026-09-09), voice-09 — do not delete/overwrite/replace",
+  "locked_reason": "human listening position 4 — warm storytelling authoritative 02",
   "register": "warm_storytelling_authoritative",
   "style": "warm_storytelling_authoritative",
   "per_language": {
     "English": {
       "native_status": "native",
-      "rank": 18,
-      "recommended": false,
+      "rank": 5,
+      "recommended": true,
       "default": false,
-      "description": "warm storytelling authoritative \u2013 superior version of current favorite, deep warm authority clarity"
+      "description": "warm storytelling authoritative – LOCKED HUMAN FAVORITE position 4, deep warm authority clarity"
     },
     "German": {
       "native_status": "cross_language",
       "rank": 88,
       "recommended": false,
       "default": false,
-      "description": "warm_storytelling_authoritative \u2013 English design (cross-language)"
+      "description": "warm_storytelling_authoritative – English design (cross-language)"
     }
   },
   "settings": {
@@ -48,5 +53,5 @@
     "arena_voice_id": "voice-09"
   },
   "reference_sha256": "ARENA_VOICE-09",
-  "reference_generated": "real speech via Arena voice-09 \u2013 4 parts benchmark + FullScript scheduled; not TestDouble sine"
+  "reference_generated": "real speech via Arena voice-09 – 4 parts benchmark + FullScript scheduled; not TestDouble sine"
 }

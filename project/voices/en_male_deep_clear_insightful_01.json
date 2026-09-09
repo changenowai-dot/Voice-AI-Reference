@@ -1,0 +1,54 @@
+{
+  "voice_id": "en_male_deep_clear_insightful_01",
+  "display_name": "EN Male Deep Clear Insightful",
+  "gender": "male",
+  "provider": "arena-tts",
+  "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "English",
+  "native_status": "native",
+  "category": "narrator",
+  "description": "deep clear insightful – intelligent, articulate, lucid, gentle authority",
+  "backend_mode": "clone",
+  "speaker_name": null,
+  "reference_path": "benchmark/fast_audition_round02/07_deep_clear_insightful.mp3",
+  "production_locked": false,
+  "recommended": false,
+  "default": false,
+  "intended_use": "long-form documentary, history, science, psychology, philosophy, investigative",
+  "status": "test_voice_round02_fast_audition",
+  "register": "deep_clear_insightful",
+  "style": "deep_clear_insightful",
+  "per_language": {
+    "English": {
+      "native_status": "native",
+      "rank": 33,
+      "recommended": false,
+      "default": false,
+      "description": "deep clear insightful – intelligent, articulate, lucid, gentle authority"
+    },
+    "German": {
+      "native_status": "cross_language",
+      "rank": 113,
+      "recommended": false,
+      "default": false,
+      "description": "deep_clear_insightful – English design (cross-language)"
+    }
+  },
+  "settings": {
+    "seed": 52033,
+    "variant": "EN_MALE_DEEP_CLEAR_INSIGHTFUL_01",
+    "cache_version": "q3p-v2-integrity",
+    "language": "English",
+    "engine": "VoiceCloneEngine",
+    "backend": "clone",
+    "arena_voice_id": "voice-24",
+    "round": "fast_audition_round02",
+    "visible_position": 7
+  },
+  "reference_sha256": "ARENA_VOICE-24",
+  "reference_generated": "real speech via Arena voice-24 – fast_audition_round02 identical short text 15-25s; not TestDouble sine"
+}

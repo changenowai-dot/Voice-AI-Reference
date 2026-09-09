@@ -1,0 +1,54 @@
+{
+  "voice_id": "en_male_deep_cinematic_restrained_01",
+  "display_name": "EN Male Deep Cinematic Restrained",
+  "gender": "male",
+  "provider": "arena-tts",
+  "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "English",
+  "native_status": "native",
+  "category": "narrator",
+  "description": "deep cinematic restrained – film-quality, controlled, subtle gravitas without overacting",
+  "backend_mode": "clone",
+  "speaker_name": null,
+  "reference_path": "benchmark/fast_audition_round02/09_deep_cinematic_restrained.mp3",
+  "production_locked": false,
+  "recommended": false,
+  "default": false,
+  "intended_use": "long-form documentary, history, science, psychology, philosophy, investigative",
+  "status": "test_voice_round02_fast_audition",
+  "register": "deep_cinematic_restrained",
+  "style": "deep_cinematic_restrained",
+  "per_language": {
+    "English": {
+      "native_status": "native",
+      "rank": 35,
+      "recommended": false,
+      "default": false,
+      "description": "deep cinematic restrained – film-quality, controlled, subtle gravitas without overacting"
+    },
+    "German": {
+      "native_status": "cross_language",
+      "rank": 115,
+      "recommended": false,
+      "default": false,
+      "description": "deep_cinematic_restrained – English design (cross-language)"
+    }
+  },
+  "settings": {
+    "seed": 52035,
+    "variant": "EN_MALE_DEEP_CINEMATIC_RESTRAINED_01",
+    "cache_version": "q3p-v2-integrity",
+    "language": "English",
+    "engine": "VoiceCloneEngine",
+    "backend": "clone",
+    "arena_voice_id": "voice-26",
+    "round": "fast_audition_round02",
+    "visible_position": 9
+  },
+  "reference_sha256": "ARENA_VOICE-26",
+  "reference_generated": "real speech via Arena voice-26 – fast_audition_round02 identical short text 15-25s; not TestDouble sine"
+}
