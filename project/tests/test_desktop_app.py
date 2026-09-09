@@ -215,10 +215,10 @@ def test_voice_registry_profiles_v2():
     from app.voices.registry import VoiceRegistry
     reg = VoiceRegistry()
     entries = reg.entries()
-    assert len(entries) == 12
+    assert len(entries) == 14
     male = [e for e in entries if e.gender == "male"]
     female = [e for e in entries if e.gender == "female"]
-    assert len(male) == 7 and len(female) == 5
+    assert len(male) == 9 and len(female) == 5
     vd = reg.get("vd_e")
     assert vd.production_locked and vd.default and vd.backend_mode == "clone"
     assert vd.reference_path == "cache/voice_refs/VD-E.wav"
@@ -226,6 +226,7 @@ def test_voice_registry_profiles_v2():
     assert ids == {"vd_e", "uncle_fu", "dylan", "ryan", "aiden",
                    "vivian", "serena", "sohee",
                    "en_male_deep_01", "en_male_deep_02",
+                   "en_male_calm_deep_01", "en_male_warm_storytelling_authoritative_01",
                    "en_female_calm_01", "en_female_calm_02"}
     assert reg.default_voice_id() == "vd_e"      # Deutsch-Standard bleibt
     assert reg.default_voice_id("German") == "vd_e"

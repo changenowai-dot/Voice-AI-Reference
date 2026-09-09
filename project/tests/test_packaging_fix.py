@@ -149,11 +149,12 @@ def test_voice_profiles_vd_e_core_unchanged():
     reg = VoiceRegistry()
     entries = reg.entries()
     # 8 bisherige + 4 neue englische Teststimmen (en_male_deep_*, en_female_calm_*)
-    assert len(entries) == 12
+    assert len(entries) == 14
     ids = {e.voice_id for e in entries}
     assert ids == {"vd_e", "uncle_fu", "dylan", "ryan", "aiden",
                    "vivian", "serena", "sohee",
                    "en_male_deep_01", "en_male_deep_02",
+                   "en_male_calm_deep_01", "en_male_warm_storytelling_authoritative_01",
                    "en_female_calm_01", "en_female_calm_02"}
     vd = reg.get("vd_e")
     assert vd.default and vd.recommended and vd.production_locked

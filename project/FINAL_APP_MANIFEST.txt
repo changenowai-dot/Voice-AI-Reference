@@ -1,12 +1,12 @@
-VERSION=2.2.0
+VERSION=2.3.0
 DESKTOP_GUI=true
 CLI=true
 PDF_IMPORT=true
-VOICE_COUNT=12
+VOICE_COUNT=14
 LANGUAGES=de,en
 NATIVE_LANGUAGE_PRIORITY=true
-GERMAN_VOICES=vd_e*,uncle_fu,dylan;serena,vivian,sohee;en_male_deep_01(cross),en_male_deep_02(cross),en_female_calm_01(cross),en_female_calm_02(cross)
-ENGLISH_VOICES=ryan*,en_male_deep_01(NATIV),en_male_deep_02(NATIV),aiden(NATIV);serena(cross),en_female_calm_01(NATIV),en_female_calm_02(NATIV),vivian(cross),sohee(cross),uncle_fu(FALLBACK),vd_e(cross)
+GERMAN_VOICES=vd_e*,uncle_fu,dylan;serena,vivian,sohee;en_male_deep_01(cross),en_male_deep_02(cross),en_male_calm_deep_01(cross),en_male_warm_storytelling_authoritative_01(cross),en_female_calm_01(cross),en_female_calm_02(cross)
+ENGLISH_VOICES=ryan*,en_male_deep_01(NATIV),en_male_deep_02(NATIV),en_male_calm_deep_01(NATIV),en_male_warm_storytelling_authoritative_01(NATIV),aiden(NATIV);serena(cross),en_female_calm_01(NATIV),en_female_calm_02(NATIV),vivian(cross),sohee(cross),uncle_fu(FALLBACK),vd_e(cross)
 VD_E_LOCKED=true
 VD_E_SHA256=B156C02A60A873AD95FC92390C4A136C85308B20188373CD734BEE5E5E5F2025
 VD_E_RECOMMENDED=true

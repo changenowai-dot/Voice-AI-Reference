@@ -217,6 +217,24 @@ ENGLISH_VOICEDESIGN_DESCRIPTIONS: dict[str, dict] = {
         "style": "calm_documentary",
         "voice_id": "en_female_calm_01",
     },
+    "en_male_calm_deep_01": {
+        "label": "EN Male Calm Deep 01 – Calm Deep (TEST)",
+        "description": (
+            "A genuinely deep, calm English narrator. Mature male voice with a low, warm register, controlled and mature, authoritative yet natural and highly intelligible. Restrained, professional delivery with subtle gravitas, excellent for long-form documentary, history and science. Deep without muddiness, authoritative without aggression, calm without sleepiness – a voice you want to keep listening to for 20–30 minutes."),
+        "gender": "male",
+        "register": "calm_deep",
+        "style": "calm_deep_authoritative",
+        "voice_id": "en_male_calm_deep_01",
+    },
+    "en_male_warm_storytelling_authoritative_01": {
+        "label": "EN Male Warm Storytelling Authoritative 01 – Warm Storytelling (TEST)",
+        "description": (
+            "A warm, storytelling authoritative English narrator. Mature male voice combining warmth, storyteller quality, natural conversational flow and subtle authority. Professional, calm and engaging with human rhythm, smooth transitions and pleasant sentence melody. Ideal for long-form history, science, philosophy and investigative documentary – the listener feels this narrator knows the subject and wants to hear the story, without theatricality or exaggeration."),
+        "gender": "male",
+        "register": "warm_storytelling",
+        "style": "warm_storytelling_authoritative",
+        "voice_id": "en_male_warm_storytelling_authoritative_01",
+    },
     "en_female_calm_02": {
         "label": "EN Female Calm Narrator 02 – Bright Articulate (TEST)",
         "description": (

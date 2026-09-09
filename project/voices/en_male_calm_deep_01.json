@@ -1,0 +1,54 @@
+{
+  "voice_id": "en_male_calm_deep_01",
+  "display_name": "EN Male Calm Deep 01",
+  "gender": "male",
+  "provider": "qwen3-tts",
+  "model": "Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone)",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "English",
+  "native_status": "native",
+  "category": "narrator",
+  "description": "calm deep, warm, controlled, authoritative – English native long-form",
+  "backend_mode": "clone",
+  "speaker_name": null,
+  "reference_path": "cache/voice_refs/en_male_calm_deep_01.wav",
+  "production_locked": false,
+  "recommended": false,
+  "default": false,
+  "intended_use": "long-form documentary, history, science, philosophy – calm deep narration",
+  "status": "test_voice",
+  "register": "calm_deep",
+  "style": "calm_deep_authoritative",
+  "per_language": {
+    "English": {
+      "native_status": "native",
+      "rank": 13,
+      "recommended": false,
+      "default": false,
+      "description": "calm deep – low, warm, controlled, mature, highly intelligible, long-form pleasant"
+    },
+    "German": {
+      "native_status": "cross_language",
+      "rank": 64,
+      "recommended": false,
+      "default": false,
+      "description": "calm deep – English design (cross-language)"
+    }
+  },
+  "settings": {
+    "seed": 52013,
+    "variant": "EN_CALM_DEEP_01",
+    "cache_version": "q3p-v2-integrity",
+    "language": "English",
+    "engine": "VoiceCloneEngine",
+    "backend": "clone",
+    "model_pool": "base",
+    "reference_text": "VOICEDESIGN_REF_TEXT_EN"
+  },
+  "reference_sha256": "PLACEHOLDER_EN_MALE_CALM_DEEP_01",
+  "reference_generated": "real speech via Arena TTS voice-04 (calm deep), to be replaced by RTX 5060 VoiceDesign->Clone on target hardware; not synthetic sine",
+  "reference_f0_hz": null
+}

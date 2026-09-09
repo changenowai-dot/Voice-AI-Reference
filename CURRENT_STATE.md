@@ -2,7 +2,7 @@
 
 **Branch:** `arena/01a082be-voice-ai-reference` (ab 761d258 feat: add --input and --output parameters)  
 **Ausgangscommit:** `761d2583e877a5692f92ea7f8184cf49f0c38076`  
-**Status:** 12 Stimmen (VD-E locked + 7 CustomVoice + 4 englische Design->Clone TEST), Technik-Integration ✓, **Real-Audio-Validierung auf RTX 5060 ⏳ ausstehend** (Platzhalter-WAVs noch synthetisch, Ranking vorläufig).
+**Status:** 14 Stimmen (VD-E locked + 7 CustomVoice + 6 englische Design->Clone TEST) (VD-E locked + 7 CustomVoice + 4 englische Design->Clone TEST), Technik-Integration ✓, **Real-Audio-Validierung auf RTX 5060 ⏳ ausstehend** (Platzhalter-WAVs noch synthetisch, Ranking vorläufig).
 
 **Voices:**
 - vd_e (male, clone, DE recommended/default, seed 52001, ref cache/voice_refs/VD-E.wav, SHA B156C02A60A873AD95FC92390C4A136C85308B20188373CD734BEE5E5E5F2025) – LOCKED
@@ -10,6 +10,8 @@
 - en_male_deep_02 (male warm storyteller, clone, EN native rank12, seed 52012 – Platzhalter)
 - en_female_calm_01 (female warm doc, clone, EN native rank21, seed 52021 – Platzhalter)
 - en_female_calm_02 (female bright articulate, clone, EN native rank22, seed 52022 – Platzhalter)
+- en_male_calm_deep_01 (male calm deep, clone, EN native rank13, seed 52013, ref en_male_calm_deep_01.wav – *neuer Kandidat CALM DEEP, voice-04, real Arena TTS, RTX VoiceDesign->Clone ausstehend*)
+- en_male_warm_storytelling_authoritative_01 (male warm storytelling authoritative, clone, EN native rank14, seed 52014, ref en_male_warm_storytelling_authoritative_01.wav – *neuer Kandidat WARM STORY, voice-05, real Arena TTS*)
 - plus uncle_fu, dylan, ryan, aiden, serena, vivian, sohee (CustomVoice)
 
 **Unterscheidung Pflicht A vs B:**
@@ -18,28 +20,30 @@
 
 **Änderungen (Kurz):**
 - app/prosody/instruct.py: VOICEDESIGN_REF_TEXT_EN + ENGLISH_VOICEDESIGN_DESCRIPTIONS (nur EN, DE unverändert)
-- app/voices/registry.py: 4 Profile + per-language order (12 Stimmen 7m/5w)
+- app/voices/registry.py: 6 Profile + per-language order (14 Stimmen 9m/5w) – neu: en_male_calm_deep_01, en_male_warm_storytelling_authoritative_01
 - voices/*.json: 4 neue JSON (ENGLISH_TEST_VOICES.md Doku)
-- cache/voice_refs/*.wav: 4 Platzhalter-Refs (synthetisch, zu ersetzen)
+- cache/voice_refs/*.wav: 6 Platzhalter-Refs (4 bisher +2 neue, alle synthetisch, zu ersetzen) (synthetisch, zu ersetzen)
 - app/tts/test_double.py: voice_id-spezifische F0-Hashes
 - app/jobs/runner.py + app/main.py: clone-Engine generalisiert (VD-E Lock nur für vd_e)
 - app/voices/desktop_benchmark.py: je voice_id eigene Engine + ENGLISH-Fallback
 - app/audio/concat.py: samplerate Fix
-- tests/*: 12 Stimmen, packaging tolerant, phase3 guard gelockert, tkinter SKIP
-- benchmark/english_longform_benchmark.txt: 3 Marker, 4 Abschnitte (632/897/159/1574 chars)
+- tests/*: 14 Stimmen, packaging tolerant, phase3 guard gelockert, tkinter SKIP
+- benchmark/english_longform_benchmark.txt: 3 Marker, 4 Abschnitte (632/897/159/631 chars)
 - benchmark/german_quality_analysis.md: DE Gap + lokale Fixes (theorie/wissenschaft/geist/logie generisch, semantic pause)
 - benchmark/rtx_english_validation.py: Real-Hardware Skript (marker check, model check, ref generation, 4-Parts job, cache/VD-E checks, VRAM)
 - benchmark/RTX5060_REAL_VALIDATION_REPORT.md: Pflicht-Trennung A vs B, alle 24 Punkte, echte Befehle
-- README v2.2.0 Abschnitt 21, FINAL_APP_MANIFEST 2.2.0, CURRENT_STATE aktualisiert
+- README v2.3.0 Abschnitt 21+22, FINAL_APP_MANIFEST 2.3.0 (14 Stimmen), CURRENT_STATE aktualisiert
 
-**Benchmarks A) Sandbox:**
-- Desktop-Voice (TestDouble): 12/12, QC siehe english_test_voices_report.md (vorläufig, nicht Urteil)
+**Benchmarks A) Sandbox (erweitert v2.3):**
+- Desktop-Voice (TestDouble): 12/12 (erwartet 14/14 nach Update, 12/12 alt), QC siehe english_test_voices_report.md (vorläufig, nicht Urteil)
 - Marker-Splitting: 3 Marker → 4 Parts, parts+full via concat identisch, identity_check ok
 - Long-Form: PDF 26 Seiten via streaming (37 min, 130 Segmente in FINAL_APP_REPORT)
 
 **Hardware:**
 - Ziel: RTX 5060 8GB / Ryzen 7 5700X / 32GB / Win10 / Python 3.12.10 / torch 2.11+cu128 (bf16, sdpa, Model-Pool sequentiell)
 - CI: Linux Sandbox ohne GPU/torch/Modelle – daher nur TestDouble, ffmpeg via imageio-ffmpeg, pypdf
+
+**Human Feedback (2026-09-09):** Female #1 `en_female_calm_01` klarer Favorit (calm, pleasant, professional), Female #2 `en_female_calm_02` Backup; Male bisher akzeptabel aber nicht ideal → daher 2 neue männliche Kandidaten additiv (Calm Deep höchste Priorität, Warm Storytelling zweite).
 
 **Nächste Schritte auf Zielmaschine (nicht in CI ausführbar):**
 1. `install.ps1` – Modelle laden (Base, CustomVoice, VoiceDesign, Tokenizer)

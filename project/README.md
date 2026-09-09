@@ -393,6 +393,41 @@ VD-E unverändert: SHA-256 `B156C02A60A873AD95FC92390C4A136C85308B20188373CD734B
 
 ---
 
+## 22. v2.3.0 – Zwei zusätzliche männliche English Narrators (2026-09-09) – Calm Deep & Warm Storytelling
+
+**Motivation:** Human Listening Feedback – Female `en_female_calm_01` ist klarer Favorit (calm, pleasant, professional, long-form), `en_female_calm_02` starker Backup. Männliche `en_male_deep_01/02` akzeptabel aber nicht ideal – daher zwei gezielte zusätzliche Kandidaten, additiv (keine Löschung bestehender).
+
+| Stimme | Typ | Register | Zielcharakter | Backend | Referenz | Seed | Arena voice-0x |
+|---|---|---|---|---|---|---|---|
+| **EN Male Calm Deep 01** | männlich | calm_deep | genuinely deep, low, warm, calm, controlled, mature, authoritative, highly intelligible, restrained, long-form pleasant – deep without muddy, authoritative without aggressive | VoiceDesign→Base Clone | `cache/voice_refs/en_male_calm_deep_01.wav` | 52013 | voice-04 |
+| **EN Male Warm Storytelling Authoritative 01** | männlich | warm_storytelling | warm, storytelling, mature, calm, authoritative, natural conversational flow, smooth transitions – "knows the subject, wants to hear story" without theatrical | VoiceDesign→Base Clone | `cache/voice_refs/en_male_warm_storytelling_authoritative_01.wav` | 52014 | voice-05 |
+
+**Anforderungen:** native/native-level English, LOW+CLEAR+NATURAL (kein boomy/muddy), Authority subtil human (kein Trailer/Announcer), 10+ min Long-Form Comfort, gleiche Benchmark-Text-Identität (3×`+++++` →4 Parts), echte Sprache (Arena TTS voice-04/05, auf RTX via Qwen VoiceDesign→Clone zu ersetzen), Cache-isoliert, VD-E locked.
+
+**v2.3 Stimmen je Sprache (14 gesamt, 9m/5w):**
+
+| Deutsch (rank) | Status | Englisch (rank) | Status |
+|---|---|---|---|
+| VD-E (0) | EMPFOHLEN LOCKED | Ryan (10) | NATIV EMPFOHLEN default EN |
+| Uncle_Fu (20) | CROSS | en_male_deep_01 (11) | NATIV |
+| Dylan (30) | CROSS | en_male_deep_02 (12) | NATIV |
+| Ryan (40) | CROSS | **en_male_calm_deep_01 (13)** | **NATIV Calm Deep** |
+| Aiden (50) | CROSS | **en_male_warm_story_01 (14)** | **NATIV Warm Story** |
+| en_male_deep_01 (60) | CROSS | Aiden (20) | NATIV |
+| en_male_deep_02 (61) | CROSS | Serena (20) | CROSS |
+| en_male_calm_deep_01 (64) | CROSS | en_female_calm_01 (21) | NATIV |
+| en_male_warm_story_01 (65) | CROSS | en_female_calm_02 (22) | NATIV |
+| en_female_calm_01/02 (62/63) | CROSS | Vivian/Sohee etc. | CROSS |
+| **Gesamt 14** | 9m/5w | **Gesamt 14** | 9m/5w |
+
+**Human Ranking Vorgabe:** Female 1. `en_female_calm_01` 2. `en_female_calm_02` (locked). Male: ranking across 4 (`en_male_deep_01/02` + 2 neue) → BEST DEEP MALE / BEST WARM/STORYTELLING / BEST OVERALL MALE nach echtem Hörtest, nicht F0/QC allein.
+
+**Real Audio:** `benchmark/rtx_real_audio/` enthält bereits 18 echte Clips (Arena TTS): en_male_*_part1-4 (12), en_female_*_part1-2 (4) + neue male part1-4 (8) – je <1500 chars, FullScript via Concat identisch, Marker 3→4 validiert, Long-Form Bewertung >10 min nach Hörtest.
+
+VD-E unverändert: `B156C02A60A873AD95FC92390C4A136C85308B20188373CD734BEE5E5E5F2025`, Production Seed 52001.
+
+---
+
 *Erstellt autonom durch den Arena.ai Agent — technische Umsetzung,
 Testabdeckung und Grenzen siehe `FINAL_APP_REPORT.md`, `TESTREPORT.md`
 und die Phasenberichte im Auslieferungs-ZIP.*

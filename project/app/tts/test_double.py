@@ -65,7 +65,11 @@ class TestDoubleEngine(TTSEngine):
             # weiblich calm 01 tiefer (warm_low), calm 02 heller (bright_calm)
             if "calm_02" in sp or "bright" in sp:
                 base_f0 += 12.0
-        if "male_deep_01" in sp:
+        if "calm_deep" in sp:
+            base_f0 = 85.0 + (seed % 300) / 10.0      # 85–115 Hz calm deep, low+clear
+        elif "warm_storytelling" in sp:
+            base_f0 = 95.0 + (seed % 300) / 10.0      # 95–125 Hz warm storytelling authoritative
+        elif "male_deep_01" in sp:
             base_f0 = 88.0 + (seed % 300) / 10.0      # 88–118 Hz tiefster
         elif "male_deep_02" in sp:
             base_f0 = 102.0 + (seed % 300) / 10.0     # 102–132 Hz warm
