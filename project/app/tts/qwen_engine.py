@@ -228,13 +228,24 @@ class VoiceCloneEngine(TTSEngine):
                  description: str, models_dir: Path | None = None,
                  attn_implementation: str | None = None,
                  allow_design: bool = True,
-                 reference_path: Path | None = None):
+                 reference_path: Path | None = None,
+                 language: str = "German",
+                 ref_text: str | None = None,
+                 seed: int | None = None):
         """allow_design=False (VD-E-Produktion, §12): die Referenzdatei
         MUSS vorhanden sein – niemals neu designen/clonen.
 
         reference_path: Optional explicit override for the reference WAV path.
         If None, uses default paths.VOICE_REFS_DIR / f"{candidate_id}.wav".
         Used by test harness to pass runtime reference (VOICEOVER_RUNTIME_REF).
+
+        language: "German" oder "English" — wählt den passenden
+                  Standard-Referenztext für create_voice_clone_prompt.
+        ref_text: Optional abweichender Referenztext (für nicht-de/engl.
+                  Stimmen oder Rezept-spezifische Texte).
+        seed:     Optionaler Seed für die VoiceDesign-Referenzgenerierung
+                  (wird andernfalls auf den bestehenden Versuchs-Algorithmus
+                  zurückgegriffen).
         """
         log.debug("[DIAG-D.1] VoiceCloneEngine.__init__() entered")
         
@@ -248,6 +259,9 @@ class VoiceCloneEngine(TTSEngine):
         self.description = description
         self.allow_design = allow_design
         self.reference_path = reference_path  # Test harness override
+        self._language = language
+        self._ref_text_override = ref_text
+        self._design_seed = seed
         
         log.debug("[DIAG-F] Creating QwenModelPool (models_dir=%s)", models_dir)
         self.pool = QwenModelPool(hw, models_dir=models_dir,
@@ -267,25 +281,34 @@ class VoiceCloneEngine(TTSEngine):
             return
         from .. import paths
         from .voice_studio import VoiceRef
+        from ..prosody.instruct import (VOICEDESIGN_REF_TEXT_DE,
+                                        VOICEDESIGN_REF_TEXT_EN)
         # Use explicit override if provided (test harness/runtime reference),
         # otherwise fall back to default cache location
         if self.reference_path is not None:
             ref_path = Path(self.reference_path)
         else:
             ref_path = paths.VOICE_REFS_DIR / f"{self.candidate_id}.wav"
+        # Pick language-appropriate reference text for clone conditioning
+        lang = getattr(self, "_language", None) or "German"
+        default_ref_text = (VOICEDESIGN_REF_TEXT_EN if lang == "English"
+                            else VOICEDESIGN_REF_TEXT_DE)
+        ref_text_for_clone = getattr(self, "_ref_text_override", None) or default_ref_text
+        # Allow description to carry per-voice info (voice JSON / recipe)
         if ref_path.exists():
-            from ..prosody.instruct import VOICEDESIGN_REF_TEXT_DE
             self._ref = VoiceRef(candidate_id=self.candidate_id,
                                  description=self.description,
-                                 ref_text=VOICEDESIGN_REF_TEXT_DE,
-                                 wav_path=ref_path)
+                                 ref_text=ref_text_for_clone,
+                                 wav_path=ref_path,
+                                 language=lang)
         else:
             if not self.allow_design:
                 raise TTSError(
                     f"VD-E-Referenz fehlt: {ref_path}. Neuerzeugung ist "
                     "gesperrt (LOCKED PRODUCTION, §12/§24).")
             self._ref = self.studio.design_reference(
-                self.candidate_id, self.description)
+                self.candidate_id, self.description, language=lang,
+                ref_text=ref_text_for_clone, seed=self._design_seed)
         self._prompt = self.studio.build_clone_prompt(self._ref)
 
     def load(self) -> None:

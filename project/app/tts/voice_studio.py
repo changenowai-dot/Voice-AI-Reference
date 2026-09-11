@@ -110,19 +110,43 @@ class QwenVoiceStudio(BaseVoiceStudio):
 
     # -------------------------------------------------- VoiceDesign -------
     def design_reference(self, candidate_id: str, description: str,
-                         language: str = "German") -> VoiceRef:
-        """Schritt 1+2: Referenz klängen (VoiceDesign) und speichern."""
+                         language: str = "German",
+                         ref_text: str | None = None,
+                         seed: int | None = None) -> VoiceRef:
+        """Schritt 1+2: Referenz klängen (VoiceDesign) und speichern.
+
+        Parameter:
+          candidate_id  - z.B. en_male_warm_storytelling_authoritative_02
+          description   - VoiceDesign-Instruct (Persona-Beschreibung)
+          language      - "German" | "English"
+          ref_text      - Optionaler Referenztext. Falls None wird der
+                          sprachpassende Standard (VOICEDESIGN_REF_TEXT_DE/EN)
+                          verwendet.
+          seed          - Optionaler Torch-Seed für die VoiceDesign-Generierung.
+                          Falls None wird der bestehende Versuch-Seed-Algorithmus
+                          verwendet (5100 + attempt*7). Bei einem festen Seed
+                          aus dem Rezept wird dieser exakt für die Generierung
+                          gesetzt, um die Reproduzierbarkeit zu maximieren.
+        """
         import numpy as np
-        from ..prosody.instruct import VOICEDESIGN_REF_TEXT_DE
+        from ..prosody.instruct import (VOICEDESIGN_REF_TEXT_DE,
+                                        VOICEDESIGN_REF_TEXT_EN)
         from .sampler import params_for_set
         from ..audio.io import write_wav
         model = self.pool.get("voicedesign")
-        ref_text = VOICEDESIGN_REF_TEXT_DE
+        if ref_text is None:
+            ref_text = (VOICEDESIGN_REF_TEXT_EN if language == "English"
+                        else VOICEDESIGN_REF_TEXT_DE)
         res = None
         last_err: Exception | None = None
         for attempt in range(1, 4):
             import torch
-            torch.manual_seed(5100 + attempt * 7)
+            if seed is not None:
+                torch.manual_seed(seed + (attempt - 1) * 10009)
+            else:
+                torch.manual_seed(5100 + attempt * 7)
+            if torch.cuda.is_available():
+                torch.cuda.manual_seed_all(seed + (attempt - 1) * 10009 if seed is not None else 5100 + attempt * 7)
             try:
                 wavs, sr = model.generate_voice_design(
                     text=ref_text, language=language, instruct=description,

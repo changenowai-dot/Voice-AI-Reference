@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 from typing import Any
 
 from app.config import paths
@@ -11,13 +11,19 @@ class QwenModelPool:
         "customvoice": "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
         "customvoice_0.6b": "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice",
         "base": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+        "voicedesign": "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
     }
 
     def __init__(self, hw: Any, models_dir: Path | None = None, dtype_hint: str | None = None, attn_implementation: str | None = None):
         self.hw = hw
         self.models_dir = Path(models_dir) if models_dir else paths.MODELS_DIR
         self.dtype_hint = dtype_hint
-        self.attn_implementation = attn_implementation or "flash_attention_2"
+        # SDPA is built into PyTorch and works reliably on RTX 5060 (Blackwell)
+        # without requiring the flash-attn wheel (which is not available on
+        # Windows for all torch/CUDA combinations). Use sdpa as default;
+        # caller can override via attn_implementation="flash_attention_2" if
+        # flash-attn is confirmed installed.
+        self.attn_implementation = attn_implementation or "sdpa"
         self._loaded = {}
 
     def _resolve_model_path(self, repo: str) -> str:
@@ -71,6 +77,18 @@ class QwenModelPool:
         if device == "cuda":
             kwargs["dtype"] = torch.bfloat16
             kwargs["device_map"] = "cuda"
+        else:
+            kwargs["dtype"] = torch.float32
+
+        # Pass attn_implementation (sdpa by default for Win/RTX 5060 compat)
+        if self.attn_implementation:
+            kwargs["attn_implementation"] = self.attn_implementation
+
+        # Allow dtype override (fp16 fallback etc.)
+        if self.dtype_hint == "float16":
+            kwargs["dtype"] = torch.float16
+        elif self.dtype_hint == "float32":
+            kwargs["dtype"] = torch.float32
 
         model = Qwen3TTSModel.from_pretrained(
             path,
@@ -82,6 +100,19 @@ class QwenModelPool:
 
     def clear(self):
         self._loaded.clear()
+
+    def unload(self):
+        """Alias for clear() — unload all loaded models and free VRAM."""
+        import gc
+        import torch
+        self._loaded.clear()
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            try:
+                torch.cuda.synchronize()
+            except Exception:
+                pass
 
 
 
