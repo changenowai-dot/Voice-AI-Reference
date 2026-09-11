@@ -10,11 +10,20 @@
 #   # Dry-run (show plan, no GPU):
 #   powershell -ExecutionPolicy Bypass -File project\tools\reproduce_premium.ps1 -DryRun
 #
-#   # All 7 premium voices:
+#   # All 11 premium voices (EN+DE):
 #   powershell -ExecutionPolicy Bypass -File project\tools\reproduce_premium.ps1 -All
 #
+#   # The 9 remaining shortlist voices (EN voice-22..27 + DE voice-30/32/33/34):
+#   powershell -ExecutionPolicy Bypass -File project\tools\reproduce_premium.ps1 -Remaining
+#
 #   # Selection:
-#   powershell -ExecutionPolicy Bypass -File project\tools\reproduce_premium.ps1 -Voices voice-09,voice-12,voice-27
+#   powershell -ExecutionPolicy Bypass -File project\tools\reproduce_premium.ps1 -Voices voice-09,voice-12,voice-27,voice-30
+#
+#   # Per-voice subprocess batch mode (recommended for RTX 5060 8 GB):
+#   powershell -ExecutionPolicy Bypass -File project\tools\reproduce_premium.ps1 -Remaining -Batch
+#
+#   # Post-run validation only (no GPU):
+#   powershell -ExecutionPolicy Bypass -File project\tools\reproduce_premium.ps1 -Validate -Remaining
 #
 #   # With long text from a file:
 #   powershell -ExecutionPolicy Bypass -File project\tools\reproduce_premium.ps1 -LongTextFile benchmark\english_longform_benchmark.txt
@@ -44,9 +53,13 @@
 param(
     [switch]$DryRun,
     [switch]$All,
+    [switch]$Remaining,
+    [switch]$Batch,
+    [switch]$Validate,
     [string[]]$Voices = @(),
     [string]$LongTextFile = "",
     [switch]$NoSkipExisting,
+    [switch]$Force,
     [switch]$Help
 )
 
@@ -124,12 +137,22 @@ sys.exit(0 if ok else 3)
 # --- Build argument list for the Python tool --------------------------------
 $ScriptPy = Join-Path $ScriptDir "reproduce_premium.py"
 $PyArgs = @($ScriptPy)
-if ($DryRun) {
+if ($Validate) {
+    $PyArgs += "--validate"
+} elseif ($DryRun) {
     $PyArgs += "--dry-run"
+} elseif ($Batch) {
+    $PyArgs += "--batch"
+    $PyArgs += "--python"
+    $PyArgs += $PythonExe
 } else {
     $PyArgs += "--reproduce"
 }
-if ($All) { $PyArgs += "--all" }
+if ($All) {
+    $PyArgs += "--all"
+} elseif ($Remaining) {
+    $PyArgs += "--remaining"
+}
 if ($Voices.Count -gt 0) {
     $PyArgs += "--voices"
     $PyArgs += ($Voices -join ",")
@@ -146,6 +169,7 @@ if ($LongTextFile) {
     $PyArgs += ("@" + $fullPath)
 }
 if ($NoSkipExisting) { $PyArgs += "--no-skip-existing" }
+if ($Force)          { $PyArgs += "--force" }
 
 Write-Host ""
 Write-Host ("[run] " + $PythonExe + " " + ($PyArgs -join " ")) -ForegroundColor Cyan
