@@ -1,42 +1,43 @@
 # ============================================================================
-# reproduce_premium.ps1 — Lokale RTX 5060 Reproduktion der Premium-Stimmen
+# reproduce_premium.ps1 - Local RTX 5060 reproduction of the premium voices
 # ============================================================================
 #
-# BENUTZUNG (PowerShell im Repository-Root oder im project/-Ordner):
+# USAGE (PowerShell in repository root or in project/ folder):
 #
-#   # Nur die zwei gesperrten Favoriten (voice-09 + voice-12) — Priorität 1:
+#   # Only the two locked favorites (voice-09 + voice-12) - priority 1:
 #   powershell -ExecutionPolicy Bypass -File project\tools\reproduce_premium.ps1
 #
-#   # Dry-run (Plan anzeigen, keine GPU):
+#   # Dry-run (show plan, no GPU):
 #   powershell -ExecutionPolicy Bypass -File project\tools\reproduce_premium.ps1 -DryRun
 #
-#   # Alle 7 Premium-Stimmen:
+#   # All 7 premium voices:
 #   powershell -ExecutionPolicy Bypass -File project\tools\reproduce_premium.ps1 -All
 #
-#   # Nur eine Auswahl:
+#   # Selection:
 #   powershell -ExecutionPolicy Bypass -File project\tools\reproduce_premium.ps1 -Voices voice-09,voice-12,voice-27
 #
-#   # Mit Langtext:
+#   # With long text from a file:
 #   powershell -ExecutionPolicy Bypass -File project\tools\reproduce_premium.ps1 -LongTextFile benchmark\english_longform_benchmark.txt
 #
-#   # Vorhandene Reference WAVs neu erzeugen (nicht empfohlen — ändert Seeds nicht,
-#   # kann aber eine beschädigte Datei ersetzen):
+#   # Re-generate existing reference WAVs (not recommended):
 #   powershell -ExecutionPolicy Bypass -File project\tools\reproduce_premium.ps1 -NoSkipExisting
 #
-# VORAUSSETZUNGEN (vor dem ersten Lauf einmal):
+# PREREQUISITES (one-time):
 #   powershell -ExecutionPolicy Bypass -File project\SETUP.ps1
 #
-# AUSGABEN:
-#   project\cache\voice_refs\<voice_id>.wav      — Qwen VoiceDesign Referenz
-#   project\reproduction\<voice_id>\reference_voicedesign.wav — Archivkopie
-#   project\reproduction\<voice_id>\clone_prompt.json         — Clone-Metadaten
-#   project\reproduction\<voice_id>\test_short.wav            — Kurztest
-#   project\reproduction\<voice_id>\test_audition.wav         — Audition-Text
-#   project\reproduction\<voice_id>\test_long.wav             — (optional) Lang
-#   project\reproduction\<voice_id>\manifest.json             — Provenienz
+# OUTPUTS:
+#   project\cache\voice_refs\<voice_id>.wav        - Qwen VoiceDesign reference
+#   project\reproduction\<voice_id>\reference_voicedesign.wav - archive copy
+#   project\reproduction\<voice_id>\clone_prompt.json           - clone metadata
+#   project\reproduction\<voice_id>\test_short.wav              - short test
+#   project\reproduction\<voice_id>\test_audition.wav           - audition text
+#   project\reproduction\<voice_id>\test_long.wav               - (optional) long
+#   project\reproduction\<voice_id>\manifest.json               - provenance
 #
-# STATUS DER ERZEUGTEN DATEIEN: REPRODUCED (niemals ORIGINAL_RECOVERED)
-# Die Golden Reference VD-E.wav wird unter keinen Umständen verändert.
+# STATUS OF GENERATED FILES: REPRODUCED (never ORIGINAL_RECOVERED).
+# The Golden Reference VD-E.wav is never modified.
+# Compatible with Windows PowerShell 5.1 (no backtick edge cases, no reserved
+# $Args usage, no multi-line quoted inline scripts).
 # ============================================================================
 
 [CmdletBinding()]
@@ -52,9 +53,9 @@ param(
 $ErrorActionPreference = "Stop"
 
 # --- Find project root ------------------------------------------------------
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$ProjectDir = Split-Path -Parent $ScriptDir   # .../project
-$RepoRoot = Split-Path -Parent $ProjectDir    # .../Voice-AI-Reference
+$ScriptDir   = Split-Path -Parent $MyInvocation.MyCommand.Path
+$ProjectDir  = Split-Path -Parent $ScriptDir   # .../project
+$RepoRoot    = Split-Path -Parent $ProjectDir  # .../Voice-AI-Reference
 
 if ($Help) {
     Get-Help $MyInvocation.MyCommand.Path -Full
@@ -73,73 +74,99 @@ if (Test-Path $VenvPy) {
     if ($pyCmd) { $PythonExe = $pyCmd.Source }
 }
 if (-not $PythonExe) {
-    Write-Error "Kein Python gefunden. Bitte zuerst SETUP.ps1 ausführen:"
+    Write-Error "Kein Python gefunden. Bitte zuerst SETUP.ps1 ausfuehren:"
     Write-Error "  powershell -ExecutionPolicy Bypass -File project\SETUP.ps1"
     exit 1
 }
-Write-Host "[env] Python: $PythonExe" -ForegroundColor Cyan
+Write-Host ("[env] Python: " + $PythonExe) -ForegroundColor Cyan
 & $PythonExe --version
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 # --- Optional verify torch/CUDA before starting -----------------------------
+# Write a small Python probe to a temp file to avoid PS5.1 multi-line string
+# parsing issues with embedded quotes / newlines.
 if (-not $DryRun) {
-    Write-Host "[env] Prüfe CUDA/torch/qwen-tts..." -ForegroundColor Cyan
-    $envCheck = & $PythonExe -c "import sys; ok=True
+    Write-Host "[env] Pruefe CUDA/torch/qwen-tts..." -ForegroundColor Cyan
+    $ProbePy = Join-Path $env:TEMP ("voiceover_envcheck_" + [guid]::NewGuid().ToString("N") + ".py")
+    $ProbeSrc = @'
+import sys
+ok = True
 try:
- import torch; print(f'torch={torch.__version__} cuda={torch.cuda.is_available()} dev={torch.cuda.get_device_name(0) if torch.cuda.is_available() else \"none\"}')
+    import torch
+    if torch.cuda.is_available():
+        print("torch={0} cuda=1 dev={1}".format(torch.__version__, torch.cuda.get_device_name(0)))
+    else:
+        print("torch={0} cuda=0 dev=none".format(torch.__version__))
 except Exception as e:
- print(f'torch fehlt: {e}'); ok=False
+    print("torch fehlt: {0}".format(e))
+    ok = False
 try:
- import qwen_tts; print(f'qwen_tts OK')
+    import qwen_tts  # noqa: F401
+    print("qwen_tts OK")
 except Exception as e:
- print(f'qwen_tts fehlt: {e}'); ok=False
-sys.exit(0 if ok else 3)" 2>&1
-    $envCheck | ForEach-Object { Write-Host "  $_" }
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "Umgebung unvollständig — SETUP.ps1 ausführen."
-        exit $LASTEXITCODE
+    print("qwen_tts fehlt: {0}".format(e))
+    ok = False
+sys.exit(0 if ok else 3)
+'@
+    Set-Content -Path $ProbePy -Value $ProbeSrc -Encoding UTF8
+    try {
+        & $PythonExe $ProbePy 2>&1 | ForEach-Object { Write-Host ("  " + $_) }
+        $probeCode = $LASTEXITCODE
+    } finally {
+        if (Test-Path $ProbePy) { Remove-Item $ProbePy -Force }
+    }
+    if ($probeCode -ne 0) {
+        Write-Error "Umgebung unvollstaendig - SETUP.ps1 ausfuehren."
+        exit $probeCode
     }
 }
 
-# --- Build argument list ----------------------------------------------------
-$Script = Join-Path $ScriptDir "reproduce_premium.py"
-$Args = @($Script)
-if ($DryRun) { $Args += "--dry-run" }
-else         { $Args += "--reproduce" }
-if ($All)    { $Args += "--all" }
+# --- Build argument list for the Python tool --------------------------------
+$ScriptPy = Join-Path $ScriptDir "reproduce_premium.py"
+$PyArgs = @($ScriptPy)
+if ($DryRun) {
+    $PyArgs += "--dry-run"
+} else {
+    $PyArgs += "--reproduce"
+}
+if ($All) { $PyArgs += "--all" }
 if ($Voices.Count -gt 0) {
-    $Args += "--voices"
-    $Args += ($Voices -join ",")
+    $PyArgs += "--voices"
+    $PyArgs += ($Voices -join ",")
 }
 if ($LongTextFile) {
-    if (-not (Test-Path $LongTextFile)) {
-        # Try relative to RepoRoot
+    $resolved = $LongTextFile
+    if (-not (Test-Path $resolved)) {
         $alt = Join-Path $RepoRoot $LongTextFile
-        if (Test-Path $alt) { $LongTextFile = $alt }
-        else { Write-Error "LongTextFile nicht gefunden: $LongTextFile"; exit 1 }
+        if (Test-Path $alt) { $resolved = $alt }
+        else { Write-Error ("LongTextFile nicht gefunden: " + $LongTextFile); exit 1 }
     }
-    $Args += "--long-text"
-    $Args += "@$((Resolve-Path $LongTextFile).Path)"
+    $fullPath = (Resolve-Path $resolved).Path
+    $PyArgs += "--long-text"
+    $PyArgs += ("@" + $fullPath)
 }
-if ($NoSkipExisting) { $Args += "--no-skip-existing" }
+if ($NoSkipExisting) { $PyArgs += "--no-skip-existing" }
 
 Write-Host ""
-Write-Host "[run] & $PythonExe $($Args -join ' ')" -ForegroundColor Cyan
+Write-Host ("[run] " + $PythonExe + " " + ($PyArgs -join " ")) -ForegroundColor Cyan
 Write-Host ""
 
 Push-Location $RepoRoot
 try {
-    & $PythonExe @Args
+    & $PythonExe @PyArgs
     $code = $LASTEXITCODE
 } finally {
     Pop-Location
 }
 
 Write-Host ""
+$outRepro = Join-Path $ProjectDir "reproduction"
+$outRefs  = Join-Path $ProjectDir "cache\voice_refs"
 if ($code -eq 0) {
     Write-Host "[done] Ausgaben unter:" -ForegroundColor Green
-    Write-Host "  $(Join-Path $ProjectDir 'reproduction')"
-    Write-Host "  $(Join-Path $ProjectDir 'cache\voice_refs')"
+    Write-Host ("  " + $outRepro)
+    Write-Host ("  " + $outRefs)
 } else {
-    Write-Host "[done] Mindestens eine Stimme fehlgeschlagen (ExitCode $code)." -ForegroundColor Red
+    Write-Host ("[done] Mindestens eine Stimme fehlgeschlagen (ExitCode " + $code + ").") -ForegroundColor Red
 }
 exit $code
