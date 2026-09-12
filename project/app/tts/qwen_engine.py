@@ -289,6 +289,13 @@ class VoiceCloneEngine(TTSEngine):
             ref_path = Path(self.reference_path)
         else:
             ref_path = paths.VOICE_REFS_DIR / f"{self.candidate_id}.wav"
+        # Make sure the reference is a 24 kHz mono WAV before handing it to
+        # create_voice_clone_prompt. If the configured reference is an MP3
+        # (e.g. a shortlist audition file we are re-using as a reference),
+        # transcode it once via ffmpeg into the cache and point at the WAV.
+        # This keeps clone conditioning consistent across runs and avoids
+        # passing MP3 bytes to an API that expects WAV.
+        ref_path = self._ensure_wav_reference(ref_path)
         # Pick language-appropriate reference text for clone conditioning
         lang = getattr(self, "_language", None) or "German"
         default_ref_text = (VOICEDESIGN_REF_TEXT_EN if lang == "English"
@@ -311,6 +318,46 @@ class VoiceCloneEngine(TTSEngine):
                 ref_text=ref_text_for_clone, seed=self._design_seed)
         self._prompt = self.studio.build_clone_prompt(self._ref)
 
+    def _ensure_wav_reference(self, ref_path: Path) -> Path:
+        """If ref_path points to an MP3/M4A/OGG/FLAC, transcode to 24 kHz mono
+        WAV in cache/voice_refs/_converted/ on first use and return that WAV.
+        WAV inputs pass through unchanged. Missing files are returned as-is so
+        the caller can trigger VoiceDesign (allow_design=True) or fail with a
+        clear error (allow_design=False)."""
+        if not ref_path.exists():
+            return ref_path
+        suf = ref_path.suffix.lower()
+        if suf == ".wav":
+            return ref_path
+        from .. import paths as _p
+        from hashlib import sha256
+        conv_dir = _p.VOICE_REFS_DIR / "_converted"
+        conv_dir.mkdir(parents=True, exist_ok=True)
+        key = (ref_path.name + "_" + str(ref_path.stat().st_size) + "_"
+               + str(int(ref_path.stat().st_mtime)))
+        digest = sha256(key.encode("utf-8")).hexdigest()[:12]
+        out_wav = conv_dir / f"{ref_path.stem}_{digest}_24k_mono.wav"
+        if out_wav.exists():
+            return out_wav
+        # Attempt ffmpeg transcode: 24 kHz mono PCM s16le (matches the
+        # VoiceDesign reference format).
+        try:
+            from ..audio.ffmpeg import run_ffmpeg
+            ok, _msg = run_ffmpeg([
+                "-y", "-i", str(ref_path),
+                "-ar", "24000", "-ac", "1",
+                "-c:a", "pcm_s16le", str(out_wav),
+            ], timeout_s=120)
+            if ok and out_wav.exists() and out_wav.stat().st_size > 0:
+                log.info("Reference %s -> WAV transcoded to %s",
+                         ref_path, out_wav)
+                return out_wav
+            log.warning("ffmpeg-Transkodierung fehlgeschlagen (%s); "
+                        "versuche Original-Pfad direkt zu verwenden.", _msg)
+        except Exception as e:
+            log.warning("ffmpeg-Transkodierung nicht verfügbar: %s", e)
+        return ref_path
+
     def load(self) -> None:
         self._ensure_prompt()
 
@@ -319,6 +366,13 @@ class VoiceCloneEngine(TTSEngine):
 
     def unload(self) -> None:
         self._prompt = None
+        # Auch den Cache im VoiceStudio leeren, damit beim engine-Wechsel
+        # keine Prompt-Tensoren/Modelle im Speicher hängen bleiben.
+        try:
+            if getattr(self, "studio", None) is not None:
+                self.studio._clone_prompts.clear()
+        except Exception:
+            pass
         self.pool.unload()
 
     def synthesize(self, request: SynthesisRequest) -> SynthesisResult:

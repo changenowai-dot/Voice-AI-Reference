@@ -290,8 +290,16 @@ class Pipeline:
                 offsets = sampling_offsets(dominant_role(seg.text), sem,
                                            se_int, self.variation_strength)
                 seg_sampling = apply_sampling_offsets(seg_sampling, offsets)
-            seg_seed = production_seed if production_seed else \
-                abs(hash(key)) % (2**31)
+            # Deterministischer Segment-Seed. Wichtig: Python's eingebautes
+            # hash() ist pro Prozess NICHT stabil (PYTHONHASHSEED) und würde
+            # bei jedem Lauf andere Segment-Seeds liefern. Wir verwenden
+            # deshalb sha256 über den stabilen Cache-Key (der bereits
+            # speaker/instruct/language/text/sampling/param_version kodiert).
+            if production_seed:
+                seg_seed = int(production_seed)
+            else:
+                from hashlib import sha256
+                seg_seed = int(sha256(key.encode("utf-8")).hexdigest()[:8], 16)
             request = SynthesisRequest(
                 text=seg.text, language=language, speaker=speaker,
                 instruct=instruct, sampling=seg_sampling,

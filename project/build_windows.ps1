@@ -35,19 +35,20 @@ if (-not $SkipCopy) {
     Write-Host "== Externe Ressourcen (relativ) kopieren ==" -ForegroundColor Cyan
     foreach ($dir in @("models", "config", "voices", "pronunciation",
                        "input", "output", "cache", "logs", "benchmark",
-                       "tools")) {
+                       "tools", "reproduction")) {
         if (Test-Path $dir) {
-            robocopy $dir (Join-Path $target $dir) /E /NFL /NDL /NJH /NJS | Out-Null
+            robocopy $dir (Join-Path $Target $dir) /E /NFL /NDL /NJH /NJS | Out-Null
         } else {
-            New-Item -ItemType Directory -Force -Path (Join-Path $target $dir) | Out-Null
+            New-Item -ItemType Directory -Force -Path (Join-Path $Target $dir) | Out-Null
         }
     }
     foreach ($f in @("README.md", "LICENSES.md", "FINAL_APP_REPORT.md",
                      "FINAL_APP_MANIFEST.txt", "FINAL_VOICE_SETTINGS.txt",
                      "START_ANLEITUNG_KORREKTUR.md",
                      "install.ps1", "START.ps1", "START.bat",
+                     "Run_LongForm.bat",
                      "requirements.txt", "versions.json")) {
-        if (Test-Path $f) { Copy-Item $f (Join-Path $target $f) -Force }
+        if (Test-Path $f) { Copy-Item $f (Join-Path $Target $f) -Force }
     }
 }
 

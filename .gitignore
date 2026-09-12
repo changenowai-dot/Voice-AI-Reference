@@ -97,3 +97,8 @@ project/tools/*.exe
 #   models/hf/hub/... (HuggingFace cache)
 # Kleine Audition-MP3s in project/benchmark/*/ (~60-85 KB je Clip, 320k) SIND bewusst versioniert
 # (menschliche Hörbewertung). Große WAVs/Cache/Modelle niemals committen.
+
+# Long-form benchmark outputs (WAV/MP3 binaries can be large; regenerable)
+project/reproduction/longform/**/*.wav
+project/reproduction/longform/**/*.mp3
+project/reproduction/longform/**/input_*.txt
