@@ -8,7 +8,8 @@ Clone pipeline.
 PURPOSE
 ================================================================================
 For each recovered premium voice (EN voice-09/12/22/23/24/25/27,
-DE voice-30/32/33/34), this tool:
+DE voice-30/32/33/34) the "premium 11" set, plus an additional batch of German
+recovery candidates (DE voice-35/36/37/38/39/40/41), this tool:
 
   1. Loads the saved recipe from project/voices/voice_generation_recipes.json
   2. Runs Qwen VoiceDesign with the EXACT saved seed, description, language,
@@ -106,7 +107,10 @@ VOICE_JSON_DIR = VOICES_DIR
 CACHE_VOICE_REFS = _PROJECT_ROOT / "cache" / "voice_refs"
 REPRODUCTION_DIR = _PROJECT_ROOT / "reproduction"
 
-# Priority order as per task (voice-09 + voice-12 first, then EN remainder, then DE)
+# Priority order as per task (voice-09 + voice-12 first, then EN remainder, then DE).
+# Semantics preserved: --all / default / --remaining refer exclusively to THIS
+# "premium 11" set so existing automation (e.g. RTX 5060 batch runs) does not
+# silently pull in new voices.
 PRIORITY_ORDER = [
     ("voice-09", "en_male_warm_storytelling_authoritative_02"),
     ("voice-12", "en_male_velvet_baritone_01"),
@@ -120,7 +124,8 @@ PRIORITY_ORDER = [
     ("voice-33", "de_female_deep_warm_documentary_01"),
     ("voice-34", "de_female_deep_calm_intelligent_01"),
 ]
-# Remaining shortlist (i.e., the 9 voices still to reproduce for this phase)
+# Remaining shortlist (i.e., the 9 voices still to reproduce for this phase).
+# Intentionally NOT extended with voices 35-41 to preserve phase semantics.
 REMAINING_SHORTLIST = [
     ("voice-22", "en_male_deep_authoritative_scholar_01"),
     ("voice-23", "en_male_mature_documentary_natural_01"),
@@ -132,8 +137,25 @@ REMAINING_SHORTLIST = [
     ("voice-33", "de_female_deep_warm_documentary_01"),
     ("voice-34", "de_female_deep_calm_intelligent_01"),
 ]
-PRIORITY_MAP = dict(PRIORITY_ORDER)      # arena_id -> voice_id
-REVERSE_PRIORITY = {v: k for k, v in PRIORITY_ORDER}
+# Additional German recovery candidates added in a later phase. These are NOT
+# included in --all / --remaining / default runs; they must be selected
+# explicitly via --voices voice-35,... (or by full voice_id) to avoid
+# surprising automation that expects the 11-voice premium set.
+ADDITIONAL_DE_RECOVERY = [
+    ("voice-35", "de_male_deep_gravitas_02"),
+    ("voice-36", "de_male_warm_calm_authoritative_02"),
+    ("voice-37", "de_male_intellectual_precise_01"),
+    ("voice-38", "de_male_natural_storyteller_01"),
+    ("voice-39", "de_male_cinematic_restrained_01"),
+    ("voice-40", "de_female_warm_empathetic_01"),
+    ("voice-41", "de_female_clear_natural_01"),
+]
+# The combined registry powers --voices <id> lookups by arena_id OR voice_id
+# while preserving PRIORITY_ORDER / REMAINING_SHORTLIST semantics for
+# --all / --remaining / default.
+ALL_KNOWN_VOICES = list(PRIORITY_ORDER) + list(ADDITIONAL_DE_RECOVERY)
+PRIORITY_MAP = dict(ALL_KNOWN_VOICES)       # arena_id -> voice_id
+REVERSE_PRIORITY = {v: k for k, v in ALL_KNOWN_VOICES}
 
 # Language-default audition texts (used as fallback if recipe has no audition_text)
 AUDITION_SHORT_TEXT_EN = (
@@ -177,8 +199,20 @@ def _find_recipe(voice_id: str) -> dict | None:
 
 
 def _resolve_voices(spec: str | None, use_all: bool, use_remaining: bool = False) -> list[tuple[str, str]]:
-    """Return list of (arena_id, voice_id) in priority order."""
-    order_index = {vid: i for i, (_, vid) in enumerate(PRIORITY_ORDER)}
+    """Return list of (arena_id, voice_id) in priority order.
+
+    Selection semantics (preserved for backward compatibility):
+      * use_all       -> PRIORITY_ORDER (the "premium 11", NOT all 24 recipes)
+      * use_remaining -> REMAINING_SHORTLIST (the 9 premium shortlist voices)
+      * default       -> voice-09 + voice-12
+      * --voices      -> explicit arena_id OR voice_id lookup across the
+                        combined registry (PRIORITY_ORDER + ADDITIONAL_DE_RECOVERY).
+                        Unknown tokens produce a [WARN] and are skipped; they
+                        are NOT silently pulled in from other recipes so that
+                        test/exploratory entries in voice_generation_recipes.json
+                        cannot slip into production runs.
+    """
+    order_index = {vid: i for i, (_, vid) in enumerate(ALL_KNOWN_VOICES)}
     if use_all:
         return list(PRIORITY_ORDER)
     if use_remaining:
@@ -195,8 +229,10 @@ def _resolve_voices(spec: str | None, use_all: bool, use_remaining: bool = False
         elif token in REVERSE_PRIORITY:
             selected.append((REVERSE_PRIORITY[token], token))
         else:
-            print(f"[WARN] Unbekannte Voice-Kennung '{token}' (erwartet z.B. voice-09 "
-                  f"oder en_male_warm_storytelling_authoritative_02).", file=sys.stderr)
+            print(f"[WARN] Unbekannte Voice-Kennung '{token}' (erwartet z.B. voice-09, "
+                  f"voice-35, oder eine bekannte voice_id wie "
+                  f"en_male_warm_storytelling_authoritative_02 / "
+                  f"de_male_deep_gravitas_02).", file=sys.stderr)
     # dedupe preserving order
     seen, out = set(), []
     for aid, vid in selected:
@@ -204,8 +240,9 @@ def _resolve_voices(spec: str | None, use_all: bool, use_remaining: bool = False
             continue
         seen.add(vid)
         out.append((aid, vid))
-    # sort by priority
-    out.sort(key=lambda p: order_index.get(p[1], 99))
+    # sort by priority (premium 11 first in their original order, then new
+    # recovery candidates in their declared order).
+    out.sort(key=lambda p: order_index.get(p[1], 9999))
     return out
 
 
@@ -271,15 +308,29 @@ def _manifest_matches_recipe(m: dict, r: dict) -> bool:
 def cmd_list() -> None:
     recipes = _load_recipes()
     by_vid = {r["voice_id"]: r for r in recipes}
-    print("\nPremium Voices (priority order — EN first, then DE):\n")
-    print(f"{'Rank':<5} {'Arena-ID':<10} {'voice_id':<55} {'Lang':<8} {'Seed':<7} {'Status'}")
-    print("-" * 115)
-    for i, (aid, vid) in enumerate(PRIORITY_ORDER, start=1):
-        r = by_vid.get(vid, {})
-        seed = r.get("seed", "?")
-        hs = (r.get("human_selection") or {}).get("status", "?")
-        lang = r.get("language", "?")
-        print(f"{i:<5} {aid:<10} {vid:<55} {str(lang):<8} {str(seed):<7} {hs}")
+
+    def _print_section(title: str, rows: list[tuple[str, str]], start_rank: int) -> int:
+        print(f"\n{title}\n")
+        print(f"{'Rank':<5} {'Arena-ID':<10} {'voice_id':<55} {'Lang':<8} {'Seed':<7} {'Status'}")
+        print("-" * 115)
+        for i, (aid, vid) in enumerate(rows, start=start_rank):
+            r = by_vid.get(vid, {})
+            seed = r.get("seed", "?")
+            hs = (r.get("human_selection") or {}).get("status", "?")
+            lang = r.get("language", "?")
+            print(f"{i:<5} {aid:<10} {vid:<55} {str(lang):<8} {str(seed):<7} {hs}")
+        return start_rank + len(rows)
+
+    print("\nPremium Voices (priority order — EN first, then DE):")
+    rank = _print_section(
+        "Phase 1 — Premium 11 (--all / default / --remaining refer to this set):",
+        PRIORITY_ORDER, start_rank=1,
+    )
+    if ADDITIONAL_DE_RECOVERY:
+        _print_section(
+            "Additional German recovery candidates (select explicitly via --voices voice-35,...):",
+            ADDITIONAL_DE_RECOVERY, start_rank=rank,
+        )
     print()
 
 
@@ -865,6 +916,7 @@ def cmd_validate(voices: list[tuple[str, str]]) -> int:
     # the recipes still contain the expected seeds for the 11 target voices.
     expected_seeds = {vid: seed for _, (vid, seed) in []}  # populated below
     expected_seeds = {
+        # Phase 1 — Premium 11
         "en_male_warm_storytelling_authoritative_02": 52018,
         "en_male_velvet_baritone_01": 52021,
         "en_male_deep_authoritative_scholar_01": 52031,
@@ -876,6 +928,14 @@ def cmd_validate(voices: list[tuple[str, str]]) -> int:
         "de_male_deep_natural_conversational_01": 53005,
         "de_female_deep_warm_documentary_01": 53011,
         "de_female_deep_calm_intelligent_01": 53012,
+        # Additional German recovery candidates
+        "de_male_deep_gravitas_02": 53013,
+        "de_male_warm_calm_authoritative_02": 53014,
+        "de_male_intellectual_precise_01": 53015,
+        "de_male_natural_storyteller_01": 53016,
+        "de_male_cinematic_restrained_01": 53017,
+        "de_female_warm_empathetic_01": 53018,
+        "de_female_clear_natural_01": 53019,
     }
     print("\n--- Recipe seed integrity check ---")
     for vid, expected_seed in expected_seeds.items():
