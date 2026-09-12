@@ -15,8 +15,12 @@ import numpy as np
 
 from .. import config as cfgmod
 from ..audio.assemble import apply_speed, assemble, assemble_to_file
-from ..audio.master import master_file_to_youtube, master_to_youtube
-from ..audio.master import master_to_youtube
+from ..audio.master import (
+    OUTPUT_FORMAT_WAV_MP3,
+    master_file_to_youtube,
+    master_to_youtube,
+    normalize_output_format,
+)
 from ..cache.manager import CacheManager, segment_cache_key
 from ..hardware.monitor import VRAMGuard
 from ..logging_setup import get_logger, plog, qlog, safe_preview
@@ -414,6 +418,11 @@ class Pipeline:
 
         # 10) Mastering (Anforderung 40+41; dateibasiert, streaming) -----------
         self._emit(phase="mastering")
+        # Ausgabeformat aus cfg holen (GUI/CLI/Jobs setzen das; Default = WAV+MP3)
+        from ..audio.master import normalize_output_format
+        output_format = normalize_output_format(
+            self.cfg.get("output_format",
+                         self.cfg.get("formats", OUTPUT_FORMAT_WAV_MP3)))
         master_report = master_file_to_youtube(
             raw_wav, out_wav, out_mp3,
             target_lufs=float(adv.get("target_lufs", -14.0)),
@@ -421,6 +430,7 @@ class Pipeline:
             wav_sample_rate=int(adv.get("wav_sample_rate", 48000)),
             wav_bit_depth=int(adv.get("wav_bit_depth", 24)),
             mp3_bitrate=str(adv.get("mp3_bitrate", "320k")),
+            output_format=output_format,
         )
         volume_db = float(self.cfg.get("volume_db", 0.0) or 0.0)
         if volume_db:
@@ -431,10 +441,17 @@ class Pipeline:
             pass
 
         elapsed = time.perf_counter() - t_start
-        state.set_phase("completed", wav=str(out_wav), mp3=str(out_mp3))
+        # Nur tatsächlich erzeugte Dateien melden (MP3/WAV ggf. None)
+        final_wav = master_report.get("wav")
+        final_mp3 = master_report.get("mp3")
+        state.set_phase("completed",
+                        wav=final_wav or "",
+                        mp3=final_mp3 or "")
         report.update({
             "ok": True,
-            "wav": str(out_wav), "mp3": str(out_mp3),
+            "wav": final_wav,
+            "mp3": final_mp3,
+            "output_format": output_format,
             "segments": n_seg, "reused": reused,
             "regenerated": regenerated,
             "failed_segments": failed_segments,
