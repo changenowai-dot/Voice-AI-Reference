@@ -138,11 +138,17 @@ class QwenTTSEngine(TTSEngine):
         self.load()
         import torch
 
-        # deterministischer Seed pro Anfrage (Reproduzierbarkeit)
-        if request.seed:
-            torch.manual_seed(request.seed)
+        # deterministischer Seed pro Anfrage (Reproduzierbarkeit).
+        # WICHTIG: Seed 0 ist ein gültiger deterministischer Torch-Seed.
+        # Die alte Prüfung `if request.seed:` behandelte 0 als falsy und
+        # setzte KEINEN manuellen Seed – dadurch liefen Retries mit dem
+        # Rest-Zustand des RNG aus dem vorigen Versuch, was identische
+        # 0.16-s-/Silence-Ausgaben erklärte. Wir prüfen deshalb explizit
+        # auf `is not None`.
+        if request.seed is not None:
+            torch.manual_seed(int(request.seed))
             if torch.cuda.is_available():
-                torch.cuda.manual_seed_all(request.seed)
+                torch.cuda.manual_seed_all(int(request.seed))
 
         gen_kwargs = dict(request.sampling or {})
         gen_kwargs.setdefault("max_new_tokens",
@@ -227,41 +233,136 @@ class VoiceCloneEngine(TTSEngine):
     def __init__(self, hw: HardwareInfo, candidate_id: str,
                  description: str, models_dir: Path | None = None,
                  attn_implementation: str | None = None,
-                 allow_design: bool = True):
+                 allow_design: bool = True,
+                 reference_path: Path | None = None,
+                 language: str = "German",
+                 ref_text: str | None = None,
+                 seed: int | None = None):
         """allow_design=False (VD-E-Produktion, §12): die Referenzdatei
-        MUSS vorhanden sein – niemals neu designen/clonen."""
+        MUSS vorhanden sein – niemals neu designen/clonen.
+
+        reference_path: Optional explicit override for the reference WAV path.
+        If None, uses default paths.VOICE_REFS_DIR / f"{candidate_id}.wav".
+        Used by test harness to pass runtime reference (VOICEOVER_RUNTIME_REF).
+
+        language: "German" oder "English" — wählt den passenden
+                  Standard-Referenztext für create_voice_clone_prompt.
+        ref_text: Optional abweichender Referenztext (für nicht-de/engl.
+                  Stimmen oder Rezept-spezifische Texte).
+        seed:     Optionaler Seed für die VoiceDesign-Referenzgenerierung
+                  (wird andernfalls auf den bestehenden Versuchs-Algorithmus
+                  zurückgegriffen).
+        """
+        log.debug("[DIAG-D.1] VoiceCloneEngine.__init__() entered")
+        
+        log.debug("[DIAG-F] Importing QwenModelPool")
         from .model_pool import QwenModelPool
+        log.debug("[DIAG-F] Importing QwenVoiceStudio")
         from .voice_studio import QwenVoiceStudio
+        
         self.hw = hw
         self.candidate_id = candidate_id
         self.description = description
         self.allow_design = allow_design
+        self.reference_path = reference_path  # Test harness override
+        self._language = language
+        self._ref_text_override = ref_text
+        self._design_seed = seed
+        
+        log.debug("[DIAG-F] Creating QwenModelPool (models_dir=%s)", models_dir)
         self.pool = QwenModelPool(hw, models_dir=models_dir,
                                   attn_implementation=attn_implementation)
+        log.debug("[DIAG-F] QwenModelPool created")
+        
+        log.debug("[DIAG-G] Creating QwenVoiceStudio")
         self.studio = QwenVoiceStudio(self.pool)
+        log.debug("[DIAG-G] QwenVoiceStudio created")
+        
         self._prompt = None
         self._ref = None
+        log.debug("[DIAG-D.2] VoiceCloneEngine.__init__() completed")
 
     def _ensure_prompt(self):
         if self._prompt is not None:
             return
         from .. import paths
         from .voice_studio import VoiceRef
-        ref_path = paths.VOICE_REFS_DIR / f"{self.candidate_id}.wav"
+        from ..prosody.instruct import (VOICEDESIGN_REF_TEXT_DE,
+                                        VOICEDESIGN_REF_TEXT_EN)
+        # Use explicit override if provided (test harness/runtime reference),
+        # otherwise fall back to default cache location
+        if self.reference_path is not None:
+            ref_path = Path(self.reference_path)
+        else:
+            ref_path = paths.VOICE_REFS_DIR / f"{self.candidate_id}.wav"
+        # Make sure the reference is a 24 kHz mono WAV before handing it to
+        # create_voice_clone_prompt. If the configured reference is an MP3
+        # (e.g. a shortlist audition file we are re-using as a reference),
+        # transcode it once via ffmpeg into the cache and point at the WAV.
+        # This keeps clone conditioning consistent across runs and avoids
+        # passing MP3 bytes to an API that expects WAV.
+        ref_path = self._ensure_wav_reference(ref_path)
+        # Pick language-appropriate reference text for clone conditioning
+        lang = getattr(self, "_language", None) or "German"
+        default_ref_text = (VOICEDESIGN_REF_TEXT_EN if lang == "English"
+                            else VOICEDESIGN_REF_TEXT_DE)
+        ref_text_for_clone = getattr(self, "_ref_text_override", None) or default_ref_text
+        # Allow description to carry per-voice info (voice JSON / recipe)
         if ref_path.exists():
-            from ..prosody.instruct import VOICEDESIGN_REF_TEXT_DE
             self._ref = VoiceRef(candidate_id=self.candidate_id,
                                  description=self.description,
-                                 ref_text=VOICEDESIGN_REF_TEXT_DE,
-                                 wav_path=ref_path)
+                                 ref_text=ref_text_for_clone,
+                                 wav_path=ref_path,
+                                 language=lang)
         else:
             if not self.allow_design:
                 raise TTSError(
                     f"VD-E-Referenz fehlt: {ref_path}. Neuerzeugung ist "
                     "gesperrt (LOCKED PRODUCTION, §12/§24).")
             self._ref = self.studio.design_reference(
-                self.candidate_id, self.description)
+                self.candidate_id, self.description, language=lang,
+                ref_text=ref_text_for_clone, seed=self._design_seed)
         self._prompt = self.studio.build_clone_prompt(self._ref)
+
+    def _ensure_wav_reference(self, ref_path: Path) -> Path:
+        """If ref_path points to an MP3/M4A/OGG/FLAC, transcode to 24 kHz mono
+        WAV in cache/voice_refs/_converted/ on first use and return that WAV.
+        WAV inputs pass through unchanged. Missing files are returned as-is so
+        the caller can trigger VoiceDesign (allow_design=True) or fail with a
+        clear error (allow_design=False)."""
+        if not ref_path.exists():
+            return ref_path
+        suf = ref_path.suffix.lower()
+        if suf == ".wav":
+            return ref_path
+        from .. import paths as _p
+        from hashlib import sha256
+        conv_dir = _p.VOICE_REFS_DIR / "_converted"
+        conv_dir.mkdir(parents=True, exist_ok=True)
+        key = (ref_path.name + "_" + str(ref_path.stat().st_size) + "_"
+               + str(int(ref_path.stat().st_mtime)))
+        digest = sha256(key.encode("utf-8")).hexdigest()[:12]
+        out_wav = conv_dir / f"{ref_path.stem}_{digest}_24k_mono.wav"
+        if out_wav.exists():
+            return out_wav
+        # Attempt ffmpeg transcode: 24 kHz mono PCM s16le (matches the
+        # VoiceDesign reference format).
+        try:
+            from ..audio.ffmpeg import run_ffmpeg
+            ok, _msg = run_ffmpeg([
+                "-y", "-i", str(ref_path),
+                "-ar", "24000", "-ac", "1",
+                "-c:a", "pcm_s16le", str(out_wav),
+            ], timeout_s=120)
+            if ok and out_wav.exists() and out_wav.stat().st_size > 0:
+                log.info("Reference %s -> WAV transcoded to %s",
+                         ref_path, out_wav)
+                return out_wav
+            log.warning("ffmpeg-Transkodierung fehlgeschlagen (%s); "
+                        "versuche Original-Pfad direkt zu verwenden.", _msg)
+        except Exception as e:
+            log.warning("ffmpeg-Transkodierung nicht verfügbar: %s", e)
+        return ref_path
 
     def load(self) -> None:
         self._ensure_prompt()
@@ -271,6 +372,13 @@ class VoiceCloneEngine(TTSEngine):
 
     def unload(self) -> None:
         self._prompt = None
+        # Auch den Cache im VoiceStudio leeren, damit beim engine-Wechsel
+        # keine Prompt-Tensoren/Modelle im Speicher hängen bleiben.
+        try:
+            if getattr(self, "studio", None) is not None:
+                self.studio._clone_prompts.clear()
+        except Exception:
+            pass
         self.pool.unload()
 
     def synthesize(self, request: SynthesisRequest) -> SynthesisResult:

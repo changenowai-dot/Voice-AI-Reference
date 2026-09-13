@@ -1,0 +1,57 @@
+{
+  "voice_id": "en_male_velvet_baritone_01",
+  "display_name": "EN Male Velvet Baritone 01",
+  "gender": "male",
+  "provider": "arena-tts",
+  "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "English",
+  "native_status": "native",
+  "category": "narrator",
+  "description": "velvet baritone – deep exceptionally smooth warm rich rounded",
+  "backend_mode": "clone",
+  "speaker_name": null,
+  "reference_path": "benchmark/male_deep_candidates/07_velvet_baritone/part1.mp3",
+  "production_locked": true,
+  "recommended": true,
+  "default": false,
+  "intended_use": "long-form documentary, history, science, psychology, philosophy, investigative",
+  "status": "locked_human_favorite",
+  "register": "velvet_baritone",
+  "style": "velvet_baritone",
+  "per_language": {
+    "English": {
+      "native_status": "native",
+      "rank": 6,
+      "recommended": true,
+      "default": false,
+      "description": "velvet baritone – LOCKED HUMAN FAVORITE position 7, deep exceptionally smooth warm rich rounded"
+    },
+    "German": {
+      "native_status": "cross_language",
+      "rank": 91,
+      "recommended": false,
+      "default": false,
+      "description": "velvet_baritone – English design (cross-language)"
+    }
+  },
+  "settings": {
+    "seed": 52021,
+    "variant": "EN_MALE_VELVET_BARITONE_01",
+    "cache_version": "q3p-v2-integrity",
+    "language": "English",
+    "engine": "VoiceCloneEngine",
+    "backend": "clone",
+    "arena_voice_id": "voice-12"
+  },
+  "reference_sha256": "ARENA_VOICE-12",
+  "reference_generated": "real speech via Arena voice-12 – 4 parts benchmark + FullScript scheduled; not TestDouble sine",
+  "human_favorite": true,
+  "human_favorite_locked": true,
+  "human_listening_position": 7,
+  "human_favorite_note": "LOCKED HUMAN FAVORITE — visible position 7/8 in fast_audition 03-10 (2026-09-09), voice-12 — do not delete/overwrite/replace",
+  "locked_reason": "human listening position 7 — velvet baritone 01"
+}

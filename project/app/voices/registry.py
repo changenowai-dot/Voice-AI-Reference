@@ -35,6 +35,45 @@ STATUS_LABELS = {
     "fallback": "CROSS-LANGUAGE FALLBACK",
 }
 
+# === 4-Tier Library (2026-09-09) — ACTIVE / BACKUPS / UNASSESSED / REJECTED ===
+# ACTIVE: human-selected/confirmed shortlist/favorite/preserved — in Haupt-GUI, Favoriten, Standard-Auswahl (nur bestätigte)
+# BACKUPS: good_archived + test_voice* als archivierter Backup-Bereich (z. B. voice-34) — nicht als Favorit
+# UNASSESSED: new_candidate / recovered / unassessed — z. B. german_recovery 7 (voice-35..41) — NICHT als ACTIVE, nur Kandidaten-Pool, Human Rank blank
+# REJECTED: rejected_human — niemals in ACTIVE-UI/Shortlist/Favoriten (nur Historie, Reproduktion)
+ACTIVE_STATUSES = {"locked_human_favorite", "saved_human_shortlist", "preserved_female_calm", "test_voice_preserved", "active"}
+BACKUP_STATUSES = {"good_archived", "test_voice", "test_voice_premium_10", "archived", "backup"}
+REJECTED_STATUSES = {"rejected_human", "rejected"}
+UNASSESSED_STATUSES = {"new_candidate_german_recovery", "new_candidate", "recovered", "unassessed", "candidate"}
+# Any status containing these substrings also counts: we also inspect human_selected/production_candidate flags
+
+def tier_for(data: dict) -> str:
+    """Bestimme Tier aus status + flags (ehrlich, kein Raten)."""
+    st = str(data.get("status","") or "")
+    # VD-E golden locked is always ACTIVE regardless of status field
+    if data.get("voice_id")=="vd_e" or data.get("production_locked") is True and data.get("voice_id")=="vd_e":
+        return "ACTIVE"
+    if data.get("production_locked") is True and "rejected" not in st:
+        # Locked favorites (vd_e, voice-09, voice-12) are always ACTIVE
+        return "ACTIVE"
+    # explicit
+    if st in REJECTED_STATUSES or "rejected" in st:
+        return "REJECTED"
+    # UNASSESSED: neue/recovered Kandidaten — NICHT ACTIVE, nicht BACKUP, nicht REJECTED (vgl. §5 FINAL CORRECTION)
+    if st in UNASSESSED_STATUSES or st.startswith("new_candidate") or st.startswith("recovered") or st == "unassessed":
+        return "UNASSESSED"
+    if st in ACTIVE_STATUSES or st in ("saved_human_shortlist","locked_human_favorite"):
+        return "ACTIVE"
+    if st in BACKUP_STATUSES:
+        return "BACKUPS"
+    # fallback via flags: human_selected+production_candidate == ACTIVE shortlist, good_archived == BACKUPS even if human_selected
+    if data.get("human_selected") is True and data.get("production_candidate") is True:
+        return "ACTIVE"
+    if str(data.get("status","")).endswith("_archived"):
+        return "BACKUPS"
+    # default: treat unknown as BACKUPS (safe, not ACTIVE)
+    return "BACKUPS"
+
+
 _DE = "German"
 _EN = "English"
 
@@ -273,6 +312,205 @@ DEFAULT_PROFILES: dict[str, dict] = {
         },
         "settings": {},
     },
+    # ================================================================
+    # VIER NEUE ENGLISCHE TESTSTIMMEN – VoiceDesign->Clone (2026-09)
+    # DESIGN: muttersprachliches Englisch, dokumentarisch, ruhig,
+    #         erwachsen, langfristig angenehm – Long-Form narrators
+    # STATUS: TEST voices – VD-E bleibt locked production
+    # ================================================================
+    "en_male_deep_01": {
+        "voice_id": "en_male_deep_01",
+        "display_name": "EN Male Deep 01",
+        "gender": "male",
+        "provider": "qwen3-tts",
+        "model": "Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone)",
+        "language_support": [_DE, _EN],
+        "native_language": "English",
+        "native_status": "native",
+        "category": "narrator",
+        "description": "deep, authoritative, investigative documentary – English native",
+        "backend_mode": "clone",
+        "speaker_name": None,
+        "reference_path": "cache/voice_refs/en_male_deep_01.wav",
+        "production_locked": False,
+        "recommended": False,
+        "default": False,
+        "intended_use": "long-form documentary, investigative, history, science",
+        "status": "test_voice",
+        "register": "deep",
+        "style": "investigative_documentary",
+        "per_language": {
+            _EN: {"native_status": "native", "rank": 11,
+                  "recommended": True, "default": False,
+                  "description": "deep, authoritative, investigative – darkest, most weighty"},
+            _DE: {"native_status": "cross_language", "rank": 60,
+                  "recommended": False, "default": False,
+                  "description": "deep, authoritative – English design (cross-language)"},
+        },
+        "settings": {"seed": 52011, "variant": "EN_DEEP_01", "cache_version": "q3p-v2-integrity",
+                     "language": "English", "engine": "VoiceCloneEngine", "backend": "clone",
+                     "model_pool": "base", "reference_text": "VOICEDESIGN_REF_TEXT_EN"},
+    },
+    "en_male_deep_02": {
+        "voice_id": "en_male_deep_02",
+        "display_name": "EN Male Deep 02",
+        "gender": "male",
+        "provider": "qwen3-tts",
+        "model": "Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone)",
+        "language_support": [_DE, _EN],
+        "native_language": "English",
+        "native_status": "native",
+        "category": "narrator",
+        "description": "deep, warm, conversational storyteller – English native",
+        "backend_mode": "clone",
+        "speaker_name": None,
+        "reference_path": "cache/voice_refs/en_male_deep_02.wav",
+        "production_locked": False,
+        "recommended": False,
+        "default": False,
+        "intended_use": "long-form storytelling, science, psychology, history",
+        "status": "test_voice",
+        "register": "deep_warm",
+        "style": "warm_storyteller",
+        "per_language": {
+            _EN: {"native_status": "native", "rank": 12,
+                  "recommended": True, "default": False,
+                  "description": "deep, warm, conversational – storyteller, inviting clarity"},
+            _DE: {"native_status": "cross_language", "rank": 61,
+                  "recommended": False, "default": False,
+                  "description": "deep, warm – English design (cross-language)"},
+        },
+        "settings": {"seed": 52012, "variant": "EN_DEEP_02", "cache_version": "q3p-v2-integrity",
+                     "language": "English", "engine": "VoiceCloneEngine", "backend": "clone"},
+    },
+    "en_female_calm_01": {
+        "voice_id": "en_female_calm_01",
+        "display_name": "EN Female Calm 01",
+        "gender": "female",
+        "provider": "qwen3-tts",
+        "model": "Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone)",
+        "language_support": [_DE, _EN],
+        "native_language": "English",
+        "native_status": "native",
+        "category": "narrator",
+        "description": "calm, warm, documentary – English native, low register",
+        "backend_mode": "clone",
+        "speaker_name": None,
+        "reference_path": "cache/voice_refs/en_female_calm_01.wav",
+        "production_locked": False,
+        "recommended": False,
+        "default": False,
+        "intended_use": "long-form documentary, psychology, philosophy, science",
+        "status": "test_voice",
+        "register": "warm_low",
+        "style": "calm_documentary",
+        "per_language": {
+            _EN: {"native_status": "native", "rank": 21,
+                  "recommended": True, "default": False,
+                  "description": "calm, warm, low register – velvet documentary, trustworthy"},
+            _DE: {"native_status": "cross_language", "rank": 62,
+                  "recommended": False, "default": False,
+                  "description": "calm, warm – English design (cross-language)"},
+        },
+        "settings": {"seed": 52021, "variant": "EN_CALM_01", "cache_version": "q3p-v2-integrity",
+                     "language": "English", "engine": "VoiceCloneEngine", "backend": "clone"},
+    },
+    "en_male_calm_deep_01": {
+        "voice_id": "en_male_calm_deep_01",
+        "display_name": "EN Male Calm Deep 01",
+        "gender": "male",
+        "provider": "qwen3-tts",
+        "model": "Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone)",
+        "language_support": [_DE, _EN],
+        "native_language": "English",
+        "native_status": "native",
+        "category": "narrator",
+        "description": "calm deep – low, warm, controlled, mature, authoritative, highly intelligible",
+        "backend_mode": "clone",
+        "speaker_name": None,
+        "reference_path": "cache/voice_refs/en_male_calm_deep_01.wav",
+        "production_locked": False,
+        "recommended": False,
+        "default": False,
+        "intended_use": "long-form documentary, history, science, philosophy – calm deep narration",
+        "status": "test_voice",
+        "register": "calm_deep",
+        "style": "calm_deep_authoritative",
+        "per_language": {
+            _EN: {"native_status": "native", "rank": 13,
+                  "recommended": True, "default": False,
+                  "description": "calm deep – low, warm, controlled, mature, highly intelligible, long-form pleasant"},
+            _DE: {"native_status": "cross_language", "rank": 64,
+                  "recommended": False, "default": False,
+                  "description": "calm deep – English design (cross-language)"},
+        },
+        "settings": {"seed": 52013, "variant": "EN_CALM_DEEP_01", "cache_version": "q3p-v2-integrity",
+                     "language": "English", "engine": "VoiceCloneEngine", "backend": "clone"},
+    },
+    "en_male_warm_storytelling_authoritative_01": {
+        "voice_id": "en_male_warm_storytelling_authoritative_01",
+        "display_name": "EN Male Warm Storytelling Authoritative 01",
+        "gender": "male",
+        "provider": "qwen3-tts",
+        "model": "Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone)",
+        "language_support": [_DE, _EN],
+        "native_language": "English",
+        "native_status": "native",
+        "category": "narrator",
+        "description": "warm storytelling authoritative – English native long-form",
+        "backend_mode": "clone",
+        "speaker_name": None,
+        "reference_path": "cache/voice_refs/en_male_warm_storytelling_authoritative_01.wav",
+        "production_locked": False,
+        "recommended": False,
+        "default": False,
+        "intended_use": "long-form documentary, history, science, psychology – warm storytelling with authority",
+        "status": "test_voice",
+        "register": "warm_storytelling",
+        "style": "warm_storytelling_authoritative",
+        "per_language": {
+            _EN: {"native_status": "native", "rank": 14,
+                  "recommended": True, "default": False,
+                  "description": "warm storytelling authoritative – natural phrasing, subtle warmth, human rhythm, professional"},
+            _DE: {"native_status": "cross_language", "rank": 65,
+                  "recommended": False, "default": False,
+                  "description": "warm storytelling – English design (cross-language)"},
+        },
+        "settings": {"seed": 52014, "variant": "EN_WARM_STORY_01", "cache_version": "q3p-v2-integrity",
+                     "language": "English", "engine": "VoiceCloneEngine", "backend": "clone"},
+    },
+    "en_female_calm_02": {
+        "voice_id": "en_female_calm_02",
+        "display_name": "EN Female Calm 02",
+        "gender": "female",
+        "provider": "qwen3-tts",
+        "model": "Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone)",
+        "language_support": [_DE, _EN],
+        "native_language": "English",
+        "native_status": "native",
+        "category": "narrator",
+        "description": "calm, bright, articulate – English native, expressive",
+        "backend_mode": "clone",
+        "speaker_name": None,
+        "reference_path": "cache/voice_refs/en_female_calm_02.wav",
+        "production_locked": False,
+        "recommended": False,
+        "default": False,
+        "intended_use": "long-form science, psychology, technology, education",
+        "status": "test_voice",
+        "register": "bright_calm",
+        "style": "articulate_expressive",
+        "per_language": {
+            _EN: {"native_status": "native", "rank": 22,
+                  "recommended": True, "default": False,
+                  "description": "calm, bright, articulate – expressive, crisp precision"},
+            _DE: {"native_status": "cross_language", "rank": 63,
+                  "recommended": False, "default": False,
+                  "description": "bright, calm – English design (cross-language)"},
+        },
+        "settings": {"seed": 52022, "variant": "EN_CALM_02", "cache_version": "q3p-v2-integrity",
+                     "language": "English", "engine": "VoiceCloneEngine", "backend": "clone"},
+    },
 }
 
 
@@ -329,7 +567,10 @@ class VoiceRegistry:
     # -- Roh-Zugriff (alle Stimmen, sprachunabhängig) ---------------------
     def entries(self) -> list[VoiceProfileEntry]:
         order = ["vd_e", "uncle_fu", "dylan", "ryan", "aiden",
-                 "serena", "vivian", "sohee"]
+                 "serena", "vivian", "sohee",
+                 "en_male_deep_01", "en_male_deep_02",
+                 "en_male_calm_deep_01", "en_male_warm_storytelling_authoritative_01",
+                 "en_female_calm_01", "en_female_calm_02"]
         ids = [i for i in order if i in self._profiles] + \
               [i for i in self._profiles if i not in order]
         out = []
@@ -389,24 +630,57 @@ class VoiceRegistry:
                 (entry.voice_id == "vd_e" and language == _DE)),
         )
 
-    def entries_for_language(self, language: str) -> list[VoiceProfileEntry]:
+    def entries_for_language(self, language: str, tier: str | None = None) -> list[VoiceProfileEntry]:
         """Stimmen einer Sprache, gruppenweise nach Rang sortiert
-        (männlich zuerst; VD-E bei Deutsch immer ganz oben, §6)."""
+        (männlich zuerst; VD-E bei Deutsch immer ganz oben, §6).
+        tier: None=alle (ohne REJECTED zu bevorzugen ist responsibility des Callers),
+              "ACTIVE"/"BACKUPS"/"REJECTED"/"CANDIDATE" filtert strikt.
+              Standard-GUI soll ausschließlich ACTIVE (confirmed) zeigen, UNASSESSED nie als Favorite, REJECTED nie
+              in Favoriten/Shortlist. Backups séparat.
+        """
         entries = [self.for_language(e, language)
                    for e in self.entries()
                    if language in e.language_support]
+        if tier:
+            t = tier.upper()
+            filtered=[]
+            for e in entries:
+                d=self._profiles.get(e.voice_id,{})
+                tt=tier_for(d)
+                # CANDIDATE is subset of ACTIVE (new_candidate*)
+                if t=="CANDIDATE":
+                    if str(d.get("status","")).startswith("new_candidate"):
+                        filtered.append(e)
+                elif tt==t:
+                    filtered.append(e)
+            entries=filtered
         male = sorted([e for e in entries if e.gender == "male"],
                       key=lambda e: (e.rank, e.display_name))
         female = sorted([e for e in entries if e.gender == "female"],
                         key=lambda e: (e.rank, e.display_name))
         return male + female
 
+    def entries_for_tier(self, tier: str) -> list[VoiceProfileEntry]:
+        """Alle Stimmen eines Tiers, sprachunabhängig (für Manifest/Validator)."""
+        out=[]
+        for e in self.entries():
+            d=self._profiles.get(e.voice_id,{})
+            if tier_for(d).upper()==tier.upper():
+                out.append(e)
+        return sorted(out, key=lambda x: (x.display_name, x.voice_id))
+
+    def tier_of(self, voice_id: str) -> str:
+        d=self._profiles.get(voice_id,{})
+        return tier_for(d) if d else "UNKNOWN"
+
+
     def default_voice_id(self, language: str = _DE) -> str:
         """VD-E bleibt bei Deutsch Standard; sonst beste empfohlene
-        Stimme der Sprache (native bevorzugt)."""
+        Stimme der Sprache (native bevorzugt). REJECTED wird nie zurückgegeben."""
         if language == _DE and self.get("vd_e") is not None:
             return "vd_e"
-        entries = self.entries_for_language(language)
+        # filter REJECTED out for default
+        entries = [e for e in self.entries_for_language(language) if self.tier_of(e.voice_id)!="REJECTED"]
         for e in entries:
             if e.default_for_language:
                 return e.voice_id

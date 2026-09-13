@@ -88,3 +88,17 @@ project/tools/*.zip
 
 # Local generated binaries
 project/tools/*.exe
+# === VoiceOverApp — Modelle (NICHT im Git, groß) ===
+# Qwen3-TTS 1.7B (Base/CustomVoice/VoiceDesign) — ca. 2–5 GB je Modell, Download via install.ps1 / SETUP.ps1
+# Erwartete Pfade (siehe project/app/tts/model_pool.py + project/app/paths.py):
+#   models/Qwen3-TTS-12Hz-1.7B-Base/
+#   models/Qwen3-TTS-12Hz-1.7B-CustomVoice/
+#   models/Qwen3-TTS-12Hz-1.7B-VoiceDesign/
+#   models/hf/hub/... (HuggingFace cache)
+# Kleine Audition-MP3s in project/benchmark/*/ (~60-85 KB je Clip, 320k) SIND bewusst versioniert
+# (menschliche Hörbewertung). Große WAVs/Cache/Modelle niemals committen.
+
+# Long-form benchmark outputs (WAV/MP3 binaries can be large; regenerable)
+project/reproduction/longform/**/*.wav
+project/reproduction/longform/**/*.mp3
+project/reproduction/longform/**/input_*.txt

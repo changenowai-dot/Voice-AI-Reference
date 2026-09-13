@@ -162,11 +162,93 @@ VOICEDESIGN_DESCRIPTIONS: dict[str, dict] = {
     },
 }
 
-# Referenztext für Design->Clone (kurz, repräsentativ für den Stil)
+# Referenztexte für Design->Clone (kurz, repräsentativ für den Stil)
 VOICEDESIGN_REF_TEXT_DE = (
     "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es "
     "Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die "
     "niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?")
+
+VOICEDESIGN_REF_TEXT_EN = (
+    "There is a book no one claims to have written. And yet it has moved "
+    "generations. Perhaps because it asks a question no one dares to speak "
+    "aloud: Who decides what is real?")
+
+# ---------------------------------------------------------------------------
+# ENGLISCHE TESTSTIMMEN – VIER NEUE ENGLISCHE NARRATOREN (2026-09)
+# Ziel: muttersprachliches Englisch, ruhig, professionell, dokumentarisch
+# ---------------------------------------------------------------------------
+ENGLISH_VOICEDESIGN_DESCRIPTIONS: dict[str, dict] = {
+    "en_male_deep_01": {
+        "label": "EN Male Deep Narrator 01 – Deep Investigative (TEST)",
+        "description": (
+            "A deep, authoritative English documentary narrator. Mature male "
+            "voice in his early forties, resonant and grounded, supremely calm "
+            "and credible. Measured pacing, flawless diction, natural neutral "
+            "accent with subtle gravitas. Investigative, cinematic without drama, "
+            "trustworthy over many minutes. Never trailer, never aggressive."),
+        "gender": "male",
+        "register": "deep",
+        "style": "investigative_documentary",
+        "voice_id": "en_male_deep_01",
+    },
+    "en_male_deep_02": {
+        "label": "EN Male Deep Narrator 02 – Warm Storyteller (TEST)",
+        "description": (
+            "A warm, deep English storyteller. Mature male voice in his late "
+            "thirties, slightly warmer and more conversational than a pure "
+            "documentary narrator, yet deeply professional and intelligent. "
+            "Clear, inviting timbre with gentle narrative musicality, confident "
+            "and articulate. Ideal for long-form history, science and psychology."),
+        "gender": "male",
+        "register": "deep_warm",
+        "style": "warm_storyteller",
+        "voice_id": "en_male_deep_02",
+    },
+    "en_female_calm_01": {
+        "label": "EN Female Calm Narrator 01 – Warm Documentary (TEST)",
+        "description": (
+            "A calm, warm English female narrator. Mature woman in her late "
+            "thirties, deeply warm and grounded in a lower register, documentary "
+            "timbre. Highly professional, intelligent and emotionally present "
+            "without theatricality. Velvet, trustworthy voice that remains "
+            "pleasant over hours – never shrill, never childlike, never hype."),
+        "gender": "female",
+        "register": "warm_low",
+        "style": "calm_documentary",
+        "voice_id": "en_female_calm_01",
+    },
+    "en_male_calm_deep_01": {
+        "label": "EN Male Calm Deep 01 – Calm Deep (TEST)",
+        "description": (
+            "A genuinely deep, calm English narrator. Mature male voice with a low, warm register, controlled and mature, authoritative yet natural and highly intelligible. Restrained, professional delivery with subtle gravitas, excellent for long-form documentary, history and science. Deep without muddiness, authoritative without aggression, calm without sleepiness – a voice you want to keep listening to for 20–30 minutes."),
+        "gender": "male",
+        "register": "calm_deep",
+        "style": "calm_deep_authoritative",
+        "voice_id": "en_male_calm_deep_01",
+    },
+    "en_male_warm_storytelling_authoritative_01": {
+        "label": "EN Male Warm Storytelling Authoritative 01 – Warm Storytelling (TEST)",
+        "description": (
+            "A warm, storytelling authoritative English narrator. Mature male voice combining warmth, storyteller quality, natural conversational flow and subtle authority. Professional, calm and engaging with human rhythm, smooth transitions and pleasant sentence melody. Ideal for long-form history, science, philosophy and investigative documentary – the listener feels this narrator knows the subject and wants to hear the story, without theatricality or exaggeration."),
+        "gender": "male",
+        "register": "warm_storytelling",
+        "style": "warm_storytelling_authoritative",
+        "voice_id": "en_male_warm_storytelling_authoritative_01",
+    },
+    "en_female_calm_02": {
+        "label": "EN Female Calm Narrator 02 – Bright Articulate (TEST)",
+        "description": (
+            "A bright yet calm English female narrator. Articulate, expressive "
+            "and intelligent, with a slightly higher but still mature register. "
+            "Crisp diction, subtle emotional color, warm precision for science, "
+            "psychology and philosophy. Naturally calm, never shrill, never "
+            "overly emotional – long-form comfortable."),
+        "gender": "female",
+        "register": "bright_calm",
+        "style": "articulate_expressive",
+        "voice_id": "en_female_calm_02",
+    },
+}
 
 
 def variant_text(variant_id: str) -> str:
