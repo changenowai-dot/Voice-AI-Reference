@@ -94,6 +94,12 @@ class QwenModelPool:
             path,
             **kwargs
         )
+        # Immer eval()-Modus: Deaktiviert Dropout und andere Trainings-RNGs
+        # die Retry-Nichtdeterminismus auch bei gleichem Seed verursachen.
+        try:
+            model.eval()
+        except Exception:
+            pass
 
         self._loaded[name] = model
         return model

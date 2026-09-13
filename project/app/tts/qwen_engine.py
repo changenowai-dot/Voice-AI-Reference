@@ -22,6 +22,7 @@ from ..hardware.detector import HardwareInfo
 from ..logging_setup import Timer, get_logger
 from .engine_base import (EngineOOMError, SynthesisRequest, SynthesisResult,
                           TTSError, TTSEngine)
+from .rng import set_deterministic_seed
 from .sampler import max_new_tokens_for
 
 log = get_logger("tts.qwen")
@@ -108,6 +109,13 @@ class QwenTTSEngine(TTSEngine):
                     path, device_map="cpu", dtype=torch.float32)
             else:
                 raise TTSError(f"Modell konnte nicht geladen werden: {e}") from e
+        # Sicherstellen, dass Dropout/NN-Dropout-RNGs nicht im Train-Modus
+        # laufen (sonst variieren mehrere identisch geseedete Aufrufe
+        # je nach internem Zustand und erzeugen 0.16-s-/Silence-Artefakte).
+        try:
+            self._model.eval()
+        except Exception:
+            pass
         load_s = time.perf_counter() - t0
         log.info("Modell geladen in %.1f s", load_s)
         try:
@@ -138,21 +146,27 @@ class QwenTTSEngine(TTSEngine):
         self.load()
         import torch
 
-        # deterministischer Seed pro Anfrage (Reproduzierbarkeit).
-        # WICHTIG: Seed 0 ist ein gültiger deterministischer Torch-Seed.
-        # Die alte Prüfung `if request.seed:` behandelte 0 als falsy und
-        # setzte KEINEN manuellen Seed – dadurch liefen Retries mit dem
-        # Rest-Zustand des RNG aus dem vorigen Versuch, was identische
-        # 0.16-s-/Silence-Ausgaben erklärte. Wir prüfen deshalb explizit
-        # auf `is not None`.
+        # Deterministischer Seed (CPU + alle CUDA-Geräte + passender
+        # torch.Generator). Siehe app.tts.rng für die Begründung.
         if request.seed is not None:
-            torch.manual_seed(int(request.seed))
-            if torch.cuda.is_available():
-                torch.cuda.manual_seed_all(int(request.seed))
+            gen = set_deterministic_seed(int(request.seed))
+        else:
+            gen = None
 
         gen_kwargs = dict(request.sampling or {})
         gen_kwargs.setdefault("max_new_tokens",
                               max_new_tokens_for(request.max_seconds_hint))
+
+        # Wenn die zugrundeliegende generate()-Methode einen ``generator=``
+        # unterstützt (transformers/accelerate tun das), übergeben wir
+        # unseren explizit gesetzten Generator. Sonst still ignorieren.
+        import inspect as _insp
+        try:
+            _gen_fn = self._model.generate_custom_voice
+            if "generator" in _insp.signature(_gen_fn).parameters and gen is not None:
+                gen_kwargs["generator"] = gen
+        except Exception:
+            pass
 
         log.debug("Synthese: %d Zeichen, speaker=%s, seed=%s, kwargs=%s",
                   len(request.text), request.speaker, request.seed, gen_kwargs)
@@ -172,6 +186,13 @@ class QwenTTSEngine(TTSEngine):
                 self._cuda_cleanup()
                 raise EngineOOMError(f"CUDA OOM bei Synthese: {msg}") from e
             raise TTSError(f"Qwen3-TTS Synthese fehlgeschlagen: {msg}") from e
+        # CUDA synchronisieren, damit RNG-/Kernel-Zustände nicht in den
+        # nächsten Versuch hinüberleaken.
+        if torch.cuda.is_available():
+            try:
+                torch.cuda.synchronize()
+            except Exception:
+                pass
         elapsed = time.perf_counter() - t0
 
         wav = wavs[0] if isinstance(wavs, (list, tuple)) and wavs else wavs

@@ -111,11 +111,23 @@ BALANCED_SAMPLING = params_for_set("balanced", {
 
 
 def _sha256_file(p: Path) -> str:
-    h = hashlib.sha256()
-    with open(p, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest().upper()
+    """Berechnet SHA-256 einer Datei. Gibt Leerstring zurück, wenn der Pfad
+    leer / ein Verzeichnis / nicht existent ist (robust gegen Teil-
+    fehlschläge, bei denen der Pipeline kein WAV erzeugt)."""
+    try:
+        p = Path(p)
+        if not str(p) or str(p) in (".", ""):
+            return ""
+        if not p.exists() or not p.is_file():
+            return ""
+        h = hashlib.sha256()
+        with open(p, "rb") as f:
+            for chunk in iter(lambda: f.read(1 << 20), b""):
+                h.update(chunk)
+        return h.hexdigest().upper()
+    except (OSError, PermissionError) as e:
+        log.warning("SHA256 für %s nicht möglich: %s", p, e)
+        return ""
 
 
 def _resolve_reference(voice_id: str, entry, voice_language: str,
