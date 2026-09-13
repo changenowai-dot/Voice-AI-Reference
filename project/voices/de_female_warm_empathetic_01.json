@@ -1,0 +1,57 @@
+{
+  "voice_id": "de_female_warm_empathetic_01",
+  "display_name": "DE Female Warm Empathetic 01",
+  "gender": "female",
+  "provider": "arena-tts",
+  "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "German",
+  "native_status": "native",
+  "category": "narrator",
+  "description": "warm empathetic — warm, empathisch, reif, nahbar",
+  "backend_mode": "clone",
+  "speaker_name": null,
+  "reference_path": "benchmark/german_recovery_audition/06_de_female_warm_empathetic_01.mp3",
+  "production_locked": false,
+  "recommended": false,
+  "default": false,
+  "intended_use": "long-form documentary, history, science, psychology, philosophy",
+  "status": "new_candidate_german_recovery",
+  "register": "warm_empathetic",
+  "style": "warm_empathetic",
+  "per_language": {
+    "German": {
+      "native_status": "native",
+      "rank": 22,
+      "recommended": false,
+      "default": false,
+      "description": "warm empathetic — warm, empathisch, reif, nahbar"
+    },
+    "English": {
+      "native_status": "cross_language",
+      "rank": 102,
+      "recommended": false,
+      "default": false,
+      "description": "warm_empathetic – German design (cross-language)"
+    }
+  },
+  "settings": {
+    "seed": 53018,
+    "variant": "DE_FEMALE_WARM_EMPATHETIC_01",
+    "cache_version": "q3p-v2-integrity",
+    "language": "German",
+    "engine": "VoiceCloneEngine",
+    "backend": "clone",
+    "arena_voice_id": "voice-40",
+    "visible_position": 6,
+    "round": "german_recovery_audition",
+    "recovery": true,
+    "source": "new_candidate — no suitable historical German voice found after thorough search (only 7 historical existed, all excluded per task)"
+  },
+  "reference_sha256": "ARENA_VOICE-40",
+  "reference_generated": "real speech via Arena voice-40 – german_recovery_audition identical German short text; not TestDouble sine",
+  "source_detail": "NEW CANDIDATE — created because thorough search in project/voices, benchmark, voice_generation_recipes.json, git history found zero additional historical German candidates beyond the 7 already tested (voice-28..34). All 7 are therefore NEW, not RECOVERED."
+}

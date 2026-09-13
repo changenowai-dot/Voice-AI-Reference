@@ -1,0 +1,2848 @@
+{
+  "generated": "2026-09-09 updated with german_recovery 7 + en_female calm 2",
+  "note": "Machine-readable voice recipes — English shortlist (7) + VD-E + German 7 fast audition (5+2) + German recovery 7 (2026-09-09) + EN female calm 2. Provenance honestly marks arena_placeholder vs actual_qwen vs preserved. See VOICE_GENERATION_ARCHITECTURE.md",
+  "recipes": [
+    {
+      "voice_id": "en_male_warm_storytelling_authoritative_02",
+      "stable_voice_name": "en_male_warm_storytelling_authoritative_02",
+      "display_name": "EN Male Warm Storytelling Authoritative 02",
+      "candidate_id": "en_male_warm_storytelling_authoritative_02",
+      "battle_id": "voice-09",
+      "arena_voice_id": "voice-09",
+      "visible_position": 4,
+      "seed": 52018,
+      "language": "English",
+      "gender": "male",
+      "concept": "warm_storytelling_authoritative",
+      "voice_design_description": "warm storytelling authoritative – superior version of current favorite, deep warm authority clarity",
+      "voice_design_prompt": "warm storytelling authoritative – superior version of current favorite, deep warm authority clarity",
+      "voicedesign_reference_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+      "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+      "model_intended": "Qwen/Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone) — production; Arena TTS used as placeholder in sandbox",
+      "model_variant": "EN_MALE_WARM_STORYTELLING_AUTHORITATIVE_02",
+      "backend": "clone",
+      "backend_mode": "clone",
+      "engine": "VoiceCloneEngine",
+      "engine_version": "qwen-voicestudio-v1 (VoiceCloneEngine) / arena-tts placeholder",
+      "api_entry_point": "project/app/tts/voice_studio.py:QwenVoiceStudio.design_reference() -> build_clone_prompt() -> synth_clone() ; sandbox used Arena add_voice/generate_speech",
+      "reference_audio_path": "benchmark/male_deep_candidates/04_warm_storytelling_authoritative/part1.mp3",
+      "reference_audio_sha256": "ARENA_VOICE-09",
+      "reference_audio_actual_sha256": "not_recorded — Arena placeholder mp3 in benchmark/fast_audition... not cache/voice_refs WAV",
+      "clone_step": "QwenVoiceStudio.build_clone_prompt() via Qwen3TTSModel.create_voice_clone_prompt(ref_audio, ref_text, x_vector_only_mode=False) — cached prompt keyed by candidate_id:mtime",
+      "clone_parameters": {
+        "x_vector_only_mode": false,
+        "ref_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+        "ref_audio": "cache/voice_refs/{candidate_id}.wav (production) ; benchmark/...mp3 is audition render, not clone ref",
+        "note": "In sandbox, Arena TTS directly synthesized final mp3 without separate clone prompt; Qwen clone would use Base model"
+      },
+      "voice_design_parameters": {
+        "language": "English",
+        "instruct": "warm storytelling authoritative – superior version of current favorite, deep warm authority clarity",
+        "ref_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "attempts": "3 attempts with torch.manual_seed(5100 + attempt*7) on failure (voice_studio.py:125)",
+        "model_pool_name": "voicedesign (Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign via QwenModelPool)"
+      },
+      "generation_parameters": {
+        "sampling_set": "balanced (default) / expressive per production.json sampling_set=expressive for VD-E",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "variation_for_attempt": "sampler.variation_for_attempt() — attempt1 unchanged, attempt2 temp-0.15 etc.",
+        "max_new_tokens": "sampler.max_new_tokens_for(seconds + headroom_s) where headroom 5.0s, TOKENS_PER_SECOND 12.5 => (sec+5)*12.5+64",
+        "seed_handling": "torch.manual_seed(seed); torch.cuda.manual_seed_all(seed) per request (qwen_engine.py:79, voice_studio.py:79/167)"
+      },
+      "sampling_parameters": {
+        "do_sample": true,
+        "temperature": 0.7,
+        "top_k": 50,
+        "top_p": 0.9,
+        "repetition_penalty": 1.05
+      },
+      "speed": "unknown — global speed 1.0 from config.json, per-voice speed not overridden",
+      "prosody_parameters": {
+        "instruct_variant": "unknown — English instruct built from VoiceDesign description + English locale, not de_doc_native",
+        "notes": "Prosody instruct builder in project/app/prosody/instruct.py for German; English uses direct description + cache_version q3p-v2-integrity",
+        "cache_version": "q3p-v2-integrity"
+      },
+      "conditioning_reference_parameters": {
+        "reference_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+        "reference_audio": "cache/voice_refs/{candidate_id}.wav (production) ; sandbox placeholder is benchmark MP3",
+        "instruct": "warm storytelling authoritative – superior version of current favorite, deep warm authority clarity"
+      },
+      "cache_key_fingerprint": "CACHE_VERSION q3p-v2-integrity | engine VoiceCloneEngine | model Base | speaker en_male_warm_storytelling_authoritative_02 | instruct warm storytelling authoritativ... | language English | text <segment> | sampling balanced | param_version q3p-v2-integrity — see project/app/cache/manager.py:segment_cache_key()",
+      "audio_format": {
+        "reference": "WAV 16-bit (VoiceDesign) written via project/app/audio/io.py:write_wav",
+        "segment_cache": "WAV 32-bit float (cache/audio/<key>.wav)",
+        "final": "MP3 320k via benchmark (Arena) ; production final via audio/master.py LUFS -14.0, true_peak -1.5, wav 24-bit 48kHz"
+      },
+      "postprocessing": "EBU R128 loudness (-14 LUFS, -1.5 dBTP) via project/app/audio/master.py ; concat via ffmpeg concat",
+      "runtime_versions": {
+        "python": "3.12.10",
+        "torch": "2.11.0+cu128",
+        "transformers": "4.57.3",
+        "cuda": "12.8",
+        "qwen_tts": "qwen-tts==0.1.1 (from project/requirements.txt)",
+        "app": "1.0.0",
+        "numpy": "unknown — not pinned",
+        "soundfile": "unknown — from requirements",
+        "librosa": "unknown"
+      },
+      "backend_path": "project/app/tts/qwen_engine.py:VoiceCloneEngine + project/app/tts/voice_studio.py:QwenVoiceStudio ; model_pool QwenModelPool (Qwen/Qwen3-TTS-12Hz-1.7B-Base)",
+      "provenance": "arena_placeholder",
+      "provenance_note": "Arena TTS real speech used as placeholder for human listening in sandbox (no GPU Qwen models loaded, nvidia-smi not found, torch not installed). VoiceDesign concept, seed, and description are preserved for later reproduction with actual Qwen VoiceDesign→Clone on RTX 5060 8GB (Qwen/Qwen3-TTS-12Hz-1.7B-Base/voiceDesign). Benchmark MP3s are audition renders, not cache/voice_refs reference WAVs.",
+      "reproduction_procedure": "1) QwenVoiceStudio.design_reference(candidate_id, description, language='English') with VOICEDESIGN_REF_TEXT_EN and balanced sampling -> cache/voice_refs/{vid}.wav ; 2) build_clone_prompt(ref) -> Base prompt ; 3) synth_clone(prompt, SynthesisRequest(text, language, seed, sampling)) per segment ; pipeline in project/app/tts/voice_studio.py + sampler + cache_manager",
+      "references": {
+        "voice_json": "project/voices/en_male_warm_storytelling_authoritative_02.json",
+        "audition_audio": "benchmark/male_deep_candidates/04_warm_storytelling_authoritative/part1.mp3",
+        "architecture_doc": "project/voices/VOICE_GENERATION_ARCHITECTURE.md",
+        "code": [
+          "project/app/tts/voice_studio.py:design_reference() / build_clone_prompt() / synth_clone()",
+          "project/app/tts/qwen_engine.py:VoiceCloneEngine",
+          "project/app/tts/model_pool.py:QwenModelPool",
+          "project/app/tts/sampler.py:PARAM_SETS, params_for_set, max_new_tokens_for",
+          "project/app/cache/manager.py:segment_cache_key, CACHE_VERSION",
+          "project/app/prosody/instruct.py:VOICEDESIGN_REF_TEXT_DE/EN, ENGLISH_VOICEDESIGN_DESCRIPTIONS",
+          "project/app/paths.py:VOICE_REFS_DIR",
+          "project/config/production.json",
+          "project/versions.json"
+        ]
+      },
+      "human_selection": {
+        "visible_position": 4,
+        "status": "locked_human_favorite",
+        "human_selected": true,
+        "production_candidate": true,
+        "production_locked": true
+      },
+      "created": "2026-09-09",
+      "cache_version": "q3p-v2-integrity"
+    },
+    {
+      "voice_id": "en_male_velvet_baritone_01",
+      "stable_voice_name": "en_male_velvet_baritone_01",
+      "display_name": "EN Male Velvet Baritone 01",
+      "candidate_id": "en_male_velvet_baritone_01",
+      "battle_id": "voice-12",
+      "arena_voice_id": "voice-12",
+      "visible_position": 7,
+      "seed": 52021,
+      "language": "English",
+      "gender": "male",
+      "concept": "velvet_baritone",
+      "voice_design_description": "velvet baritone – deep exceptionally smooth warm rich rounded",
+      "voice_design_prompt": "velvet baritone – deep exceptionally smooth warm rich rounded",
+      "voicedesign_reference_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+      "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+      "model_intended": "Qwen/Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone) — production; Arena TTS used as placeholder in sandbox",
+      "model_variant": "EN_MALE_VELVET_BARITONE_01",
+      "backend": "clone",
+      "backend_mode": "clone",
+      "engine": "VoiceCloneEngine",
+      "engine_version": "qwen-voicestudio-v1 (VoiceCloneEngine) / arena-tts placeholder",
+      "api_entry_point": "project/app/tts/voice_studio.py:QwenVoiceStudio.design_reference() -> build_clone_prompt() -> synth_clone() ; sandbox used Arena add_voice/generate_speech",
+      "reference_audio_path": "benchmark/male_deep_candidates/07_velvet_baritone/part1.mp3",
+      "reference_audio_sha256": "ARENA_VOICE-12",
+      "reference_audio_actual_sha256": "not_recorded — Arena placeholder mp3 in benchmark/fast_audition... not cache/voice_refs WAV",
+      "clone_step": "QwenVoiceStudio.build_clone_prompt() via Qwen3TTSModel.create_voice_clone_prompt(ref_audio, ref_text, x_vector_only_mode=False) — cached prompt keyed by candidate_id:mtime",
+      "clone_parameters": {
+        "x_vector_only_mode": false,
+        "ref_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+        "ref_audio": "cache/voice_refs/{candidate_id}.wav (production) ; benchmark/...mp3 is audition render, not clone ref",
+        "note": "In sandbox, Arena TTS directly synthesized final mp3 without separate clone prompt; Qwen clone would use Base model"
+      },
+      "voice_design_parameters": {
+        "language": "English",
+        "instruct": "velvet baritone – deep exceptionally smooth warm rich rounded",
+        "ref_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "attempts": "3 attempts with torch.manual_seed(5100 + attempt*7) on failure (voice_studio.py:125)",
+        "model_pool_name": "voicedesign (Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign via QwenModelPool)"
+      },
+      "generation_parameters": {
+        "sampling_set": "balanced (default) / expressive per production.json sampling_set=expressive for VD-E",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "variation_for_attempt": "sampler.variation_for_attempt() — attempt1 unchanged, attempt2 temp-0.15 etc.",
+        "max_new_tokens": "sampler.max_new_tokens_for(seconds + headroom_s) where headroom 5.0s, TOKENS_PER_SECOND 12.5 => (sec+5)*12.5+64",
+        "seed_handling": "torch.manual_seed(seed); torch.cuda.manual_seed_all(seed) per request (qwen_engine.py:79, voice_studio.py:79/167)"
+      },
+      "sampling_parameters": {
+        "do_sample": true,
+        "temperature": 0.7,
+        "top_k": 50,
+        "top_p": 0.9,
+        "repetition_penalty": 1.05
+      },
+      "speed": "unknown — global speed 1.0 from config.json, per-voice speed not overridden",
+      "prosody_parameters": {
+        "instruct_variant": "unknown — English instruct built from VoiceDesign description + English locale, not de_doc_native",
+        "notes": "Prosody instruct builder in project/app/prosody/instruct.py for German; English uses direct description + cache_version q3p-v2-integrity",
+        "cache_version": "q3p-v2-integrity"
+      },
+      "conditioning_reference_parameters": {
+        "reference_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+        "reference_audio": "cache/voice_refs/{candidate_id}.wav (production) ; sandbox placeholder is benchmark MP3",
+        "instruct": "velvet baritone – deep exceptionally smooth warm rich rounded"
+      },
+      "cache_key_fingerprint": "CACHE_VERSION q3p-v2-integrity | engine VoiceCloneEngine | model Base | speaker en_male_velvet_baritone_01 | instruct velvet baritone – deep excepti... | language English | text <segment> | sampling balanced | param_version q3p-v2-integrity — see project/app/cache/manager.py:segment_cache_key()",
+      "audio_format": {
+        "reference": "WAV 16-bit (VoiceDesign) written via project/app/audio/io.py:write_wav",
+        "segment_cache": "WAV 32-bit float (cache/audio/<key>.wav)",
+        "final": "MP3 320k via benchmark (Arena) ; production final via audio/master.py LUFS -14.0, true_peak -1.5, wav 24-bit 48kHz"
+      },
+      "postprocessing": "EBU R128 loudness (-14 LUFS, -1.5 dBTP) via project/app/audio/master.py ; concat via ffmpeg concat",
+      "runtime_versions": {
+        "python": "3.12.10",
+        "torch": "2.11.0+cu128",
+        "transformers": "4.57.3",
+        "cuda": "12.8",
+        "qwen_tts": "qwen-tts==0.1.1 (from project/requirements.txt)",
+        "app": "1.0.0",
+        "numpy": "unknown — not pinned",
+        "soundfile": "unknown — from requirements",
+        "librosa": "unknown"
+      },
+      "backend_path": "project/app/tts/qwen_engine.py:VoiceCloneEngine + project/app/tts/voice_studio.py:QwenVoiceStudio ; model_pool QwenModelPool (Qwen/Qwen3-TTS-12Hz-1.7B-Base)",
+      "provenance": "arena_placeholder",
+      "provenance_note": "Arena TTS real speech used as placeholder for human listening in sandbox (no GPU Qwen models loaded, nvidia-smi not found, torch not installed). VoiceDesign concept, seed, and description are preserved for later reproduction with actual Qwen VoiceDesign→Clone on RTX 5060 8GB (Qwen/Qwen3-TTS-12Hz-1.7B-Base/voiceDesign). Benchmark MP3s are audition renders, not cache/voice_refs reference WAVs.",
+      "reproduction_procedure": "1) QwenVoiceStudio.design_reference(candidate_id, description, language='English') with VOICEDESIGN_REF_TEXT_EN and balanced sampling -> cache/voice_refs/{vid}.wav ; 2) build_clone_prompt(ref) -> Base prompt ; 3) synth_clone(prompt, SynthesisRequest(text, language, seed, sampling)) per segment ; pipeline in project/app/tts/voice_studio.py + sampler + cache_manager",
+      "references": {
+        "voice_json": "project/voices/en_male_velvet_baritone_01.json",
+        "audition_audio": "benchmark/male_deep_candidates/07_velvet_baritone/part1.mp3",
+        "architecture_doc": "project/voices/VOICE_GENERATION_ARCHITECTURE.md",
+        "code": [
+          "project/app/tts/voice_studio.py:design_reference() / build_clone_prompt() / synth_clone()",
+          "project/app/tts/qwen_engine.py:VoiceCloneEngine",
+          "project/app/tts/model_pool.py:QwenModelPool",
+          "project/app/tts/sampler.py:PARAM_SETS, params_for_set, max_new_tokens_for",
+          "project/app/cache/manager.py:segment_cache_key, CACHE_VERSION",
+          "project/app/prosody/instruct.py:VOICEDESIGN_REF_TEXT_DE/EN, ENGLISH_VOICEDESIGN_DESCRIPTIONS",
+          "project/app/paths.py:VOICE_REFS_DIR",
+          "project/config/production.json",
+          "project/versions.json"
+        ]
+      },
+      "human_selection": {
+        "visible_position": 7,
+        "status": "locked_human_favorite",
+        "human_selected": true,
+        "production_candidate": true,
+        "production_locked": true
+      },
+      "created": "2026-09-09",
+      "cache_version": "q3p-v2-integrity"
+    },
+    {
+      "voice_id": "en_male_deep_authoritative_scholar_01",
+      "stable_voice_name": "en_male_deep_authoritative_scholar_01",
+      "display_name": "EN Male Deep Authoritative Scholar",
+      "candidate_id": "en_male_deep_authoritative_scholar_01",
+      "battle_id": "voice-22",
+      "arena_voice_id": "voice-22",
+      "visible_position": 5,
+      "seed": 52031,
+      "language": "English",
+      "gender": "male",
+      "concept": "deep_authoritative_scholar",
+      "voice_design_description": "deep authoritative scholar – clear, grounded, knowledgeable, steady and reassuring",
+      "voice_design_prompt": "deep authoritative scholar – clear, grounded, knowledgeable, steady and reassuring",
+      "voicedesign_reference_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+      "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+      "model_intended": "Qwen/Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone) — production; Arena TTS used as placeholder in sandbox",
+      "model_variant": "EN_MALE_DEEP_AUTHORITATIVE_SCHOLAR_01",
+      "backend": "clone",
+      "backend_mode": "clone",
+      "engine": "VoiceCloneEngine",
+      "engine_version": "qwen-voicestudio-v1 (VoiceCloneEngine) / arena-tts placeholder",
+      "api_entry_point": "project/app/tts/voice_studio.py:QwenVoiceStudio.design_reference() -> build_clone_prompt() -> synth_clone() ; sandbox used Arena add_voice/generate_speech",
+      "reference_audio_path": "benchmark/fast_audition_round02/05_deep_authoritative_scholar.mp3",
+      "reference_audio_sha256": "ARENA_VOICE-22",
+      "reference_audio_actual_sha256": "not_recorded — Arena placeholder mp3 in benchmark/fast_audition... not cache/voice_refs WAV",
+      "clone_step": "QwenVoiceStudio.build_clone_prompt() via Qwen3TTSModel.create_voice_clone_prompt(ref_audio, ref_text, x_vector_only_mode=False) — cached prompt keyed by candidate_id:mtime",
+      "clone_parameters": {
+        "x_vector_only_mode": false,
+        "ref_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+        "ref_audio": "cache/voice_refs/{candidate_id}.wav (production) ; benchmark/...mp3 is audition render, not clone ref",
+        "note": "In sandbox, Arena TTS directly synthesized final mp3 without separate clone prompt; Qwen clone would use Base model"
+      },
+      "voice_design_parameters": {
+        "language": "English",
+        "instruct": "deep authoritative scholar – clear, grounded, knowledgeable, steady and reassuring",
+        "ref_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "attempts": "3 attempts with torch.manual_seed(5100 + attempt*7) on failure (voice_studio.py:125)",
+        "model_pool_name": "voicedesign (Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign via QwenModelPool)"
+      },
+      "generation_parameters": {
+        "sampling_set": "balanced (default) / expressive per production.json sampling_set=expressive for VD-E",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "variation_for_attempt": "sampler.variation_for_attempt() — attempt1 unchanged, attempt2 temp-0.15 etc.",
+        "max_new_tokens": "sampler.max_new_tokens_for(seconds + headroom_s) where headroom 5.0s, TOKENS_PER_SECOND 12.5 => (sec+5)*12.5+64",
+        "seed_handling": "torch.manual_seed(seed); torch.cuda.manual_seed_all(seed) per request (qwen_engine.py:79, voice_studio.py:79/167)"
+      },
+      "sampling_parameters": {
+        "do_sample": true,
+        "temperature": 0.7,
+        "top_k": 50,
+        "top_p": 0.9,
+        "repetition_penalty": 1.05
+      },
+      "speed": "unknown — global speed 1.0 from config.json, per-voice speed not overridden",
+      "prosody_parameters": {
+        "instruct_variant": "unknown — English instruct built from VoiceDesign description + English locale, not de_doc_native",
+        "notes": "Prosody instruct builder in project/app/prosody/instruct.py for German; English uses direct description + cache_version q3p-v2-integrity",
+        "cache_version": "q3p-v2-integrity"
+      },
+      "conditioning_reference_parameters": {
+        "reference_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+        "reference_audio": "cache/voice_refs/{candidate_id}.wav (production) ; sandbox placeholder is benchmark MP3",
+        "instruct": "deep authoritative scholar – clear, grounded, knowledgeable, steady and reassuring"
+      },
+      "cache_key_fingerprint": "CACHE_VERSION q3p-v2-integrity | engine VoiceCloneEngine | model Base | speaker en_male_deep_authoritative_scholar_01 | instruct deep authoritative scholar – c... | language English | text <segment> | sampling balanced | param_version q3p-v2-integrity — see project/app/cache/manager.py:segment_cache_key()",
+      "audio_format": {
+        "reference": "WAV 16-bit (VoiceDesign) written via project/app/audio/io.py:write_wav",
+        "segment_cache": "WAV 32-bit float (cache/audio/<key>.wav)",
+        "final": "MP3 320k via benchmark (Arena) ; production final via audio/master.py LUFS -14.0, true_peak -1.5, wav 24-bit 48kHz"
+      },
+      "postprocessing": "EBU R128 loudness (-14 LUFS, -1.5 dBTP) via project/app/audio/master.py ; concat via ffmpeg concat",
+      "runtime_versions": {
+        "python": "3.12.10",
+        "torch": "2.11.0+cu128",
+        "transformers": "4.57.3",
+        "cuda": "12.8",
+        "qwen_tts": "qwen-tts==0.1.1 (from project/requirements.txt)",
+        "app": "1.0.0",
+        "numpy": "unknown — not pinned",
+        "soundfile": "unknown — from requirements",
+        "librosa": "unknown"
+      },
+      "backend_path": "project/app/tts/qwen_engine.py:VoiceCloneEngine + project/app/tts/voice_studio.py:QwenVoiceStudio ; model_pool QwenModelPool (Qwen/Qwen3-TTS-12Hz-1.7B-Base)",
+      "provenance": "arena_placeholder",
+      "provenance_note": "Arena TTS real speech used as placeholder for human listening in sandbox (no GPU Qwen models loaded, nvidia-smi not found, torch not installed). VoiceDesign concept, seed, and description are preserved for later reproduction with actual Qwen VoiceDesign→Clone on RTX 5060 8GB (Qwen/Qwen3-TTS-12Hz-1.7B-Base/voiceDesign). Benchmark MP3s are audition renders, not cache/voice_refs reference WAVs.",
+      "reproduction_procedure": "1) QwenVoiceStudio.design_reference(candidate_id, description, language='English') with VOICEDESIGN_REF_TEXT_EN and balanced sampling -> cache/voice_refs/{vid}.wav ; 2) build_clone_prompt(ref) -> Base prompt ; 3) synth_clone(prompt, SynthesisRequest(text, language, seed, sampling)) per segment ; pipeline in project/app/tts/voice_studio.py + sampler + cache_manager",
+      "references": {
+        "voice_json": "project/voices/en_male_deep_authoritative_scholar_01.json",
+        "audition_audio": "benchmark/fast_audition_round02/05_deep_authoritative_scholar.mp3",
+        "architecture_doc": "project/voices/VOICE_GENERATION_ARCHITECTURE.md",
+        "code": [
+          "project/app/tts/voice_studio.py:design_reference() / build_clone_prompt() / synth_clone()",
+          "project/app/tts/qwen_engine.py:VoiceCloneEngine",
+          "project/app/tts/model_pool.py:QwenModelPool",
+          "project/app/tts/sampler.py:PARAM_SETS, params_for_set, max_new_tokens_for",
+          "project/app/cache/manager.py:segment_cache_key, CACHE_VERSION",
+          "project/app/prosody/instruct.py:VOICEDESIGN_REF_TEXT_DE/EN, ENGLISH_VOICEDESIGN_DESCRIPTIONS",
+          "project/app/paths.py:VOICE_REFS_DIR",
+          "project/config/production.json",
+          "project/versions.json"
+        ]
+      },
+      "human_selection": {
+        "visible_position": 5,
+        "status": "saved_human_shortlist",
+        "human_selected": true,
+        "production_candidate": true,
+        "production_locked": false
+      },
+      "created": "2026-09-09",
+      "cache_version": "q3p-v2-integrity"
+    },
+    {
+      "voice_id": "en_male_mature_documentary_natural_01",
+      "stable_voice_name": "en_male_mature_documentary_natural_01",
+      "display_name": "EN Male Mature Documentary Natural",
+      "candidate_id": "en_male_mature_documentary_natural_01",
+      "battle_id": "voice-23",
+      "arena_voice_id": "voice-23",
+      "visible_position": 6,
+      "seed": 52032,
+      "language": "English",
+      "gender": "male",
+      "concept": "mature_documentary_natural",
+      "voice_design_description": "mature documentary natural – authentic, lived-in, calm, documentary-grade believability",
+      "voice_design_prompt": "mature documentary natural – authentic, lived-in, calm, documentary-grade believability",
+      "voicedesign_reference_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+      "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+      "model_intended": "Qwen/Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone) — production; Arena TTS used as placeholder in sandbox",
+      "model_variant": "EN_MALE_MATURE_DOCUMENTARY_NATURAL_01",
+      "backend": "clone",
+      "backend_mode": "clone",
+      "engine": "VoiceCloneEngine",
+      "engine_version": "qwen-voicestudio-v1 (VoiceCloneEngine) / arena-tts placeholder",
+      "api_entry_point": "project/app/tts/voice_studio.py:QwenVoiceStudio.design_reference() -> build_clone_prompt() -> synth_clone() ; sandbox used Arena add_voice/generate_speech",
+      "reference_audio_path": "benchmark/fast_audition_round02/06_mature_documentary_natural.mp3",
+      "reference_audio_sha256": "ARENA_VOICE-23",
+      "reference_audio_actual_sha256": "not_recorded — Arena placeholder mp3 in benchmark/fast_audition... not cache/voice_refs WAV",
+      "clone_step": "QwenVoiceStudio.build_clone_prompt() via Qwen3TTSModel.create_voice_clone_prompt(ref_audio, ref_text, x_vector_only_mode=False) — cached prompt keyed by candidate_id:mtime",
+      "clone_parameters": {
+        "x_vector_only_mode": false,
+        "ref_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+        "ref_audio": "cache/voice_refs/{candidate_id}.wav (production) ; benchmark/...mp3 is audition render, not clone ref",
+        "note": "In sandbox, Arena TTS directly synthesized final mp3 without separate clone prompt; Qwen clone would use Base model"
+      },
+      "voice_design_parameters": {
+        "language": "English",
+        "instruct": "mature documentary natural – authentic, lived-in, calm, documentary-grade believability",
+        "ref_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "attempts": "3 attempts with torch.manual_seed(5100 + attempt*7) on failure (voice_studio.py:125)",
+        "model_pool_name": "voicedesign (Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign via QwenModelPool)"
+      },
+      "generation_parameters": {
+        "sampling_set": "balanced (default) / expressive per production.json sampling_set=expressive for VD-E",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "variation_for_attempt": "sampler.variation_for_attempt() — attempt1 unchanged, attempt2 temp-0.15 etc.",
+        "max_new_tokens": "sampler.max_new_tokens_for(seconds + headroom_s) where headroom 5.0s, TOKENS_PER_SECOND 12.5 => (sec+5)*12.5+64",
+        "seed_handling": "torch.manual_seed(seed); torch.cuda.manual_seed_all(seed) per request (qwen_engine.py:79, voice_studio.py:79/167)"
+      },
+      "sampling_parameters": {
+        "do_sample": true,
+        "temperature": 0.7,
+        "top_k": 50,
+        "top_p": 0.9,
+        "repetition_penalty": 1.05
+      },
+      "speed": "unknown — global speed 1.0 from config.json, per-voice speed not overridden",
+      "prosody_parameters": {
+        "instruct_variant": "unknown — English instruct built from VoiceDesign description + English locale, not de_doc_native",
+        "notes": "Prosody instruct builder in project/app/prosody/instruct.py for German; English uses direct description + cache_version q3p-v2-integrity",
+        "cache_version": "q3p-v2-integrity"
+      },
+      "conditioning_reference_parameters": {
+        "reference_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+        "reference_audio": "cache/voice_refs/{candidate_id}.wav (production) ; sandbox placeholder is benchmark MP3",
+        "instruct": "mature documentary natural – authentic, lived-in, calm, documentary-grade believability"
+      },
+      "cache_key_fingerprint": "CACHE_VERSION q3p-v2-integrity | engine VoiceCloneEngine | model Base | speaker en_male_mature_documentary_natural_01 | instruct mature documentary natural – a... | language English | text <segment> | sampling balanced | param_version q3p-v2-integrity — see project/app/cache/manager.py:segment_cache_key()",
+      "audio_format": {
+        "reference": "WAV 16-bit (VoiceDesign) written via project/app/audio/io.py:write_wav",
+        "segment_cache": "WAV 32-bit float (cache/audio/<key>.wav)",
+        "final": "MP3 320k via benchmark (Arena) ; production final via audio/master.py LUFS -14.0, true_peak -1.5, wav 24-bit 48kHz"
+      },
+      "postprocessing": "EBU R128 loudness (-14 LUFS, -1.5 dBTP) via project/app/audio/master.py ; concat via ffmpeg concat",
+      "runtime_versions": {
+        "python": "3.12.10",
+        "torch": "2.11.0+cu128",
+        "transformers": "4.57.3",
+        "cuda": "12.8",
+        "qwen_tts": "qwen-tts==0.1.1 (from project/requirements.txt)",
+        "app": "1.0.0",
+        "numpy": "unknown — not pinned",
+        "soundfile": "unknown — from requirements",
+        "librosa": "unknown"
+      },
+      "backend_path": "project/app/tts/qwen_engine.py:VoiceCloneEngine + project/app/tts/voice_studio.py:QwenVoiceStudio ; model_pool QwenModelPool (Qwen/Qwen3-TTS-12Hz-1.7B-Base)",
+      "provenance": "arena_placeholder",
+      "provenance_note": "Arena TTS real speech used as placeholder for human listening in sandbox (no GPU Qwen models loaded, nvidia-smi not found, torch not installed). VoiceDesign concept, seed, and description are preserved for later reproduction with actual Qwen VoiceDesign→Clone on RTX 5060 8GB (Qwen/Qwen3-TTS-12Hz-1.7B-Base/voiceDesign). Benchmark MP3s are audition renders, not cache/voice_refs reference WAVs.",
+      "reproduction_procedure": "1) QwenVoiceStudio.design_reference(candidate_id, description, language='English') with VOICEDESIGN_REF_TEXT_EN and balanced sampling -> cache/voice_refs/{vid}.wav ; 2) build_clone_prompt(ref) -> Base prompt ; 3) synth_clone(prompt, SynthesisRequest(text, language, seed, sampling)) per segment ; pipeline in project/app/tts/voice_studio.py + sampler + cache_manager",
+      "references": {
+        "voice_json": "project/voices/en_male_mature_documentary_natural_01.json",
+        "audition_audio": "benchmark/fast_audition_round02/06_mature_documentary_natural.mp3",
+        "architecture_doc": "project/voices/VOICE_GENERATION_ARCHITECTURE.md",
+        "code": [
+          "project/app/tts/voice_studio.py:design_reference() / build_clone_prompt() / synth_clone()",
+          "project/app/tts/qwen_engine.py:VoiceCloneEngine",
+          "project/app/tts/model_pool.py:QwenModelPool",
+          "project/app/tts/sampler.py:PARAM_SETS, params_for_set, max_new_tokens_for",
+          "project/app/cache/manager.py:segment_cache_key, CACHE_VERSION",
+          "project/app/prosody/instruct.py:VOICEDESIGN_REF_TEXT_DE/EN, ENGLISH_VOICEDESIGN_DESCRIPTIONS",
+          "project/app/paths.py:VOICE_REFS_DIR",
+          "project/config/production.json",
+          "project/versions.json"
+        ]
+      },
+      "human_selection": {
+        "visible_position": 6,
+        "status": "saved_human_shortlist",
+        "human_selected": true,
+        "production_candidate": true,
+        "production_locked": false
+      },
+      "created": "2026-09-09",
+      "cache_version": "q3p-v2-integrity"
+    },
+    {
+      "voice_id": "en_male_deep_clear_insightful_01",
+      "stable_voice_name": "en_male_deep_clear_insightful_01",
+      "display_name": "EN Male Deep Clear Insightful",
+      "candidate_id": "en_male_deep_clear_insightful_01",
+      "battle_id": "voice-24",
+      "arena_voice_id": "voice-24",
+      "visible_position": 7,
+      "seed": 52033,
+      "language": "English",
+      "gender": "male",
+      "concept": "deep_clear_insightful",
+      "voice_design_description": "deep clear insightful – intelligent, articulate, lucid, gentle authority",
+      "voice_design_prompt": "deep clear insightful – intelligent, articulate, lucid, gentle authority",
+      "voicedesign_reference_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+      "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+      "model_intended": "Qwen/Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone) — production; Arena TTS used as placeholder in sandbox",
+      "model_variant": "EN_MALE_DEEP_CLEAR_INSIGHTFUL_01",
+      "backend": "clone",
+      "backend_mode": "clone",
+      "engine": "VoiceCloneEngine",
+      "engine_version": "qwen-voicestudio-v1 (VoiceCloneEngine) / arena-tts placeholder",
+      "api_entry_point": "project/app/tts/voice_studio.py:QwenVoiceStudio.design_reference() -> build_clone_prompt() -> synth_clone() ; sandbox used Arena add_voice/generate_speech",
+      "reference_audio_path": "benchmark/fast_audition_round02/07_deep_clear_insightful.mp3",
+      "reference_audio_sha256": "ARENA_VOICE-24",
+      "reference_audio_actual_sha256": "not_recorded — Arena placeholder mp3 in benchmark/fast_audition... not cache/voice_refs WAV",
+      "clone_step": "QwenVoiceStudio.build_clone_prompt() via Qwen3TTSModel.create_voice_clone_prompt(ref_audio, ref_text, x_vector_only_mode=False) — cached prompt keyed by candidate_id:mtime",
+      "clone_parameters": {
+        "x_vector_only_mode": false,
+        "ref_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+        "ref_audio": "cache/voice_refs/{candidate_id}.wav (production) ; benchmark/...mp3 is audition render, not clone ref",
+        "note": "In sandbox, Arena TTS directly synthesized final mp3 without separate clone prompt; Qwen clone would use Base model"
+      },
+      "voice_design_parameters": {
+        "language": "English",
+        "instruct": "deep clear insightful – intelligent, articulate, lucid, gentle authority",
+        "ref_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "attempts": "3 attempts with torch.manual_seed(5100 + attempt*7) on failure (voice_studio.py:125)",
+        "model_pool_name": "voicedesign (Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign via QwenModelPool)"
+      },
+      "generation_parameters": {
+        "sampling_set": "balanced (default) / expressive per production.json sampling_set=expressive for VD-E",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "variation_for_attempt": "sampler.variation_for_attempt() — attempt1 unchanged, attempt2 temp-0.15 etc.",
+        "max_new_tokens": "sampler.max_new_tokens_for(seconds + headroom_s) where headroom 5.0s, TOKENS_PER_SECOND 12.5 => (sec+5)*12.5+64",
+        "seed_handling": "torch.manual_seed(seed); torch.cuda.manual_seed_all(seed) per request (qwen_engine.py:79, voice_studio.py:79/167)"
+      },
+      "sampling_parameters": {
+        "do_sample": true,
+        "temperature": 0.7,
+        "top_k": 50,
+        "top_p": 0.9,
+        "repetition_penalty": 1.05
+      },
+      "speed": "unknown — global speed 1.0 from config.json, per-voice speed not overridden",
+      "prosody_parameters": {
+        "instruct_variant": "unknown — English instruct built from VoiceDesign description + English locale, not de_doc_native",
+        "notes": "Prosody instruct builder in project/app/prosody/instruct.py for German; English uses direct description + cache_version q3p-v2-integrity",
+        "cache_version": "q3p-v2-integrity"
+      },
+      "conditioning_reference_parameters": {
+        "reference_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+        "reference_audio": "cache/voice_refs/{candidate_id}.wav (production) ; sandbox placeholder is benchmark MP3",
+        "instruct": "deep clear insightful – intelligent, articulate, lucid, gentle authority"
+      },
+      "cache_key_fingerprint": "CACHE_VERSION q3p-v2-integrity | engine VoiceCloneEngine | model Base | speaker en_male_deep_clear_insightful_01 | instruct deep clear insightful – intell... | language English | text <segment> | sampling balanced | param_version q3p-v2-integrity — see project/app/cache/manager.py:segment_cache_key()",
+      "audio_format": {
+        "reference": "WAV 16-bit (VoiceDesign) written via project/app/audio/io.py:write_wav",
+        "segment_cache": "WAV 32-bit float (cache/audio/<key>.wav)",
+        "final": "MP3 320k via benchmark (Arena) ; production final via audio/master.py LUFS -14.0, true_peak -1.5, wav 24-bit 48kHz"
+      },
+      "postprocessing": "EBU R128 loudness (-14 LUFS, -1.5 dBTP) via project/app/audio/master.py ; concat via ffmpeg concat",
+      "runtime_versions": {
+        "python": "3.12.10",
+        "torch": "2.11.0+cu128",
+        "transformers": "4.57.3",
+        "cuda": "12.8",
+        "qwen_tts": "qwen-tts==0.1.1 (from project/requirements.txt)",
+        "app": "1.0.0",
+        "numpy": "unknown — not pinned",
+        "soundfile": "unknown — from requirements",
+        "librosa": "unknown"
+      },
+      "backend_path": "project/app/tts/qwen_engine.py:VoiceCloneEngine + project/app/tts/voice_studio.py:QwenVoiceStudio ; model_pool QwenModelPool (Qwen/Qwen3-TTS-12Hz-1.7B-Base)",
+      "provenance": "arena_placeholder",
+      "provenance_note": "Arena TTS real speech used as placeholder for human listening in sandbox (no GPU Qwen models loaded, nvidia-smi not found, torch not installed). VoiceDesign concept, seed, and description are preserved for later reproduction with actual Qwen VoiceDesign→Clone on RTX 5060 8GB (Qwen/Qwen3-TTS-12Hz-1.7B-Base/voiceDesign). Benchmark MP3s are audition renders, not cache/voice_refs reference WAVs.",
+      "reproduction_procedure": "1) QwenVoiceStudio.design_reference(candidate_id, description, language='English') with VOICEDESIGN_REF_TEXT_EN and balanced sampling -> cache/voice_refs/{vid}.wav ; 2) build_clone_prompt(ref) -> Base prompt ; 3) synth_clone(prompt, SynthesisRequest(text, language, seed, sampling)) per segment ; pipeline in project/app/tts/voice_studio.py + sampler + cache_manager",
+      "references": {
+        "voice_json": "project/voices/en_male_deep_clear_insightful_01.json",
+        "audition_audio": "benchmark/fast_audition_round02/07_deep_clear_insightful.mp3",
+        "architecture_doc": "project/voices/VOICE_GENERATION_ARCHITECTURE.md",
+        "code": [
+          "project/app/tts/voice_studio.py:design_reference() / build_clone_prompt() / synth_clone()",
+          "project/app/tts/qwen_engine.py:VoiceCloneEngine",
+          "project/app/tts/model_pool.py:QwenModelPool",
+          "project/app/tts/sampler.py:PARAM_SETS, params_for_set, max_new_tokens_for",
+          "project/app/cache/manager.py:segment_cache_key, CACHE_VERSION",
+          "project/app/prosody/instruct.py:VOICEDESIGN_REF_TEXT_DE/EN, ENGLISH_VOICEDESIGN_DESCRIPTIONS",
+          "project/app/paths.py:VOICE_REFS_DIR",
+          "project/config/production.json",
+          "project/versions.json"
+        ]
+      },
+      "human_selection": {
+        "visible_position": 7,
+        "status": "saved_human_shortlist",
+        "human_selected": true,
+        "production_candidate": true,
+        "production_locked": false
+      },
+      "created": "2026-09-09",
+      "cache_version": "q3p-v2-integrity"
+    },
+    {
+      "voice_id": "en_male_warm_grounded_humanist_01",
+      "stable_voice_name": "en_male_warm_grounded_humanist_01",
+      "display_name": "EN Male Warm Grounded Humanist",
+      "candidate_id": "en_male_warm_grounded_humanist_01",
+      "battle_id": "voice-25",
+      "arena_voice_id": "voice-25",
+      "visible_position": 8,
+      "seed": 52034,
+      "language": "English",
+      "gender": "male",
+      "concept": "warm_grounded_humanist",
+      "voice_design_description": "warm grounded humanist – empathetic, sincere, mature, comforting and human",
+      "voice_design_prompt": "warm grounded humanist – empathetic, sincere, mature, comforting and human",
+      "voicedesign_reference_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+      "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+      "model_intended": "Qwen/Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone) — production; Arena TTS used as placeholder in sandbox",
+      "model_variant": "EN_MALE_WARM_GROUNDED_HUMANIST_01",
+      "backend": "clone",
+      "backend_mode": "clone",
+      "engine": "VoiceCloneEngine",
+      "engine_version": "qwen-voicestudio-v1 (VoiceCloneEngine) / arena-tts placeholder",
+      "api_entry_point": "project/app/tts/voice_studio.py:QwenVoiceStudio.design_reference() -> build_clone_prompt() -> synth_clone() ; sandbox used Arena add_voice/generate_speech",
+      "reference_audio_path": "benchmark/fast_audition_round02/08_warm_grounded_humanist.mp3",
+      "reference_audio_sha256": "ARENA_VOICE-25",
+      "reference_audio_actual_sha256": "not_recorded — Arena placeholder mp3 in benchmark/fast_audition... not cache/voice_refs WAV",
+      "clone_step": "QwenVoiceStudio.build_clone_prompt() via Qwen3TTSModel.create_voice_clone_prompt(ref_audio, ref_text, x_vector_only_mode=False) — cached prompt keyed by candidate_id:mtime",
+      "clone_parameters": {
+        "x_vector_only_mode": false,
+        "ref_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+        "ref_audio": "cache/voice_refs/{candidate_id}.wav (production) ; benchmark/...mp3 is audition render, not clone ref",
+        "note": "In sandbox, Arena TTS directly synthesized final mp3 without separate clone prompt; Qwen clone would use Base model"
+      },
+      "voice_design_parameters": {
+        "language": "English",
+        "instruct": "warm grounded humanist – empathetic, sincere, mature, comforting and human",
+        "ref_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "attempts": "3 attempts with torch.manual_seed(5100 + attempt*7) on failure (voice_studio.py:125)",
+        "model_pool_name": "voicedesign (Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign via QwenModelPool)"
+      },
+      "generation_parameters": {
+        "sampling_set": "balanced (default) / expressive per production.json sampling_set=expressive for VD-E",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "variation_for_attempt": "sampler.variation_for_attempt() — attempt1 unchanged, attempt2 temp-0.15 etc.",
+        "max_new_tokens": "sampler.max_new_tokens_for(seconds + headroom_s) where headroom 5.0s, TOKENS_PER_SECOND 12.5 => (sec+5)*12.5+64",
+        "seed_handling": "torch.manual_seed(seed); torch.cuda.manual_seed_all(seed) per request (qwen_engine.py:79, voice_studio.py:79/167)"
+      },
+      "sampling_parameters": {
+        "do_sample": true,
+        "temperature": 0.7,
+        "top_k": 50,
+        "top_p": 0.9,
+        "repetition_penalty": 1.05
+      },
+      "speed": "unknown — global speed 1.0 from config.json, per-voice speed not overridden",
+      "prosody_parameters": {
+        "instruct_variant": "unknown — English instruct built from VoiceDesign description + English locale, not de_doc_native",
+        "notes": "Prosody instruct builder in project/app/prosody/instruct.py for German; English uses direct description + cache_version q3p-v2-integrity",
+        "cache_version": "q3p-v2-integrity"
+      },
+      "conditioning_reference_parameters": {
+        "reference_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+        "reference_audio": "cache/voice_refs/{candidate_id}.wav (production) ; sandbox placeholder is benchmark MP3",
+        "instruct": "warm grounded humanist – empathetic, sincere, mature, comforting and human"
+      },
+      "cache_key_fingerprint": "CACHE_VERSION q3p-v2-integrity | engine VoiceCloneEngine | model Base | speaker en_male_warm_grounded_humanist_01 | instruct warm grounded humanist – empat... | language English | text <segment> | sampling balanced | param_version q3p-v2-integrity — see project/app/cache/manager.py:segment_cache_key()",
+      "audio_format": {
+        "reference": "WAV 16-bit (VoiceDesign) written via project/app/audio/io.py:write_wav",
+        "segment_cache": "WAV 32-bit float (cache/audio/<key>.wav)",
+        "final": "MP3 320k via benchmark (Arena) ; production final via audio/master.py LUFS -14.0, true_peak -1.5, wav 24-bit 48kHz"
+      },
+      "postprocessing": "EBU R128 loudness (-14 LUFS, -1.5 dBTP) via project/app/audio/master.py ; concat via ffmpeg concat",
+      "runtime_versions": {
+        "python": "3.12.10",
+        "torch": "2.11.0+cu128",
+        "transformers": "4.57.3",
+        "cuda": "12.8",
+        "qwen_tts": "qwen-tts==0.1.1 (from project/requirements.txt)",
+        "app": "1.0.0",
+        "numpy": "unknown — not pinned",
+        "soundfile": "unknown — from requirements",
+        "librosa": "unknown"
+      },
+      "backend_path": "project/app/tts/qwen_engine.py:VoiceCloneEngine + project/app/tts/voice_studio.py:QwenVoiceStudio ; model_pool QwenModelPool (Qwen/Qwen3-TTS-12Hz-1.7B-Base)",
+      "provenance": "arena_placeholder",
+      "provenance_note": "Arena TTS real speech used as placeholder for human listening in sandbox (no GPU Qwen models loaded, nvidia-smi not found, torch not installed). VoiceDesign concept, seed, and description are preserved for later reproduction with actual Qwen VoiceDesign→Clone on RTX 5060 8GB (Qwen/Qwen3-TTS-12Hz-1.7B-Base/voiceDesign). Benchmark MP3s are audition renders, not cache/voice_refs reference WAVs.",
+      "reproduction_procedure": "1) QwenVoiceStudio.design_reference(candidate_id, description, language='English') with VOICEDESIGN_REF_TEXT_EN and balanced sampling -> cache/voice_refs/{vid}.wav ; 2) build_clone_prompt(ref) -> Base prompt ; 3) synth_clone(prompt, SynthesisRequest(text, language, seed, sampling)) per segment ; pipeline in project/app/tts/voice_studio.py + sampler + cache_manager",
+      "references": {
+        "voice_json": "project/voices/en_male_warm_grounded_humanist_01.json",
+        "audition_audio": "benchmark/fast_audition_round02/08_warm_grounded_humanist.mp3",
+        "architecture_doc": "project/voices/VOICE_GENERATION_ARCHITECTURE.md",
+        "code": [
+          "project/app/tts/voice_studio.py:design_reference() / build_clone_prompt() / synth_clone()",
+          "project/app/tts/qwen_engine.py:VoiceCloneEngine",
+          "project/app/tts/model_pool.py:QwenModelPool",
+          "project/app/tts/sampler.py:PARAM_SETS, params_for_set, max_new_tokens_for",
+          "project/app/cache/manager.py:segment_cache_key, CACHE_VERSION",
+          "project/app/prosody/instruct.py:VOICEDESIGN_REF_TEXT_DE/EN, ENGLISH_VOICEDESIGN_DESCRIPTIONS",
+          "project/app/paths.py:VOICE_REFS_DIR",
+          "project/config/production.json",
+          "project/versions.json"
+        ]
+      },
+      "human_selection": {
+        "visible_position": 8,
+        "status": "saved_human_shortlist",
+        "human_selected": true,
+        "production_candidate": true,
+        "production_locked": false
+      },
+      "created": "2026-09-09",
+      "cache_version": "q3p-v2-integrity"
+    },
+    {
+      "voice_id": "en_male_extremely_natural_deep_conversational_01",
+      "stable_voice_name": "en_male_extremely_natural_deep_conversational_01",
+      "display_name": "EN Male Extremely Natural Deep Conversationalist",
+      "candidate_id": "en_male_extremely_natural_deep_conversational_01",
+      "battle_id": "voice-27",
+      "arena_voice_id": "voice-27",
+      "visible_position": 10,
+      "seed": 52036,
+      "language": "English",
+      "gender": "male",
+      "concept": "extremely_natural_deep_conversational",
+      "voice_design_description": "extremely natural deep conversationalist – hyper-natural, effortless, human rhythm, long-form fatigue-free",
+      "voice_design_prompt": "extremely natural deep conversationalist – hyper-natural, effortless, human rhythm, long-form fatigue-free",
+      "voicedesign_reference_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+      "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+      "model_intended": "Qwen/Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone) — production; Arena TTS used as placeholder in sandbox",
+      "model_variant": "EN_MALE_EXTREMELY_NATURAL_DEEP_CONVERSATIONAL_01",
+      "backend": "clone",
+      "backend_mode": "clone",
+      "engine": "VoiceCloneEngine",
+      "engine_version": "qwen-voicestudio-v1 (VoiceCloneEngine) / arena-tts placeholder",
+      "api_entry_point": "project/app/tts/voice_studio.py:QwenVoiceStudio.design_reference() -> build_clone_prompt() -> synth_clone() ; sandbox used Arena add_voice/generate_speech",
+      "reference_audio_path": "benchmark/fast_audition_round02/10_extremely_natural_deep_conversational.mp3",
+      "reference_audio_sha256": "ARENA_VOICE-27",
+      "reference_audio_actual_sha256": "not_recorded — Arena placeholder mp3 in benchmark/fast_audition... not cache/voice_refs WAV",
+      "clone_step": "QwenVoiceStudio.build_clone_prompt() via Qwen3TTSModel.create_voice_clone_prompt(ref_audio, ref_text, x_vector_only_mode=False) — cached prompt keyed by candidate_id:mtime",
+      "clone_parameters": {
+        "x_vector_only_mode": false,
+        "ref_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+        "ref_audio": "cache/voice_refs/{candidate_id}.wav (production) ; benchmark/...mp3 is audition render, not clone ref",
+        "note": "In sandbox, Arena TTS directly synthesized final mp3 without separate clone prompt; Qwen clone would use Base model"
+      },
+      "voice_design_parameters": {
+        "language": "English",
+        "instruct": "extremely natural deep conversationalist – hyper-natural, effortless, human rhythm, long-form fatigue-free",
+        "ref_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "attempts": "3 attempts with torch.manual_seed(5100 + attempt*7) on failure (voice_studio.py:125)",
+        "model_pool_name": "voicedesign (Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign via QwenModelPool)"
+      },
+      "generation_parameters": {
+        "sampling_set": "balanced (default) / expressive per production.json sampling_set=expressive for VD-E",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "variation_for_attempt": "sampler.variation_for_attempt() — attempt1 unchanged, attempt2 temp-0.15 etc.",
+        "max_new_tokens": "sampler.max_new_tokens_for(seconds + headroom_s) where headroom 5.0s, TOKENS_PER_SECOND 12.5 => (sec+5)*12.5+64",
+        "seed_handling": "torch.manual_seed(seed); torch.cuda.manual_seed_all(seed) per request (qwen_engine.py:79, voice_studio.py:79/167)"
+      },
+      "sampling_parameters": {
+        "do_sample": true,
+        "temperature": 0.7,
+        "top_k": 50,
+        "top_p": 0.9,
+        "repetition_penalty": 1.05
+      },
+      "speed": "unknown — global speed 1.0 from config.json, per-voice speed not overridden",
+      "prosody_parameters": {
+        "instruct_variant": "unknown — English instruct built from VoiceDesign description + English locale, not de_doc_native",
+        "notes": "Prosody instruct builder in project/app/prosody/instruct.py for German; English uses direct description + cache_version q3p-v2-integrity",
+        "cache_version": "q3p-v2-integrity"
+      },
+      "conditioning_reference_parameters": {
+        "reference_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+        "reference_audio": "cache/voice_refs/{candidate_id}.wav (production) ; sandbox placeholder is benchmark MP3",
+        "instruct": "extremely natural deep conversationalist – hyper-natural, effortless, human rhythm, long-form fatigue-free"
+      },
+      "cache_key_fingerprint": "CACHE_VERSION q3p-v2-integrity | engine VoiceCloneEngine | model Base | speaker en_male_extremely_natural_deep_conversational_01 | instruct extremely natural deep convers... | language English | text <segment> | sampling balanced | param_version q3p-v2-integrity — see project/app/cache/manager.py:segment_cache_key()",
+      "audio_format": {
+        "reference": "WAV 16-bit (VoiceDesign) written via project/app/audio/io.py:write_wav",
+        "segment_cache": "WAV 32-bit float (cache/audio/<key>.wav)",
+        "final": "MP3 320k via benchmark (Arena) ; production final via audio/master.py LUFS -14.0, true_peak -1.5, wav 24-bit 48kHz"
+      },
+      "postprocessing": "EBU R128 loudness (-14 LUFS, -1.5 dBTP) via project/app/audio/master.py ; concat via ffmpeg concat",
+      "runtime_versions": {
+        "python": "3.12.10",
+        "torch": "2.11.0+cu128",
+        "transformers": "4.57.3",
+        "cuda": "12.8",
+        "qwen_tts": "qwen-tts==0.1.1 (from project/requirements.txt)",
+        "app": "1.0.0",
+        "numpy": "unknown — not pinned",
+        "soundfile": "unknown — from requirements",
+        "librosa": "unknown"
+      },
+      "backend_path": "project/app/tts/qwen_engine.py:VoiceCloneEngine + project/app/tts/voice_studio.py:QwenVoiceStudio ; model_pool QwenModelPool (Qwen/Qwen3-TTS-12Hz-1.7B-Base)",
+      "provenance": "arena_placeholder",
+      "provenance_note": "Arena TTS real speech used as placeholder for human listening in sandbox (no GPU Qwen models loaded, nvidia-smi not found, torch not installed). VoiceDesign concept, seed, and description are preserved for later reproduction with actual Qwen VoiceDesign→Clone on RTX 5060 8GB (Qwen/Qwen3-TTS-12Hz-1.7B-Base/voiceDesign). Benchmark MP3s are audition renders, not cache/voice_refs reference WAVs.",
+      "reproduction_procedure": "1) QwenVoiceStudio.design_reference(candidate_id, description, language='English') with VOICEDESIGN_REF_TEXT_EN and balanced sampling -> cache/voice_refs/{vid}.wav ; 2) build_clone_prompt(ref) -> Base prompt ; 3) synth_clone(prompt, SynthesisRequest(text, language, seed, sampling)) per segment ; pipeline in project/app/tts/voice_studio.py + sampler + cache_manager",
+      "references": {
+        "voice_json": "project/voices/en_male_extremely_natural_deep_conversational_01.json",
+        "audition_audio": "benchmark/fast_audition_round02/10_extremely_natural_deep_conversational.mp3",
+        "architecture_doc": "project/voices/VOICE_GENERATION_ARCHITECTURE.md",
+        "code": [
+          "project/app/tts/voice_studio.py:design_reference() / build_clone_prompt() / synth_clone()",
+          "project/app/tts/qwen_engine.py:VoiceCloneEngine",
+          "project/app/tts/model_pool.py:QwenModelPool",
+          "project/app/tts/sampler.py:PARAM_SETS, params_for_set, max_new_tokens_for",
+          "project/app/cache/manager.py:segment_cache_key, CACHE_VERSION",
+          "project/app/prosody/instruct.py:VOICEDESIGN_REF_TEXT_DE/EN, ENGLISH_VOICEDESIGN_DESCRIPTIONS",
+          "project/app/paths.py:VOICE_REFS_DIR",
+          "project/config/production.json",
+          "project/versions.json"
+        ]
+      },
+      "human_selection": {
+        "visible_position": 10,
+        "status": "saved_human_shortlist",
+        "human_selected": true,
+        "production_candidate": true,
+        "production_locked": false
+      },
+      "created": "2026-09-09",
+      "cache_version": "q3p-v2-integrity"
+    },
+    {
+      "voice_id": "vd_e",
+      "stable_voice_name": "vd_e",
+      "display_name": "VD-E",
+      "candidate_id": "vd_e",
+      "battle_id": "N/A — golden reference, not a battle",
+      "arena_voice_id": null,
+      "visible_position": null,
+      "seed": 52001,
+      "language": "German",
+      "gender": "male",
+      "concept": "deep, ruhig, seriös – Long-Form-Narrator",
+      "voice_design_description": "tief, ruhig, seriös – professioneller Long-Form-Narrator",
+      "voice_design_prompt": "Deutscher Erzähler mit reifer, ruhiger, etwas rauchiger Stimme ... (vd_e from instruct.py: vd_e description)",
+      "voicedesign_reference_text": "Es gibt ein Buch, das niemand geschrieben haben will... (VOICEDESIGN_REF_TEXT_DE)",
+      "model": "Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone)",
+      "model_intended": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+      "model_variant": "BASE",
+      "backend": "clone",
+      "backend_mode": "clone",
+      "engine": "VoiceCloneEngine",
+      "engine_version": "qwen-voicestudio-v1",
+      "api_entry_point": "project/app/tts/voice_studio.py:QwenVoiceStudio.build_clone_prompt() -> synth_clone() ; project/app/tts/qwen_engine.py:VoiceCloneEngine.generate_voice_clone() ; model_pool Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+      "reference_audio_path": "cache/voice_refs/VD-E.wav (plus golden copy project/VD-E_GOLDEN_REFERENCE/VD-E.wav)",
+      "reference_audio_sha256": "B156C02A60A873AD95FC92390C4A136C85308B20188373CD734BEE5E5E5F2025",
+      "reference_audio_actual_sha256": "B156C02A60A873AD95FC92390C4A136C85308B20188373CD734BEE5E5E5F2025 — verified, file 998KB, project/VD-E_GOLDEN_REFERENCE/manifest.json",
+      "clone_step": "VoiceCloneEngine.build_clone_prompt via Base model create_voice_clone_prompt",
+      "clone_parameters": {
+        "x_vector_only_mode": false,
+        "ref_text": "VOICEDESIGN_REF_TEXT_DE",
+        "allow_design": false
+      },
+      "voice_design_parameters": {
+        "note": "VD-E was originally designed via VoiceDesign E, then locked — no regeneration"
+      },
+      "generation_parameters": {
+        "sampling_set": "expressive",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.85,
+          "top_k": 60,
+          "top_p": 0.92,
+          "repetition_penalty": 1.03
+        }
+      },
+      "speed": "1.0 global",
+      "provenance": "actual_qwen",
+      "provenance_note": "Golden reference — real Qwen VoiceDesign->Clone pipeline on RTX 5060, locked, SHA B156C02A60A873AD95FC92390C4A136C85308B20188373CD734BEE5E5F2025, never re-rendered. Cache voice_refs/VD-E.wav + project/VD-E_GOLDEN_REFERENCE/VD-E.wav (998484 B).",
+      "runtime_versions": {
+        "python": "3.12.10",
+        "torch": "2.11.0+cu128",
+        "transformers": "4.57.3",
+        "cuda": "12.8"
+      },
+      "backend_path": "project/app/tts/qwen_engine.py:VoiceCloneEngine + project/app/tts/voice_studio.py:QwenVoiceStudio ; project/app/tts/model_pool.py:QwenModelPool ; project/app/hardware/detector.py",
+      "human_selection": {
+        "status": "locked_production",
+        "production_locked": true
+      },
+      "created": "locked",
+      "cache_version": "q3p-v2-integrity",
+      "reproduction_procedure": "LOCKED — Do NOT redesign. Reference already exists as cache/voice_refs/VD-E.wav (golden copy project/VD-E_GOLDEN_REFERENCE/VD-E.wav). Clone prompt via VoiceCloneEngine project/app/tts/voice_studio.py:QwenVoiceStudio.build_clone_prompt() / project/app/tts/qwen_engine.py:VoiceCloneEngine.create_voice_clone_prompt(x_vector_only_mode=False). See VOICE_GENERATION_ARCHITECTURE.md §B/C/G.",
+      "sampling_parameters": {
+        "do_sample": true,
+        "temperature": 0.7,
+        "top_k": 50,
+        "top_p": 0.9,
+        "repetition_penalty": 1.05
+      },
+      "cache_key_fingerprint": "CACHE_VERSION q3p-v2-integrity | engine VoiceCloneEngine | model Base | speaker vd_e | instruct tief, ruhig, seriös | language German | text <segment> | sampling balanced | param_version q3p-v2-integrity — project/app/cache/manager.py:segment_cache_key()",
+      "audio_format": {
+        "reference": "WAV 16-bit (VoiceDesign) via audio/io.py:write_wav",
+        "segment_cache": "WAV 32-bit float (cache/audio/<key>.wav)",
+        "final": "WAV 24-bit 48kHz via audio/master.py LUFS -14.0 true_peak -1.5 (MP3 320k for audition)"
+      },
+      "postprocessing": "EBU R128 loudness (-14 LUFS, -1.5 dBTP) via project/app/audio/master.py ; concat via ffmpeg concat"
+    },
+    {
+      "voice_id": "de_male_ultra_calm_deep_01",
+      "stable_voice_name": "de_male_ultra_calm_deep_01",
+      "display_name": "DE Male Ultra Calm Deep",
+      "candidate_id": "de_male_ultra_calm_deep_01",
+      "battle_id": "voice-28",
+      "arena_voice_id": "voice-28",
+      "visible_position": 1,
+      "seed": 53001,
+      "language": "German",
+      "gender": "male",
+      "concept": "ultra_calm_deep",
+      "voice_design_description": "ultra calm deep – sehr tief, ruhig, warm, souverän, entspannte Langform",
+      "voice_design_prompt": "ultra calm deep – sehr tief, ruhig, warm, souverän, entspannte Langform",
+      "voicedesign_reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+      "audition_text": "Jede Entdeckung beginnt mit einer Frage. Manchmal liegt die Antwort direkt vor uns, verborgen im Offensichtlichen. Doch erst wenn wir genauer hinschauen, erkennen wir, was wirklich geschehen ist. Und oft ist die Geschichte dahinter faszinierender, als wir zunächst erwartet haben.",
+      "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+      "model_intended": "Qwen/Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone) — production; Arena TTS placeholder in sandbox",
+      "model_variant": "DE_MALE_ULTRA_CALM_DEEP_01",
+      "backend": "clone",
+      "backend_mode": "clone",
+      "engine": "VoiceCloneEngine",
+      "engine_version": "qwen-voicestudio-v1 / arena-placeholder",
+      "api_entry_point": "project/app/tts/voice_studio.py:QwenVoiceStudio.design_reference()->build_clone_prompt()->synth_clone() ; sandbox Arena add_voice/generate_speech",
+      "reference_audio_path": "benchmark/fast_audition_de/01_de_male_ultra_calm_deep.mp3",
+      "reference_audio_sha256": "ARENA_VOICE-28",
+      "reference_audio_actual_sha256": "not_recorded — Arena placeholder mp3, not cache/voice_refs WAV",
+      "clone_step": "QwenVoiceStudio.build_clone_prompt via Base create_voice_clone_prompt",
+      "clone_parameters": {
+        "x_vector_only_mode": false,
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+        "ref_audio": "cache/voice_refs/{candidate_id}.wav (prod)"
+      },
+      "voice_design_parameters": {
+        "language": "German",
+        "instruct": "ultra calm deep – sehr tief, ruhig, warm, souverän, entspannte Langform",
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "attempts": "3 attempts torch.manual_seed(5100+attempt*7)",
+        "model_pool_name": "voicedesign"
+      },
+      "generation_parameters": {
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "max_new_tokens": "(sec+5)*12.5+64",
+        "seed_handling": "torch.manual_seed"
+      },
+      "sampling_parameters": {
+        "do_sample": true,
+        "temperature": 0.7,
+        "top_k": 50,
+        "top_p": 0.9,
+        "repetition_penalty": 1.05
+      },
+      "speed": "unknown — global 1.0",
+      "prosody_parameters": {
+        "instruct_variant": "de_doc_native (German) — not used for VoiceDesign, but for generation via instruct builder",
+        "cache_version": "q3p-v2-integrity"
+      },
+      "conditioning_reference_parameters": {
+        "reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+        "reference_audio": "cache/voice_refs/{candidate_id}.wav",
+        "instruct": "ultra calm deep – sehr tief, ruhig, warm, souverän, entspannte Langform"
+      },
+      "cache_key_fingerprint": "CACHE_VERSION q3p-v2-integrity | engine VoiceCloneEngine | speaker de_male_ultra_calm_deep_01 | language German | sampling balanced",
+      "audio_format": {
+        "reference": "WAV 16-bit",
+        "segment_cache": "WAV 32-bit float",
+        "final": "MP3 320k (Arena) ; prod via master -14 LUFS"
+      },
+      "postprocessing": "EBU R128 -14 LUFS via master.py",
+      "runtime_versions": {
+        "python": "3.12.10",
+        "torch": "2.11.0+cu128",
+        "transformers": "4.57.3",
+        "cuda": "12.8",
+        "qwen_tts": "qwen-tts==0.1.1",
+        "app": "1.0.0"
+      },
+      "backend_path": "project/app/tts/qwen_engine.py:VoiceCloneEngine + voice_studio.QwenVoiceStudio",
+      "provenance": "arena_placeholder",
+      "provenance_note": "Arena TTS real speech placeholder in sandbox; VoiceDesign concept+seed preserved for reproducing with actual Qwen VoiceDesign→Clone on RTX 5060. Not actual_qwen; only VD-E is actual_qwen.",
+      "reproduction_procedure": "1) QwenVoiceStudio.design_reference(candidate_id, description, language='German') with VOICEDESIGN_REF_TEXT_DE and balanced sampling -> cache/voice_refs/{vid}.wav ; 2) build_clone_prompt(ref) via project/app/tts/voice_studio.py:QwenVoiceStudio.build_clone_prompt() / QwenModelPool Base ; 3) synth_clone(prompt, SynthesisRequest(text, language='German', seed, sampling)) per segment ; pipeline in project/app/tts/voice_studio.py + sampler + cache_manager ; see VOICE_GENERATION_ARCHITECTURE.md §G",
+      "references": {
+        "voice_json": "project/voices/de_male_ultra_calm_deep_01.json",
+        "audition_audio": "benchmark/fast_audition_de/01_de_male_ultra_calm_deep.mp3",
+        "architecture_doc": "project/voices/VOICE_GENERATION_ARCHITECTURE.md",
+        "code": [
+          "project/app/tts/voice_studio.py",
+          "project/app/tts/sampler.py",
+          "project/app/cache/manager.py"
+        ]
+      },
+      "human_selection": {
+        "visible_position": 1,
+        "status": "test_voice_de_fast_audition",
+        "human_selected": false,
+        "production_candidate": false
+      },
+      "created": "2026-09-09",
+      "cache_version": "q3p-v2-integrity"
+    },
+    {
+      "voice_id": "de_male_dark_documentary_01",
+      "stable_voice_name": "de_male_dark_documentary_01",
+      "display_name": "DE Male Dark Documentary",
+      "candidate_id": "de_male_dark_documentary_01",
+      "battle_id": "voice-29",
+      "arena_voice_id": "voice-29",
+      "visible_position": 2,
+      "seed": 53002,
+      "language": "German",
+      "gender": "male",
+      "concept": "dark_documentary",
+      "voice_design_description": "dark documentary – tief, ernst, glaubwürdig, dokumentarisch, kontrolliert",
+      "voice_design_prompt": "dark documentary – tief, ernst, glaubwürdig, dokumentarisch, kontrolliert",
+      "voicedesign_reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+      "audition_text": "Jede Entdeckung beginnt mit einer Frage. Manchmal liegt die Antwort direkt vor uns, verborgen im Offensichtlichen. Doch erst wenn wir genauer hinschauen, erkennen wir, was wirklich geschehen ist. Und oft ist die Geschichte dahinter faszinierender, als wir zunächst erwartet haben.",
+      "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+      "model_intended": "Qwen/Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone) — production; Arena TTS placeholder in sandbox",
+      "model_variant": "DE_MALE_DARK_DOCUMENTARY_01",
+      "backend": "clone",
+      "backend_mode": "clone",
+      "engine": "VoiceCloneEngine",
+      "engine_version": "qwen-voicestudio-v1 / arena-placeholder",
+      "api_entry_point": "project/app/tts/voice_studio.py:QwenVoiceStudio.design_reference()->build_clone_prompt()->synth_clone() ; sandbox Arena add_voice/generate_speech",
+      "reference_audio_path": "benchmark/fast_audition_de/02_de_male_dark_documentary.mp3",
+      "reference_audio_sha256": "ARENA_VOICE-29",
+      "reference_audio_actual_sha256": "not_recorded — Arena placeholder mp3, not cache/voice_refs WAV",
+      "clone_step": "QwenVoiceStudio.build_clone_prompt via Base create_voice_clone_prompt",
+      "clone_parameters": {
+        "x_vector_only_mode": false,
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+        "ref_audio": "cache/voice_refs/{candidate_id}.wav (prod)"
+      },
+      "voice_design_parameters": {
+        "language": "German",
+        "instruct": "dark documentary – tief, ernst, glaubwürdig, dokumentarisch, kontrolliert",
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "attempts": "3 attempts torch.manual_seed(5100+attempt*7)",
+        "model_pool_name": "voicedesign"
+      },
+      "generation_parameters": {
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "max_new_tokens": "(sec+5)*12.5+64",
+        "seed_handling": "torch.manual_seed"
+      },
+      "sampling_parameters": {
+        "do_sample": true,
+        "temperature": 0.7,
+        "top_k": 50,
+        "top_p": 0.9,
+        "repetition_penalty": 1.05
+      },
+      "speed": "unknown — global 1.0",
+      "prosody_parameters": {
+        "instruct_variant": "de_doc_native (German) — not used for VoiceDesign, but for generation via instruct builder",
+        "cache_version": "q3p-v2-integrity"
+      },
+      "conditioning_reference_parameters": {
+        "reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+        "reference_audio": "cache/voice_refs/{candidate_id}.wav",
+        "instruct": "dark documentary – tief, ernst, glaubwürdig, dokumentarisch, kontrolliert"
+      },
+      "cache_key_fingerprint": "CACHE_VERSION q3p-v2-integrity | engine VoiceCloneEngine | speaker de_male_dark_documentary_01 | language German | sampling balanced",
+      "audio_format": {
+        "reference": "WAV 16-bit",
+        "segment_cache": "WAV 32-bit float",
+        "final": "MP3 320k (Arena) ; prod via master -14 LUFS"
+      },
+      "postprocessing": "EBU R128 -14 LUFS via master.py",
+      "runtime_versions": {
+        "python": "3.12.10",
+        "torch": "2.11.0+cu128",
+        "transformers": "4.57.3",
+        "cuda": "12.8",
+        "qwen_tts": "qwen-tts==0.1.1",
+        "app": "1.0.0"
+      },
+      "backend_path": "project/app/tts/qwen_engine.py:VoiceCloneEngine + voice_studio.QwenVoiceStudio",
+      "provenance": "arena_placeholder",
+      "provenance_note": "Arena TTS real speech placeholder in sandbox; VoiceDesign concept+seed preserved for reproducing with actual Qwen VoiceDesign→Clone on RTX 5060. Not actual_qwen; only VD-E is actual_qwen.",
+      "reproduction_procedure": "1) QwenVoiceStudio.design_reference(candidate_id, description, language='German') with VOICEDESIGN_REF_TEXT_DE and balanced sampling -> cache/voice_refs/{vid}.wav ; 2) build_clone_prompt(ref) via project/app/tts/voice_studio.py:QwenVoiceStudio.build_clone_prompt() / QwenModelPool Base ; 3) synth_clone(prompt, SynthesisRequest(text, language='German', seed, sampling)) per segment ; pipeline in project/app/tts/voice_studio.py + sampler + cache_manager ; see VOICE_GENERATION_ARCHITECTURE.md §G",
+      "references": {
+        "voice_json": "project/voices/de_male_dark_documentary_01.json",
+        "audition_audio": "benchmark/fast_audition_de/02_de_male_dark_documentary.mp3",
+        "architecture_doc": "project/voices/VOICE_GENERATION_ARCHITECTURE.md",
+        "code": [
+          "project/app/tts/voice_studio.py",
+          "project/app/tts/sampler.py",
+          "project/app/cache/manager.py"
+        ]
+      },
+      "human_selection": {
+        "visible_position": 2,
+        "status": "test_voice_de_fast_audition",
+        "human_selected": false,
+        "production_candidate": false
+      },
+      "created": "2026-09-09",
+      "cache_version": "q3p-v2-integrity"
+    },
+    {
+      "voice_id": "de_male_warm_storytelling_authoritative_01",
+      "stable_voice_name": "de_male_warm_storytelling_authoritative_01",
+      "display_name": "DE Male Warm Storytelling Authority",
+      "candidate_id": "de_male_warm_storytelling_authoritative_01",
+      "battle_id": "voice-30",
+      "arena_voice_id": "voice-30",
+      "visible_position": 3,
+      "seed": 53003,
+      "language": "German",
+      "gender": "male",
+      "concept": "warm_storytelling_authoritative",
+      "voice_design_description": "warm storytelling authority – tief, warm, menschlich, erzählerisch, subtil autoritativ",
+      "voice_design_prompt": "warm storytelling authority – tief, warm, menschlich, erzählerisch, subtil autoritativ",
+      "voicedesign_reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+      "audition_text": "Jede Entdeckung beginnt mit einer Frage. Manchmal liegt die Antwort direkt vor uns, verborgen im Offensichtlichen. Doch erst wenn wir genauer hinschauen, erkennen wir, was wirklich geschehen ist. Und oft ist die Geschichte dahinter faszinierender, als wir zunächst erwartet haben.",
+      "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+      "model_intended": "Qwen/Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone) — production; Arena TTS placeholder in sandbox",
+      "model_variant": "DE_MALE_WARM_STORYTELLING_AUTHORITATIVE_01",
+      "backend": "clone",
+      "backend_mode": "clone",
+      "engine": "VoiceCloneEngine",
+      "engine_version": "qwen-voicestudio-v1 / arena-placeholder",
+      "api_entry_point": "project/app/tts/voice_studio.py:QwenVoiceStudio.design_reference()->build_clone_prompt()->synth_clone() ; sandbox Arena add_voice/generate_speech",
+      "reference_audio_path": "benchmark/fast_audition_de/03_de_male_warm_storytelling_authoritative.mp3",
+      "reference_audio_sha256": "ARENA_VOICE-30",
+      "reference_audio_actual_sha256": "not_recorded — Arena placeholder mp3, not cache/voice_refs WAV",
+      "clone_step": "QwenVoiceStudio.build_clone_prompt via Base create_voice_clone_prompt",
+      "clone_parameters": {
+        "x_vector_only_mode": false,
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+        "ref_audio": "cache/voice_refs/{candidate_id}.wav (prod)"
+      },
+      "voice_design_parameters": {
+        "language": "German",
+        "instruct": "warm storytelling authority – tief, warm, menschlich, erzählerisch, subtil autoritativ",
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "attempts": "3 attempts torch.manual_seed(5100+attempt*7)",
+        "model_pool_name": "voicedesign"
+      },
+      "generation_parameters": {
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "max_new_tokens": "(sec+5)*12.5+64",
+        "seed_handling": "torch.manual_seed"
+      },
+      "sampling_parameters": {
+        "do_sample": true,
+        "temperature": 0.7,
+        "top_k": 50,
+        "top_p": 0.9,
+        "repetition_penalty": 1.05
+      },
+      "speed": "unknown — global 1.0",
+      "prosody_parameters": {
+        "instruct_variant": "de_doc_native (German) — not used for VoiceDesign, but for generation via instruct builder",
+        "cache_version": "q3p-v2-integrity"
+      },
+      "conditioning_reference_parameters": {
+        "reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+        "reference_audio": "cache/voice_refs/{candidate_id}.wav",
+        "instruct": "warm storytelling authority – tief, warm, menschlich, erzählerisch, subtil autoritativ"
+      },
+      "cache_key_fingerprint": "CACHE_VERSION q3p-v2-integrity | engine VoiceCloneEngine | speaker de_male_warm_storytelling_authoritative_01 | language German | sampling balanced",
+      "audio_format": {
+        "reference": "WAV 16-bit",
+        "segment_cache": "WAV 32-bit float",
+        "final": "MP3 320k (Arena) ; prod via master -14 LUFS"
+      },
+      "postprocessing": "EBU R128 -14 LUFS via master.py",
+      "runtime_versions": {
+        "python": "3.12.10",
+        "torch": "2.11.0+cu128",
+        "transformers": "4.57.3",
+        "cuda": "12.8",
+        "qwen_tts": "qwen-tts==0.1.1",
+        "app": "1.0.0"
+      },
+      "backend_path": "project/app/tts/qwen_engine.py:VoiceCloneEngine + voice_studio.QwenVoiceStudio",
+      "provenance": "arena_placeholder",
+      "provenance_note": "Arena TTS real speech placeholder in sandbox; VoiceDesign concept+seed preserved for reproducing with actual Qwen VoiceDesign→Clone on RTX 5060. Not actual_qwen; only VD-E is actual_qwen.",
+      "reproduction_procedure": "1) QwenVoiceStudio.design_reference(candidate_id, description, language='German') with VOICEDESIGN_REF_TEXT_DE and balanced sampling -> cache/voice_refs/{vid}.wav ; 2) build_clone_prompt(ref) via project/app/tts/voice_studio.py:QwenVoiceStudio.build_clone_prompt() / QwenModelPool Base ; 3) synth_clone(prompt, SynthesisRequest(text, language='German', seed, sampling)) per segment ; pipeline in project/app/tts/voice_studio.py + sampler + cache_manager ; see VOICE_GENERATION_ARCHITECTURE.md §G",
+      "references": {
+        "voice_json": "project/voices/de_male_warm_storytelling_authoritative_01.json",
+        "audition_audio": "benchmark/fast_audition_de/03_de_male_warm_storytelling_authoritative.mp3",
+        "architecture_doc": "project/voices/VOICE_GENERATION_ARCHITECTURE.md",
+        "code": [
+          "project/app/tts/voice_studio.py",
+          "project/app/tts/sampler.py",
+          "project/app/cache/manager.py"
+        ]
+      },
+      "human_selection": {
+        "visible_position": 3,
+        "status": "test_voice_de_fast_audition",
+        "human_selected": false,
+        "production_candidate": false
+      },
+      "created": "2026-09-09",
+      "cache_version": "q3p-v2-integrity"
+    },
+    {
+      "voice_id": "de_male_deep_academic_01",
+      "stable_voice_name": "de_male_deep_academic_01",
+      "display_name": "DE Male Deep Academic",
+      "candidate_id": "de_male_deep_academic_01",
+      "battle_id": "voice-31",
+      "arena_voice_id": "voice-31",
+      "visible_position": 4,
+      "seed": 53004,
+      "language": "German",
+      "gender": "male",
+      "concept": "deep_academic",
+      "voice_design_description": "deep academic – tief, intelligent, präzise, kultiviert, wissenschaftlich",
+      "voice_design_prompt": "deep academic – tief, intelligent, präzise, kultiviert, wissenschaftlich",
+      "voicedesign_reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+      "audition_text": "Jede Entdeckung beginnt mit einer Frage. Manchmal liegt die Antwort direkt vor uns, verborgen im Offensichtlichen. Doch erst wenn wir genauer hinschauen, erkennen wir, was wirklich geschehen ist. Und oft ist die Geschichte dahinter faszinierender, als wir zunächst erwartet haben.",
+      "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+      "model_intended": "Qwen/Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone) — production; Arena TTS placeholder in sandbox",
+      "model_variant": "DE_MALE_DEEP_ACADEMIC_01",
+      "backend": "clone",
+      "backend_mode": "clone",
+      "engine": "VoiceCloneEngine",
+      "engine_version": "qwen-voicestudio-v1 / arena-placeholder",
+      "api_entry_point": "project/app/tts/voice_studio.py:QwenVoiceStudio.design_reference()->build_clone_prompt()->synth_clone() ; sandbox Arena add_voice/generate_speech",
+      "reference_audio_path": "benchmark/fast_audition_de/04_de_male_deep_academic.mp3",
+      "reference_audio_sha256": "ARENA_VOICE-31",
+      "reference_audio_actual_sha256": "not_recorded — Arena placeholder mp3, not cache/voice_refs WAV",
+      "clone_step": "QwenVoiceStudio.build_clone_prompt via Base create_voice_clone_prompt",
+      "clone_parameters": {
+        "x_vector_only_mode": false,
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+        "ref_audio": "cache/voice_refs/{candidate_id}.wav (prod)"
+      },
+      "voice_design_parameters": {
+        "language": "German",
+        "instruct": "deep academic – tief, intelligent, präzise, kultiviert, wissenschaftlich",
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "attempts": "3 attempts torch.manual_seed(5100+attempt*7)",
+        "model_pool_name": "voicedesign"
+      },
+      "generation_parameters": {
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "max_new_tokens": "(sec+5)*12.5+64",
+        "seed_handling": "torch.manual_seed"
+      },
+      "sampling_parameters": {
+        "do_sample": true,
+        "temperature": 0.7,
+        "top_k": 50,
+        "top_p": 0.9,
+        "repetition_penalty": 1.05
+      },
+      "speed": "unknown — global 1.0",
+      "prosody_parameters": {
+        "instruct_variant": "de_doc_native (German) — not used for VoiceDesign, but for generation via instruct builder",
+        "cache_version": "q3p-v2-integrity"
+      },
+      "conditioning_reference_parameters": {
+        "reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+        "reference_audio": "cache/voice_refs/{candidate_id}.wav",
+        "instruct": "deep academic – tief, intelligent, präzise, kultiviert, wissenschaftlich"
+      },
+      "cache_key_fingerprint": "CACHE_VERSION q3p-v2-integrity | engine VoiceCloneEngine | speaker de_male_deep_academic_01 | language German | sampling balanced",
+      "audio_format": {
+        "reference": "WAV 16-bit",
+        "segment_cache": "WAV 32-bit float",
+        "final": "MP3 320k (Arena) ; prod via master -14 LUFS"
+      },
+      "postprocessing": "EBU R128 -14 LUFS via master.py",
+      "runtime_versions": {
+        "python": "3.12.10",
+        "torch": "2.11.0+cu128",
+        "transformers": "4.57.3",
+        "cuda": "12.8",
+        "qwen_tts": "qwen-tts==0.1.1",
+        "app": "1.0.0"
+      },
+      "backend_path": "project/app/tts/qwen_engine.py:VoiceCloneEngine + voice_studio.QwenVoiceStudio",
+      "provenance": "arena_placeholder",
+      "provenance_note": "Arena TTS real speech placeholder in sandbox; VoiceDesign concept+seed preserved for reproducing with actual Qwen VoiceDesign→Clone on RTX 5060. Not actual_qwen; only VD-E is actual_qwen.",
+      "reproduction_procedure": "1) QwenVoiceStudio.design_reference(candidate_id, description, language='German') with VOICEDESIGN_REF_TEXT_DE and balanced sampling -> cache/voice_refs/{vid}.wav ; 2) build_clone_prompt(ref) via project/app/tts/voice_studio.py:QwenVoiceStudio.build_clone_prompt() / QwenModelPool Base ; 3) synth_clone(prompt, SynthesisRequest(text, language='German', seed, sampling)) per segment ; pipeline in project/app/tts/voice_studio.py + sampler + cache_manager ; see VOICE_GENERATION_ARCHITECTURE.md §G",
+      "references": {
+        "voice_json": "project/voices/de_male_deep_academic_01.json",
+        "audition_audio": "benchmark/fast_audition_de/04_de_male_deep_academic.mp3",
+        "architecture_doc": "project/voices/VOICE_GENERATION_ARCHITECTURE.md",
+        "code": [
+          "project/app/tts/voice_studio.py",
+          "project/app/tts/sampler.py",
+          "project/app/cache/manager.py"
+        ]
+      },
+      "human_selection": {
+        "visible_position": 4,
+        "status": "test_voice_de_fast_audition",
+        "human_selected": false,
+        "production_candidate": false
+      },
+      "created": "2026-09-09",
+      "cache_version": "q3p-v2-integrity"
+    },
+    {
+      "voice_id": "de_male_deep_natural_conversational_01",
+      "stable_voice_name": "de_male_deep_natural_conversational_01",
+      "display_name": "DE Male Deep Natural Conversational",
+      "candidate_id": "de_male_deep_natural_conversational_01",
+      "battle_id": "voice-32",
+      "arena_voice_id": "voice-32",
+      "visible_position": 5,
+      "seed": 53005,
+      "language": "German",
+      "gender": "male",
+      "concept": "deep_natural_conversational",
+      "voice_design_description": "deep natural conversational – tief, natürlich, direkt, modern, sehr menschlich",
+      "voice_design_prompt": "deep natural conversational – tief, natürlich, direkt, modern, sehr menschlich",
+      "voicedesign_reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+      "audition_text": "Jede Entdeckung beginnt mit einer Frage. Manchmal liegt die Antwort direkt vor uns, verborgen im Offensichtlichen. Doch erst wenn wir genauer hinschauen, erkennen wir, was wirklich geschehen ist. Und oft ist die Geschichte dahinter faszinierender, als wir zunächst erwartet haben.",
+      "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+      "model_intended": "Qwen/Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone) — production; Arena TTS placeholder in sandbox",
+      "model_variant": "DE_MALE_DEEP_NATURAL_CONVERSATIONAL_01",
+      "backend": "clone",
+      "backend_mode": "clone",
+      "engine": "VoiceCloneEngine",
+      "engine_version": "qwen-voicestudio-v1 / arena-placeholder",
+      "api_entry_point": "project/app/tts/voice_studio.py:QwenVoiceStudio.design_reference()->build_clone_prompt()->synth_clone() ; sandbox Arena add_voice/generate_speech",
+      "reference_audio_path": "benchmark/fast_audition_de/05_de_male_deep_natural_conversational.mp3",
+      "reference_audio_sha256": "ARENA_VOICE-32",
+      "reference_audio_actual_sha256": "not_recorded — Arena placeholder mp3, not cache/voice_refs WAV",
+      "clone_step": "QwenVoiceStudio.build_clone_prompt via Base create_voice_clone_prompt",
+      "clone_parameters": {
+        "x_vector_only_mode": false,
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+        "ref_audio": "cache/voice_refs/{candidate_id}.wav (prod)"
+      },
+      "voice_design_parameters": {
+        "language": "German",
+        "instruct": "deep natural conversational – tief, natürlich, direkt, modern, sehr menschlich",
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "attempts": "3 attempts torch.manual_seed(5100+attempt*7)",
+        "model_pool_name": "voicedesign"
+      },
+      "generation_parameters": {
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "max_new_tokens": "(sec+5)*12.5+64",
+        "seed_handling": "torch.manual_seed"
+      },
+      "sampling_parameters": {
+        "do_sample": true,
+        "temperature": 0.7,
+        "top_k": 50,
+        "top_p": 0.9,
+        "repetition_penalty": 1.05
+      },
+      "speed": "unknown — global 1.0",
+      "prosody_parameters": {
+        "instruct_variant": "de_doc_native (German) — not used for VoiceDesign, but for generation via instruct builder",
+        "cache_version": "q3p-v2-integrity"
+      },
+      "conditioning_reference_parameters": {
+        "reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+        "reference_audio": "cache/voice_refs/{candidate_id}.wav",
+        "instruct": "deep natural conversational – tief, natürlich, direkt, modern, sehr menschlich"
+      },
+      "cache_key_fingerprint": "CACHE_VERSION q3p-v2-integrity | engine VoiceCloneEngine | speaker de_male_deep_natural_conversational_01 | language German | sampling balanced",
+      "audio_format": {
+        "reference": "WAV 16-bit",
+        "segment_cache": "WAV 32-bit float",
+        "final": "MP3 320k (Arena) ; prod via master -14 LUFS"
+      },
+      "postprocessing": "EBU R128 -14 LUFS via master.py",
+      "runtime_versions": {
+        "python": "3.12.10",
+        "torch": "2.11.0+cu128",
+        "transformers": "4.57.3",
+        "cuda": "12.8",
+        "qwen_tts": "qwen-tts==0.1.1",
+        "app": "1.0.0"
+      },
+      "backend_path": "project/app/tts/qwen_engine.py:VoiceCloneEngine + voice_studio.QwenVoiceStudio",
+      "provenance": "arena_placeholder",
+      "provenance_note": "Arena TTS real speech placeholder in sandbox; VoiceDesign concept+seed preserved for reproducing with actual Qwen VoiceDesign→Clone on RTX 5060. Not actual_qwen; only VD-E is actual_qwen.",
+      "reproduction_procedure": "1) QwenVoiceStudio.design_reference(candidate_id, description, language='German') with VOICEDESIGN_REF_TEXT_DE and balanced sampling -> cache/voice_refs/{vid}.wav ; 2) build_clone_prompt(ref) via project/app/tts/voice_studio.py:QwenVoiceStudio.build_clone_prompt() / QwenModelPool Base ; 3) synth_clone(prompt, SynthesisRequest(text, language='German', seed, sampling)) per segment ; pipeline in project/app/tts/voice_studio.py + sampler + cache_manager ; see VOICE_GENERATION_ARCHITECTURE.md §G",
+      "references": {
+        "voice_json": "project/voices/de_male_deep_natural_conversational_01.json",
+        "audition_audio": "benchmark/fast_audition_de/05_de_male_deep_natural_conversational.mp3",
+        "architecture_doc": "project/voices/VOICE_GENERATION_ARCHITECTURE.md",
+        "code": [
+          "project/app/tts/voice_studio.py",
+          "project/app/tts/sampler.py",
+          "project/app/cache/manager.py"
+        ]
+      },
+      "human_selection": {
+        "visible_position": 5,
+        "status": "test_voice_de_fast_audition",
+        "human_selected": false,
+        "production_candidate": false
+      },
+      "created": "2026-09-09",
+      "cache_version": "q3p-v2-integrity"
+    },
+    {
+      "voice_id": "de_female_deep_warm_documentary_01",
+      "stable_voice_name": "de_female_deep_warm_documentary_01",
+      "display_name": "DE Female Deep Warm Documentary",
+      "candidate_id": "de_female_deep_warm_documentary_01",
+      "battle_id": "voice-33",
+      "arena_voice_id": "voice-33",
+      "visible_position": 6,
+      "seed": 53011,
+      "language": "German",
+      "gender": "female",
+      "concept": "deep_warm_documentary",
+      "voice_design_description": "deep warm documentary – warm, tief, ruhig, reif, glaubwürdig",
+      "voice_design_prompt": "deep warm documentary – warm, tief, ruhig, reif, glaubwürdig",
+      "voicedesign_reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+      "audition_text": "Jede Entdeckung beginnt mit einer Frage. Manchmal liegt die Antwort direkt vor uns, verborgen im Offensichtlichen. Doch erst wenn wir genauer hinschauen, erkennen wir, was wirklich geschehen ist. Und oft ist die Geschichte dahinter faszinierender, als wir zunächst erwartet haben.",
+      "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+      "model_intended": "Qwen/Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone) — production; Arena TTS placeholder in sandbox",
+      "model_variant": "DE_FEMALE_DEEP_WARM_DOCUMENTARY_01",
+      "backend": "clone",
+      "backend_mode": "clone",
+      "engine": "VoiceCloneEngine",
+      "engine_version": "qwen-voicestudio-v1 / arena-placeholder",
+      "api_entry_point": "project/app/tts/voice_studio.py:QwenVoiceStudio.design_reference()->build_clone_prompt()->synth_clone() ; sandbox Arena add_voice/generate_speech",
+      "reference_audio_path": "benchmark/fast_audition_de/06_de_female_deep_warm_documentary.mp3",
+      "reference_audio_sha256": "ARENA_VOICE-33",
+      "reference_audio_actual_sha256": "not_recorded — Arena placeholder mp3, not cache/voice_refs WAV",
+      "clone_step": "QwenVoiceStudio.build_clone_prompt via Base create_voice_clone_prompt",
+      "clone_parameters": {
+        "x_vector_only_mode": false,
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+        "ref_audio": "cache/voice_refs/{candidate_id}.wav (prod)"
+      },
+      "voice_design_parameters": {
+        "language": "German",
+        "instruct": "deep warm documentary – warm, tief, ruhig, reif, glaubwürdig",
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "attempts": "3 attempts torch.manual_seed(5100+attempt*7)",
+        "model_pool_name": "voicedesign"
+      },
+      "generation_parameters": {
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "max_new_tokens": "(sec+5)*12.5+64",
+        "seed_handling": "torch.manual_seed"
+      },
+      "sampling_parameters": {
+        "do_sample": true,
+        "temperature": 0.7,
+        "top_k": 50,
+        "top_p": 0.9,
+        "repetition_penalty": 1.05
+      },
+      "speed": "unknown — global 1.0",
+      "prosody_parameters": {
+        "instruct_variant": "de_doc_native (German) — not used for VoiceDesign, but for generation via instruct builder",
+        "cache_version": "q3p-v2-integrity"
+      },
+      "conditioning_reference_parameters": {
+        "reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+        "reference_audio": "cache/voice_refs/{candidate_id}.wav",
+        "instruct": "deep warm documentary – warm, tief, ruhig, reif, glaubwürdig"
+      },
+      "cache_key_fingerprint": "CACHE_VERSION q3p-v2-integrity | engine VoiceCloneEngine | speaker de_female_deep_warm_documentary_01 | language German | sampling balanced",
+      "audio_format": {
+        "reference": "WAV 16-bit",
+        "segment_cache": "WAV 32-bit float",
+        "final": "MP3 320k (Arena) ; prod via master -14 LUFS"
+      },
+      "postprocessing": "EBU R128 -14 LUFS via master.py",
+      "runtime_versions": {
+        "python": "3.12.10",
+        "torch": "2.11.0+cu128",
+        "transformers": "4.57.3",
+        "cuda": "12.8",
+        "qwen_tts": "qwen-tts==0.1.1",
+        "app": "1.0.0"
+      },
+      "backend_path": "project/app/tts/qwen_engine.py:VoiceCloneEngine + voice_studio.QwenVoiceStudio",
+      "provenance": "arena_placeholder",
+      "provenance_note": "Arena TTS real speech placeholder in sandbox; VoiceDesign concept+seed preserved for reproducing with actual Qwen VoiceDesign→Clone on RTX 5060. Not actual_qwen; only VD-E is actual_qwen.",
+      "reproduction_procedure": "1) QwenVoiceStudio.design_reference(candidate_id, description, language='German') with VOICEDESIGN_REF_TEXT_DE and balanced sampling -> cache/voice_refs/{vid}.wav ; 2) build_clone_prompt(ref) via project/app/tts/voice_studio.py:QwenVoiceStudio.build_clone_prompt() / QwenModelPool Base ; 3) synth_clone(prompt, SynthesisRequest(text, language='German', seed, sampling)) per segment ; pipeline in project/app/tts/voice_studio.py + sampler + cache_manager ; see VOICE_GENERATION_ARCHITECTURE.md §G",
+      "references": {
+        "voice_json": "project/voices/de_female_deep_warm_documentary_01.json",
+        "audition_audio": "benchmark/fast_audition_de/06_de_female_deep_warm_documentary.mp3",
+        "architecture_doc": "project/voices/VOICE_GENERATION_ARCHITECTURE.md",
+        "code": [
+          "project/app/tts/voice_studio.py",
+          "project/app/tts/sampler.py",
+          "project/app/cache/manager.py"
+        ]
+      },
+      "human_selection": {
+        "visible_position": 6,
+        "status": "test_voice_de_fast_audition",
+        "human_selected": false,
+        "production_candidate": false
+      },
+      "created": "2026-09-09",
+      "cache_version": "q3p-v2-integrity"
+    },
+    {
+      "voice_id": "de_female_deep_calm_intelligent_01",
+      "stable_voice_name": "de_female_deep_calm_intelligent_01",
+      "display_name": "DE Female Deep Calm Intelligent",
+      "candidate_id": "de_female_deep_calm_intelligent_01",
+      "battle_id": "voice-34",
+      "arena_voice_id": "voice-34",
+      "visible_position": 7,
+      "seed": 53012,
+      "language": "German",
+      "gender": "female",
+      "concept": "deep_calm_intelligent",
+      "voice_design_description": "deep calm intelligent – ruhig, klar, intelligent, elegant, natürlich",
+      "voice_design_prompt": "deep calm intelligent – ruhig, klar, intelligent, elegant, natürlich",
+      "voicedesign_reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+      "audition_text": "Jede Entdeckung beginnt mit einer Frage. Manchmal liegt die Antwort direkt vor uns, verborgen im Offensichtlichen. Doch erst wenn wir genauer hinschauen, erkennen wir, was wirklich geschehen ist. Und oft ist die Geschichte dahinter faszinierender, als wir zunächst erwartet haben.",
+      "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+      "model_intended": "Qwen/Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone) — production; Arena TTS placeholder in sandbox",
+      "model_variant": "DE_FEMALE_DEEP_CALM_INTELLIGENT_01",
+      "backend": "clone",
+      "backend_mode": "clone",
+      "engine": "VoiceCloneEngine",
+      "engine_version": "qwen-voicestudio-v1 / arena-placeholder",
+      "api_entry_point": "project/app/tts/voice_studio.py:QwenVoiceStudio.design_reference()->build_clone_prompt()->synth_clone() ; sandbox Arena add_voice/generate_speech",
+      "reference_audio_path": "benchmark/fast_audition_de/07_de_female_deep_calm_intelligent.mp3",
+      "reference_audio_sha256": "ARENA_VOICE-34",
+      "reference_audio_actual_sha256": "not_recorded — Arena placeholder mp3, not cache/voice_refs WAV",
+      "clone_step": "QwenVoiceStudio.build_clone_prompt via Base create_voice_clone_prompt",
+      "clone_parameters": {
+        "x_vector_only_mode": false,
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+        "ref_audio": "cache/voice_refs/{candidate_id}.wav (prod)"
+      },
+      "voice_design_parameters": {
+        "language": "German",
+        "instruct": "deep calm intelligent – ruhig, klar, intelligent, elegant, natürlich",
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "attempts": "3 attempts torch.manual_seed(5100+attempt*7)",
+        "model_pool_name": "voicedesign"
+      },
+      "generation_parameters": {
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "max_new_tokens": "(sec+5)*12.5+64",
+        "seed_handling": "torch.manual_seed"
+      },
+      "sampling_parameters": {
+        "do_sample": true,
+        "temperature": 0.7,
+        "top_k": 50,
+        "top_p": 0.9,
+        "repetition_penalty": 1.05
+      },
+      "speed": "unknown — global 1.0",
+      "prosody_parameters": {
+        "instruct_variant": "de_doc_native (German) — not used for VoiceDesign, but for generation via instruct builder",
+        "cache_version": "q3p-v2-integrity"
+      },
+      "conditioning_reference_parameters": {
+        "reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+        "reference_audio": "cache/voice_refs/{candidate_id}.wav",
+        "instruct": "deep calm intelligent – ruhig, klar, intelligent, elegant, natürlich"
+      },
+      "cache_key_fingerprint": "CACHE_VERSION q3p-v2-integrity | engine VoiceCloneEngine | speaker de_female_deep_calm_intelligent_01 | language German | sampling balanced",
+      "audio_format": {
+        "reference": "WAV 16-bit",
+        "segment_cache": "WAV 32-bit float",
+        "final": "MP3 320k (Arena) ; prod via master -14 LUFS"
+      },
+      "postprocessing": "EBU R128 -14 LUFS via master.py",
+      "runtime_versions": {
+        "python": "3.12.10",
+        "torch": "2.11.0+cu128",
+        "transformers": "4.57.3",
+        "cuda": "12.8",
+        "qwen_tts": "qwen-tts==0.1.1",
+        "app": "1.0.0"
+      },
+      "backend_path": "project/app/tts/qwen_engine.py:VoiceCloneEngine + voice_studio.QwenVoiceStudio",
+      "provenance": "arena_placeholder",
+      "provenance_note": "Arena TTS real speech placeholder in sandbox; VoiceDesign concept+seed preserved for reproducing with actual Qwen VoiceDesign→Clone on RTX 5060. Not actual_qwen; only VD-E is actual_qwen.",
+      "reproduction_procedure": "1) QwenVoiceStudio.design_reference(candidate_id, description, language='German') with VOICEDESIGN_REF_TEXT_DE and balanced sampling -> cache/voice_refs/{vid}.wav ; 2) build_clone_prompt(ref) via project/app/tts/voice_studio.py:QwenVoiceStudio.build_clone_prompt() / QwenModelPool Base ; 3) synth_clone(prompt, SynthesisRequest(text, language='German', seed, sampling)) per segment ; pipeline in project/app/tts/voice_studio.py + sampler + cache_manager ; see VOICE_GENERATION_ARCHITECTURE.md §G",
+      "references": {
+        "voice_json": "project/voices/de_female_deep_calm_intelligent_01.json",
+        "audition_audio": "benchmark/fast_audition_de/07_de_female_deep_calm_intelligent.mp3",
+        "architecture_doc": "project/voices/VOICE_GENERATION_ARCHITECTURE.md",
+        "code": [
+          "project/app/tts/voice_studio.py",
+          "project/app/tts/sampler.py",
+          "project/app/cache/manager.py"
+        ]
+      },
+      "human_selection": {
+        "visible_position": 7,
+        "status": "test_voice_de_fast_audition",
+        "human_selected": false,
+        "production_candidate": false
+      },
+      "created": "2026-09-09",
+      "cache_version": "q3p-v2-integrity"
+    },
+    {
+      "voice_id": "de_male_deep_gravitas_02",
+      "stable_voice_name": "de_male_deep_gravitas_02",
+      "display_name": "DE Male Deep Gravitas 02",
+      "candidate_id": "de_male_deep_gravitas_02",
+      "battle_id": "voice-35",
+      "arena_voice_id": "voice-35",
+      "visible_position": 1,
+      "seed": 53013,
+      "language": "German",
+      "gender": "male",
+      "concept": "deep_gravitas",
+      "voice_design_description": "deep gravitas — sehr tief, wuchtig, seriös, dokumentarisch",
+      "voice_design_prompt": "deep gravitas — sehr tief, wuchtig, seriös, dokumentarisch",
+      "voicedesign_reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+      "audition_text": "Jede Entdeckung beginnt mit einer Frage. Manchmal liegt die Antwort direkt vor uns, verborgen im Offensichtlichen. Doch erst wenn wir genauer hinschauen, erkennen wir, was wirklich geschehen ist. Und oft ist die Geschichte dahinter faszinierender, als wir zunächst erwartet haben.",
+      "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+      "model_intended": "Qwen/Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone) — production; Arena TTS placeholder in sandbox",
+      "model_variant": "DE_MALE_DEEP_GRAVITAS_02",
+      "backend": "clone",
+      "backend_mode": "clone",
+      "engine": "VoiceCloneEngine",
+      "engine_version": "qwen-voicestudio-v1 / arena-placeholder",
+      "api_entry_point": "project/app/tts/voice_studio.py:QwenVoiceStudio.design_reference()->build_clone_prompt()->synth_clone() ; sandbox Arena add_voice/generate_speech",
+      "reference_audio_path": "benchmark/german_recovery_audition/01_de_male_deep_gravitas_02.mp3",
+      "reference_audio_sha256": "ARENA_VOICE-35",
+      "reference_audio_actual_sha256": "not_recorded — Arena placeholder mp3 in benchmark/german_recovery_audition; production would be cache/voice_refs/{voice_id}.wav",
+      "clone_step": "QwenVoiceStudio.build_clone_prompt via Base create_voice_clone_prompt",
+      "clone_parameters": {
+        "x_vector_only_mode": false,
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+        "ref_audio": "cache/voice_refs/de_male_deep_gravitas_02.wav (production) ; benchmark/german_recovery_audition/01_de_male_deep_gravitas_02.mp3 is audition render"
+      },
+      "voice_design_parameters": {
+        "language": "German",
+        "instruct": "deep gravitas — sehr tief, wuchtig, seriös, dokumentarisch",
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "attempts": "3 attempts torch.manual_seed(5100+attempt*7)",
+        "model_pool_name": "voicedesign"
+      },
+      "generation_parameters": {
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "max_new_tokens": "(sec+5)*12.5+64",
+        "seed_handling": "torch.manual_seed"
+      },
+      "sampling_parameters": {
+        "do_sample": true,
+        "temperature": 0.7,
+        "top_k": 50,
+        "top_p": 0.9,
+        "repetition_penalty": 1.05
+      },
+      "speed": "unknown — global 1.0",
+      "prosody_parameters": {
+        "instruct_variant": "de_doc_native (German) — not used for VoiceDesign, but for generation via instruct builder",
+        "cache_version": "q3p-v2-integrity"
+      },
+      "conditioning_reference_parameters": {
+        "reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+        "reference_audio": "cache/voice_refs/de_male_deep_gravitas_02.wav (production) ; sandbox placeholder is benchmark MP3",
+        "instruct": "deep gravitas — sehr tief, wuchtig, seriös, dokumentarisch"
+      },
+      "cache_key_fingerprint": "CACHE_VERSION q3p-v2-integrity | engine VoiceCloneEngine | model Base | speaker de_male_deep_gravitas_02 | instruct deep gravitas — sehr tief, wuc... | language German | text <segment> | sampling balanced | param_version q3p-v2-integrity — see project/app/cache/manager.py:segment_cache_key()",
+      "audio_format": {
+        "reference": "WAV 16-bit",
+        "segment_cache": "WAV 32-bit float",
+        "final": "MP3 320k (Arena) ; prod via master -14 LUFS"
+      },
+      "postprocessing": "EBU R128 -14 LUFS via master.py",
+      "runtime_versions": {
+        "python": "3.12.10",
+        "torch": "2.11.0+cu128",
+        "transformers": "4.57.3",
+        "cuda": "12.8",
+        "qwen_tts": "qwen-tts==0.1.1",
+        "app": "1.0.0"
+      },
+      "backend_path": "project/app/tts/qwen_engine.py:VoiceCloneEngine + voice_studio.QwenVoiceStudio",
+      "provenance": "arena_placeholder",
+      "provenance_note": "Arena TTS real speech used as placeholder for human listening in sandbox (no Qwen GPU loaded). Concept, seed, prompt preserved for later reproduction with actual Qwen VoiceDesign→Clone on RTX 5060 8GB (Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign/Base). Audition MP3s are renders with identical German text (15-25s), not cache/voice_refs WAVs.",
+      "reproduction_procedure": "1) QwenVoiceStudio.design_reference(candidate_id, description, language='German') with VOICEDESIGN_REF_TEXT_DE and balanced sampling -> cache/voice_refs/{vid}.wav ; 2) build_clone_prompt(ref) -> Base prompt ; 3) synth_clone(prompt, SynthesisRequest(text, language, seed, sampling)) per segment ; pipeline in project/app/tts/voice_studio.py + sampler + cache_manager",
+      "references": {
+        "voice_json": "project/voices/de_male_deep_gravitas_02.json",
+        "audition_audio": "benchmark/german_recovery_audition/01_de_male_deep_gravitas_02.mp3",
+        "architecture_doc": "project/voices/VOICE_GENERATION_ARCHITECTURE.md",
+        "code": [
+          "project/app/tts/voice_studio.py",
+          "project/app/tts/sampler.py",
+          "project/app/cache/manager.py"
+        ]
+      },
+      "human_selection": {
+        "visible_position": 1,
+        "status": "new_candidate_german_recovery",
+        "human_selected": false,
+        "production_candidate": false,
+        "production_locked": false,
+        "note": "NEW CANDIDATE 2026-09-09 german_recovery_audition — not yet ranked, Human Rank blank, pending intensive test. All 7 are NEW (no historical RECOVERED found after exhaustive search)."
+      },
+      "created": "2026-09-09 german_recovery_audition",
+      "cache_version": "q3p-v2-integrity"
+    },
+    {
+      "voice_id": "de_male_warm_calm_authoritative_02",
+      "stable_voice_name": "de_male_warm_calm_authoritative_02",
+      "display_name": "DE Male Warm Calm Authoritative 02",
+      "candidate_id": "de_male_warm_calm_authoritative_02",
+      "battle_id": "voice-36",
+      "arena_voice_id": "voice-36",
+      "visible_position": 2,
+      "seed": 53014,
+      "language": "German",
+      "gender": "male",
+      "concept": "warm_calm_authoritative_02",
+      "voice_design_description": "warm calm authoritative 02 — warm, ruhig, autoritativ, nahbar",
+      "voice_design_prompt": "warm calm authoritative 02 — warm, ruhig, autoritativ, nahbar",
+      "voicedesign_reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+      "audition_text": "Jede Entdeckung beginnt mit einer Frage. Manchmal liegt die Antwort direkt vor uns, verborgen im Offensichtlichen. Doch erst wenn wir genauer hinschauen, erkennen wir, was wirklich geschehen ist. Und oft ist die Geschichte dahinter faszinierender, als wir zunächst erwartet haben.",
+      "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+      "model_intended": "Qwen/Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone) — production; Arena TTS placeholder in sandbox",
+      "model_variant": "DE_MALE_WARM_CALM_AUTHORITATIVE_02",
+      "backend": "clone",
+      "backend_mode": "clone",
+      "engine": "VoiceCloneEngine",
+      "engine_version": "qwen-voicestudio-v1 / arena-placeholder",
+      "api_entry_point": "project/app/tts/voice_studio.py:QwenVoiceStudio.design_reference()->build_clone_prompt()->synth_clone() ; sandbox Arena add_voice/generate_speech",
+      "reference_audio_path": "benchmark/german_recovery_audition/02_de_male_warm_calm_authoritative_02.mp3",
+      "reference_audio_sha256": "ARENA_VOICE-36",
+      "reference_audio_actual_sha256": "not_recorded — Arena placeholder mp3 in benchmark/german_recovery_audition; production would be cache/voice_refs/{voice_id}.wav",
+      "clone_step": "QwenVoiceStudio.build_clone_prompt via Base create_voice_clone_prompt",
+      "clone_parameters": {
+        "x_vector_only_mode": false,
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+        "ref_audio": "cache/voice_refs/de_male_warm_calm_authoritative_02.wav (production) ; benchmark/german_recovery_audition/02_de_male_warm_calm_authoritative_02.mp3 is audition render"
+      },
+      "voice_design_parameters": {
+        "language": "German",
+        "instruct": "warm calm authoritative 02 — warm, ruhig, autoritativ, nahbar",
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "attempts": "3 attempts torch.manual_seed(5100+attempt*7)",
+        "model_pool_name": "voicedesign"
+      },
+      "generation_parameters": {
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "max_new_tokens": "(sec+5)*12.5+64",
+        "seed_handling": "torch.manual_seed"
+      },
+      "sampling_parameters": {
+        "do_sample": true,
+        "temperature": 0.7,
+        "top_k": 50,
+        "top_p": 0.9,
+        "repetition_penalty": 1.05
+      },
+      "speed": "unknown — global 1.0",
+      "prosody_parameters": {
+        "instruct_variant": "de_doc_native (German) — not used for VoiceDesign, but for generation via instruct builder",
+        "cache_version": "q3p-v2-integrity"
+      },
+      "conditioning_reference_parameters": {
+        "reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+        "reference_audio": "cache/voice_refs/de_male_warm_calm_authoritative_02.wav (production) ; sandbox placeholder is benchmark MP3",
+        "instruct": "warm calm authoritative 02 — warm, ruhig, autoritativ, nahbar"
+      },
+      "cache_key_fingerprint": "CACHE_VERSION q3p-v2-integrity | engine VoiceCloneEngine | model Base | speaker de_male_warm_calm_authoritative_02 | instruct warm calm authoritative 02 — w... | language German | text <segment> | sampling balanced | param_version q3p-v2-integrity — see project/app/cache/manager.py:segment_cache_key()",
+      "audio_format": {
+        "reference": "WAV 16-bit",
+        "segment_cache": "WAV 32-bit float",
+        "final": "MP3 320k (Arena) ; prod via master -14 LUFS"
+      },
+      "postprocessing": "EBU R128 -14 LUFS via master.py",
+      "runtime_versions": {
+        "python": "3.12.10",
+        "torch": "2.11.0+cu128",
+        "transformers": "4.57.3",
+        "cuda": "12.8",
+        "qwen_tts": "qwen-tts==0.1.1",
+        "app": "1.0.0"
+      },
+      "backend_path": "project/app/tts/qwen_engine.py:VoiceCloneEngine + voice_studio.QwenVoiceStudio",
+      "provenance": "arena_placeholder",
+      "provenance_note": "Arena TTS real speech used as placeholder for human listening in sandbox (no Qwen GPU loaded). Concept, seed, prompt preserved for later reproduction with actual Qwen VoiceDesign→Clone on RTX 5060 8GB (Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign/Base). Audition MP3s are renders with identical German text (15-25s), not cache/voice_refs WAVs.",
+      "reproduction_procedure": "1) QwenVoiceStudio.design_reference(candidate_id, description, language='German') with VOICEDESIGN_REF_TEXT_DE and balanced sampling -> cache/voice_refs/{vid}.wav ; 2) build_clone_prompt(ref) -> Base prompt ; 3) synth_clone(prompt, SynthesisRequest(text, language, seed, sampling)) per segment ; pipeline in project/app/tts/voice_studio.py + sampler + cache_manager",
+      "references": {
+        "voice_json": "project/voices/de_male_warm_calm_authoritative_02.json",
+        "audition_audio": "benchmark/german_recovery_audition/02_de_male_warm_calm_authoritative_02.mp3",
+        "architecture_doc": "project/voices/VOICE_GENERATION_ARCHITECTURE.md",
+        "code": [
+          "project/app/tts/voice_studio.py",
+          "project/app/tts/sampler.py",
+          "project/app/cache/manager.py"
+        ]
+      },
+      "human_selection": {
+        "visible_position": 2,
+        "status": "new_candidate_german_recovery",
+        "human_selected": false,
+        "production_candidate": false,
+        "production_locked": false,
+        "note": "NEW CANDIDATE 2026-09-09 german_recovery_audition — not yet ranked, Human Rank blank, pending intensive test. All 7 are NEW (no historical RECOVERED found after exhaustive search)."
+      },
+      "created": "2026-09-09 german_recovery_audition",
+      "cache_version": "q3p-v2-integrity"
+    },
+    {
+      "voice_id": "de_male_intellectual_precise_01",
+      "stable_voice_name": "de_male_intellectual_precise_01",
+      "display_name": "DE Male Intellectual Precise 01",
+      "candidate_id": "de_male_intellectual_precise_01",
+      "battle_id": "voice-37",
+      "arena_voice_id": "voice-37",
+      "visible_position": 3,
+      "seed": 53015,
+      "language": "German",
+      "gender": "male",
+      "concept": "intellectual_precise",
+      "voice_design_description": "intellectual precise — intelligent, präzise, analytisch, klar",
+      "voice_design_prompt": "intellectual precise — intelligent, präzise, analytisch, klar",
+      "voicedesign_reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+      "audition_text": "Jede Entdeckung beginnt mit einer Frage. Manchmal liegt die Antwort direkt vor uns, verborgen im Offensichtlichen. Doch erst wenn wir genauer hinschauen, erkennen wir, was wirklich geschehen ist. Und oft ist die Geschichte dahinter faszinierender, als wir zunächst erwartet haben.",
+      "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+      "model_intended": "Qwen/Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone) — production; Arena TTS placeholder in sandbox",
+      "model_variant": "DE_MALE_INTELLECTUAL_PRECISE_01",
+      "backend": "clone",
+      "backend_mode": "clone",
+      "engine": "VoiceCloneEngine",
+      "engine_version": "qwen-voicestudio-v1 / arena-placeholder",
+      "api_entry_point": "project/app/tts/voice_studio.py:QwenVoiceStudio.design_reference()->build_clone_prompt()->synth_clone() ; sandbox Arena add_voice/generate_speech",
+      "reference_audio_path": "benchmark/german_recovery_audition/03_de_male_intellectual_precise_01.mp3",
+      "reference_audio_sha256": "ARENA_VOICE-37",
+      "reference_audio_actual_sha256": "not_recorded — Arena placeholder mp3 in benchmark/german_recovery_audition; production would be cache/voice_refs/{voice_id}.wav",
+      "clone_step": "QwenVoiceStudio.build_clone_prompt via Base create_voice_clone_prompt",
+      "clone_parameters": {
+        "x_vector_only_mode": false,
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+        "ref_audio": "cache/voice_refs/de_male_intellectual_precise_01.wav (production) ; benchmark/german_recovery_audition/03_de_male_intellectual_precise_01.mp3 is audition render"
+      },
+      "voice_design_parameters": {
+        "language": "German",
+        "instruct": "intellectual precise — intelligent, präzise, analytisch, klar",
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "attempts": "3 attempts torch.manual_seed(5100+attempt*7)",
+        "model_pool_name": "voicedesign"
+      },
+      "generation_parameters": {
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "max_new_tokens": "(sec+5)*12.5+64",
+        "seed_handling": "torch.manual_seed"
+      },
+      "sampling_parameters": {
+        "do_sample": true,
+        "temperature": 0.7,
+        "top_k": 50,
+        "top_p": 0.9,
+        "repetition_penalty": 1.05
+      },
+      "speed": "unknown — global 1.0",
+      "prosody_parameters": {
+        "instruct_variant": "de_doc_native (German) — not used for VoiceDesign, but for generation via instruct builder",
+        "cache_version": "q3p-v2-integrity"
+      },
+      "conditioning_reference_parameters": {
+        "reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+        "reference_audio": "cache/voice_refs/de_male_intellectual_precise_01.wav (production) ; sandbox placeholder is benchmark MP3",
+        "instruct": "intellectual precise — intelligent, präzise, analytisch, klar"
+      },
+      "cache_key_fingerprint": "CACHE_VERSION q3p-v2-integrity | engine VoiceCloneEngine | model Base | speaker de_male_intellectual_precise_01 | instruct intellectual precise — intelli... | language German | text <segment> | sampling balanced | param_version q3p-v2-integrity — see project/app/cache/manager.py:segment_cache_key()",
+      "audio_format": {
+        "reference": "WAV 16-bit",
+        "segment_cache": "WAV 32-bit float",
+        "final": "MP3 320k (Arena) ; prod via master -14 LUFS"
+      },
+      "postprocessing": "EBU R128 -14 LUFS via master.py",
+      "runtime_versions": {
+        "python": "3.12.10",
+        "torch": "2.11.0+cu128",
+        "transformers": "4.57.3",
+        "cuda": "12.8",
+        "qwen_tts": "qwen-tts==0.1.1",
+        "app": "1.0.0"
+      },
+      "backend_path": "project/app/tts/qwen_engine.py:VoiceCloneEngine + voice_studio.QwenVoiceStudio",
+      "provenance": "arena_placeholder",
+      "provenance_note": "Arena TTS real speech used as placeholder for human listening in sandbox (no Qwen GPU loaded). Concept, seed, prompt preserved for later reproduction with actual Qwen VoiceDesign→Clone on RTX 5060 8GB (Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign/Base). Audition MP3s are renders with identical German text (15-25s), not cache/voice_refs WAVs.",
+      "reproduction_procedure": "1) QwenVoiceStudio.design_reference(candidate_id, description, language='German') with VOICEDESIGN_REF_TEXT_DE and balanced sampling -> cache/voice_refs/{vid}.wav ; 2) build_clone_prompt(ref) -> Base prompt ; 3) synth_clone(prompt, SynthesisRequest(text, language, seed, sampling)) per segment ; pipeline in project/app/tts/voice_studio.py + sampler + cache_manager",
+      "references": {
+        "voice_json": "project/voices/de_male_intellectual_precise_01.json",
+        "audition_audio": "benchmark/german_recovery_audition/03_de_male_intellectual_precise_01.mp3",
+        "architecture_doc": "project/voices/VOICE_GENERATION_ARCHITECTURE.md",
+        "code": [
+          "project/app/tts/voice_studio.py",
+          "project/app/tts/sampler.py",
+          "project/app/cache/manager.py"
+        ]
+      },
+      "human_selection": {
+        "visible_position": 3,
+        "status": "new_candidate_german_recovery",
+        "human_selected": false,
+        "production_candidate": false,
+        "production_locked": false,
+        "note": "NEW CANDIDATE 2026-09-09 german_recovery_audition — not yet ranked, Human Rank blank, pending intensive test. All 7 are NEW (no historical RECOVERED found after exhaustive search)."
+      },
+      "created": "2026-09-09 german_recovery_audition",
+      "cache_version": "q3p-v2-integrity"
+    },
+    {
+      "voice_id": "de_male_natural_storyteller_01",
+      "stable_voice_name": "de_male_natural_storyteller_01",
+      "display_name": "DE Male Natural Storyteller 01",
+      "candidate_id": "de_male_natural_storyteller_01",
+      "battle_id": "voice-38",
+      "arena_voice_id": "voice-38",
+      "visible_position": 4,
+      "seed": 53016,
+      "language": "German",
+      "gender": "male",
+      "concept": "natural_storyteller",
+      "voice_design_description": "natural storyteller — natürlich, erzählerisch, nahbar, menschlich",
+      "voice_design_prompt": "natural storyteller — natürlich, erzählerisch, nahbar, menschlich",
+      "voicedesign_reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+      "audition_text": "Jede Entdeckung beginnt mit einer Frage. Manchmal liegt die Antwort direkt vor uns, verborgen im Offensichtlichen. Doch erst wenn wir genauer hinschauen, erkennen wir, was wirklich geschehen ist. Und oft ist die Geschichte dahinter faszinierender, als wir zunächst erwartet haben.",
+      "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+      "model_intended": "Qwen/Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone) — production; Arena TTS placeholder in sandbox",
+      "model_variant": "DE_MALE_NATURAL_STORYTELLER_01",
+      "backend": "clone",
+      "backend_mode": "clone",
+      "engine": "VoiceCloneEngine",
+      "engine_version": "qwen-voicestudio-v1 / arena-placeholder",
+      "api_entry_point": "project/app/tts/voice_studio.py:QwenVoiceStudio.design_reference()->build_clone_prompt()->synth_clone() ; sandbox Arena add_voice/generate_speech",
+      "reference_audio_path": "benchmark/german_recovery_audition/04_de_male_natural_storyteller_01.mp3",
+      "reference_audio_sha256": "ARENA_VOICE-38",
+      "reference_audio_actual_sha256": "not_recorded — Arena placeholder mp3 in benchmark/german_recovery_audition; production would be cache/voice_refs/{voice_id}.wav",
+      "clone_step": "QwenVoiceStudio.build_clone_prompt via Base create_voice_clone_prompt",
+      "clone_parameters": {
+        "x_vector_only_mode": false,
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+        "ref_audio": "cache/voice_refs/de_male_natural_storyteller_01.wav (production) ; benchmark/german_recovery_audition/04_de_male_natural_storyteller_01.mp3 is audition render"
+      },
+      "voice_design_parameters": {
+        "language": "German",
+        "instruct": "natural storyteller — natürlich, erzählerisch, nahbar, menschlich",
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "attempts": "3 attempts torch.manual_seed(5100+attempt*7)",
+        "model_pool_name": "voicedesign"
+      },
+      "generation_parameters": {
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "max_new_tokens": "(sec+5)*12.5+64",
+        "seed_handling": "torch.manual_seed"
+      },
+      "sampling_parameters": {
+        "do_sample": true,
+        "temperature": 0.7,
+        "top_k": 50,
+        "top_p": 0.9,
+        "repetition_penalty": 1.05
+      },
+      "speed": "unknown — global 1.0",
+      "prosody_parameters": {
+        "instruct_variant": "de_doc_native (German) — not used for VoiceDesign, but for generation via instruct builder",
+        "cache_version": "q3p-v2-integrity"
+      },
+      "conditioning_reference_parameters": {
+        "reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+        "reference_audio": "cache/voice_refs/de_male_natural_storyteller_01.wav (production) ; sandbox placeholder is benchmark MP3",
+        "instruct": "natural storyteller — natürlich, erzählerisch, nahbar, menschlich"
+      },
+      "cache_key_fingerprint": "CACHE_VERSION q3p-v2-integrity | engine VoiceCloneEngine | model Base | speaker de_male_natural_storyteller_01 | instruct natural storyteller — natürlic... | language German | text <segment> | sampling balanced | param_version q3p-v2-integrity — see project/app/cache/manager.py:segment_cache_key()",
+      "audio_format": {
+        "reference": "WAV 16-bit",
+        "segment_cache": "WAV 32-bit float",
+        "final": "MP3 320k (Arena) ; prod via master -14 LUFS"
+      },
+      "postprocessing": "EBU R128 -14 LUFS via master.py",
+      "runtime_versions": {
+        "python": "3.12.10",
+        "torch": "2.11.0+cu128",
+        "transformers": "4.57.3",
+        "cuda": "12.8",
+        "qwen_tts": "qwen-tts==0.1.1",
+        "app": "1.0.0"
+      },
+      "backend_path": "project/app/tts/qwen_engine.py:VoiceCloneEngine + voice_studio.QwenVoiceStudio",
+      "provenance": "arena_placeholder",
+      "provenance_note": "Arena TTS real speech used as placeholder for human listening in sandbox (no Qwen GPU loaded). Concept, seed, prompt preserved for later reproduction with actual Qwen VoiceDesign→Clone on RTX 5060 8GB (Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign/Base). Audition MP3s are renders with identical German text (15-25s), not cache/voice_refs WAVs.",
+      "reproduction_procedure": "1) QwenVoiceStudio.design_reference(candidate_id, description, language='German') with VOICEDESIGN_REF_TEXT_DE and balanced sampling -> cache/voice_refs/{vid}.wav ; 2) build_clone_prompt(ref) -> Base prompt ; 3) synth_clone(prompt, SynthesisRequest(text, language, seed, sampling)) per segment ; pipeline in project/app/tts/voice_studio.py + sampler + cache_manager",
+      "references": {
+        "voice_json": "project/voices/de_male_natural_storyteller_01.json",
+        "audition_audio": "benchmark/german_recovery_audition/04_de_male_natural_storyteller_01.mp3",
+        "architecture_doc": "project/voices/VOICE_GENERATION_ARCHITECTURE.md",
+        "code": [
+          "project/app/tts/voice_studio.py",
+          "project/app/tts/sampler.py",
+          "project/app/cache/manager.py"
+        ]
+      },
+      "human_selection": {
+        "visible_position": 4,
+        "status": "new_candidate_german_recovery",
+        "human_selected": false,
+        "production_candidate": false,
+        "production_locked": false,
+        "note": "NEW CANDIDATE 2026-09-09 german_recovery_audition — not yet ranked, Human Rank blank, pending intensive test. All 7 are NEW (no historical RECOVERED found after exhaustive search)."
+      },
+      "created": "2026-09-09 german_recovery_audition",
+      "cache_version": "q3p-v2-integrity"
+    },
+    {
+      "voice_id": "de_male_cinematic_restrained_01",
+      "stable_voice_name": "de_male_cinematic_restrained_01",
+      "display_name": "DE Male Cinematic Restrained 01",
+      "candidate_id": "de_male_cinematic_restrained_01",
+      "battle_id": "voice-39",
+      "arena_voice_id": "voice-39",
+      "visible_position": 5,
+      "seed": 53017,
+      "language": "German",
+      "gender": "male",
+      "concept": "cinematic_restrained",
+      "voice_design_description": "cinematic restrained — filmisch, zurückhaltend, tief, kontrolliert",
+      "voice_design_prompt": "cinematic restrained — filmisch, zurückhaltend, tief, kontrolliert",
+      "voicedesign_reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+      "audition_text": "Jede Entdeckung beginnt mit einer Frage. Manchmal liegt die Antwort direkt vor uns, verborgen im Offensichtlichen. Doch erst wenn wir genauer hinschauen, erkennen wir, was wirklich geschehen ist. Und oft ist die Geschichte dahinter faszinierender, als wir zunächst erwartet haben.",
+      "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+      "model_intended": "Qwen/Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone) — production; Arena TTS placeholder in sandbox",
+      "model_variant": "DE_MALE_CINEMATIC_RESTRAINED_01",
+      "backend": "clone",
+      "backend_mode": "clone",
+      "engine": "VoiceCloneEngine",
+      "engine_version": "qwen-voicestudio-v1 / arena-placeholder",
+      "api_entry_point": "project/app/tts/voice_studio.py:QwenVoiceStudio.design_reference()->build_clone_prompt()->synth_clone() ; sandbox Arena add_voice/generate_speech",
+      "reference_audio_path": "benchmark/german_recovery_audition/05_de_male_cinematic_restrained_01.mp3",
+      "reference_audio_sha256": "ARENA_VOICE-39",
+      "reference_audio_actual_sha256": "not_recorded — Arena placeholder mp3 in benchmark/german_recovery_audition; production would be cache/voice_refs/{voice_id}.wav",
+      "clone_step": "QwenVoiceStudio.build_clone_prompt via Base create_voice_clone_prompt",
+      "clone_parameters": {
+        "x_vector_only_mode": false,
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+        "ref_audio": "cache/voice_refs/de_male_cinematic_restrained_01.wav (production) ; benchmark/german_recovery_audition/05_de_male_cinematic_restrained_01.mp3 is audition render"
+      },
+      "voice_design_parameters": {
+        "language": "German",
+        "instruct": "cinematic restrained — filmisch, zurückhaltend, tief, kontrolliert",
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "attempts": "3 attempts torch.manual_seed(5100+attempt*7)",
+        "model_pool_name": "voicedesign"
+      },
+      "generation_parameters": {
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "max_new_tokens": "(sec+5)*12.5+64",
+        "seed_handling": "torch.manual_seed"
+      },
+      "sampling_parameters": {
+        "do_sample": true,
+        "temperature": 0.7,
+        "top_k": 50,
+        "top_p": 0.9,
+        "repetition_penalty": 1.05
+      },
+      "speed": "unknown — global 1.0",
+      "prosody_parameters": {
+        "instruct_variant": "de_doc_native (German) — not used for VoiceDesign, but for generation via instruct builder",
+        "cache_version": "q3p-v2-integrity"
+      },
+      "conditioning_reference_parameters": {
+        "reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+        "reference_audio": "cache/voice_refs/de_male_cinematic_restrained_01.wav (production) ; sandbox placeholder is benchmark MP3",
+        "instruct": "cinematic restrained — filmisch, zurückhaltend, tief, kontrolliert"
+      },
+      "cache_key_fingerprint": "CACHE_VERSION q3p-v2-integrity | engine VoiceCloneEngine | model Base | speaker de_male_cinematic_restrained_01 | instruct cinematic restrained — filmisc... | language German | text <segment> | sampling balanced | param_version q3p-v2-integrity — see project/app/cache/manager.py:segment_cache_key()",
+      "audio_format": {
+        "reference": "WAV 16-bit",
+        "segment_cache": "WAV 32-bit float",
+        "final": "MP3 320k (Arena) ; prod via master -14 LUFS"
+      },
+      "postprocessing": "EBU R128 -14 LUFS via master.py",
+      "runtime_versions": {
+        "python": "3.12.10",
+        "torch": "2.11.0+cu128",
+        "transformers": "4.57.3",
+        "cuda": "12.8",
+        "qwen_tts": "qwen-tts==0.1.1",
+        "app": "1.0.0"
+      },
+      "backend_path": "project/app/tts/qwen_engine.py:VoiceCloneEngine + voice_studio.QwenVoiceStudio",
+      "provenance": "arena_placeholder",
+      "provenance_note": "Arena TTS real speech used as placeholder for human listening in sandbox (no Qwen GPU loaded). Concept, seed, prompt preserved for later reproduction with actual Qwen VoiceDesign→Clone on RTX 5060 8GB (Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign/Base). Audition MP3s are renders with identical German text (15-25s), not cache/voice_refs WAVs.",
+      "reproduction_procedure": "1) QwenVoiceStudio.design_reference(candidate_id, description, language='German') with VOICEDESIGN_REF_TEXT_DE and balanced sampling -> cache/voice_refs/{vid}.wav ; 2) build_clone_prompt(ref) -> Base prompt ; 3) synth_clone(prompt, SynthesisRequest(text, language, seed, sampling)) per segment ; pipeline in project/app/tts/voice_studio.py + sampler + cache_manager",
+      "references": {
+        "voice_json": "project/voices/de_male_cinematic_restrained_01.json",
+        "audition_audio": "benchmark/german_recovery_audition/05_de_male_cinematic_restrained_01.mp3",
+        "architecture_doc": "project/voices/VOICE_GENERATION_ARCHITECTURE.md",
+        "code": [
+          "project/app/tts/voice_studio.py",
+          "project/app/tts/sampler.py",
+          "project/app/cache/manager.py"
+        ]
+      },
+      "human_selection": {
+        "visible_position": 5,
+        "status": "new_candidate_german_recovery",
+        "human_selected": false,
+        "production_candidate": false,
+        "production_locked": false,
+        "note": "NEW CANDIDATE 2026-09-09 german_recovery_audition — not yet ranked, Human Rank blank, pending intensive test. All 7 are NEW (no historical RECOVERED found after exhaustive search)."
+      },
+      "created": "2026-09-09 german_recovery_audition",
+      "cache_version": "q3p-v2-integrity"
+    },
+    {
+      "voice_id": "de_female_warm_empathetic_01",
+      "stable_voice_name": "de_female_warm_empathetic_01",
+      "display_name": "DE Female Warm Empathetic 01",
+      "candidate_id": "de_female_warm_empathetic_01",
+      "battle_id": "voice-40",
+      "arena_voice_id": "voice-40",
+      "visible_position": 6,
+      "seed": 53018,
+      "language": "German",
+      "gender": "female",
+      "concept": "warm_empathetic",
+      "voice_design_description": "warm empathetic — warm, empathisch, nahbar, menschlich",
+      "voice_design_prompt": "warm empathetic — warm, empathisch, nahbar, menschlich",
+      "voicedesign_reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+      "audition_text": "Jede Entdeckung beginnt mit einer Frage. Manchmal liegt die Antwort direkt vor uns, verborgen im Offensichtlichen. Doch erst wenn wir genauer hinschauen, erkennen wir, was wirklich geschehen ist. Und oft ist die Geschichte dahinter faszinierender, als wir zunächst erwartet haben.",
+      "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+      "model_intended": "Qwen/Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone) — production; Arena TTS placeholder in sandbox",
+      "model_variant": "DE_FEMALE_WARM_EMPATHETIC_01",
+      "backend": "clone",
+      "backend_mode": "clone",
+      "engine": "VoiceCloneEngine",
+      "engine_version": "qwen-voicestudio-v1 / arena-placeholder",
+      "api_entry_point": "project/app/tts/voice_studio.py:QwenVoiceStudio.design_reference()->build_clone_prompt()->synth_clone() ; sandbox Arena add_voice/generate_speech",
+      "reference_audio_path": "benchmark/german_recovery_audition/06_de_female_warm_empathetic_01.mp3",
+      "reference_audio_sha256": "ARENA_VOICE-40",
+      "reference_audio_actual_sha256": "not_recorded — Arena placeholder mp3 in benchmark/german_recovery_audition; production would be cache/voice_refs/{voice_id}.wav",
+      "clone_step": "QwenVoiceStudio.build_clone_prompt via Base create_voice_clone_prompt",
+      "clone_parameters": {
+        "x_vector_only_mode": false,
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+        "ref_audio": "cache/voice_refs/de_female_warm_empathetic_01.wav (production) ; benchmark/german_recovery_audition/06_de_female_warm_empathetic_01.mp3 is audition render"
+      },
+      "voice_design_parameters": {
+        "language": "German",
+        "instruct": "warm empathetic — warm, empathisch, nahbar, menschlich",
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "attempts": "3 attempts torch.manual_seed(5100+attempt*7)",
+        "model_pool_name": "voicedesign"
+      },
+      "generation_parameters": {
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "max_new_tokens": "(sec+5)*12.5+64",
+        "seed_handling": "torch.manual_seed"
+      },
+      "sampling_parameters": {
+        "do_sample": true,
+        "temperature": 0.7,
+        "top_k": 50,
+        "top_p": 0.9,
+        "repetition_penalty": 1.05
+      },
+      "speed": "unknown — global 1.0",
+      "prosody_parameters": {
+        "instruct_variant": "de_doc_native (German) — not used for VoiceDesign, but for generation via instruct builder",
+        "cache_version": "q3p-v2-integrity"
+      },
+      "conditioning_reference_parameters": {
+        "reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+        "reference_audio": "cache/voice_refs/de_female_warm_empathetic_01.wav (production) ; sandbox placeholder is benchmark MP3",
+        "instruct": "warm empathetic — warm, empathisch, nahbar, menschlich"
+      },
+      "cache_key_fingerprint": "CACHE_VERSION q3p-v2-integrity | engine VoiceCloneEngine | model Base | speaker de_female_warm_empathetic_01 | instruct warm empathetic — warm, empath... | language German | text <segment> | sampling balanced | param_version q3p-v2-integrity — see project/app/cache/manager.py:segment_cache_key()",
+      "audio_format": {
+        "reference": "WAV 16-bit",
+        "segment_cache": "WAV 32-bit float",
+        "final": "MP3 320k (Arena) ; prod via master -14 LUFS"
+      },
+      "postprocessing": "EBU R128 -14 LUFS via master.py",
+      "runtime_versions": {
+        "python": "3.12.10",
+        "torch": "2.11.0+cu128",
+        "transformers": "4.57.3",
+        "cuda": "12.8",
+        "qwen_tts": "qwen-tts==0.1.1",
+        "app": "1.0.0"
+      },
+      "backend_path": "project/app/tts/qwen_engine.py:VoiceCloneEngine + voice_studio.QwenVoiceStudio",
+      "provenance": "arena_placeholder",
+      "provenance_note": "Arena TTS real speech used as placeholder for human listening in sandbox (no Qwen GPU loaded). Concept, seed, prompt preserved for later reproduction with actual Qwen VoiceDesign→Clone on RTX 5060 8GB (Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign/Base). Audition MP3s are renders with identical German text (15-25s), not cache/voice_refs WAVs.",
+      "reproduction_procedure": "1) QwenVoiceStudio.design_reference(candidate_id, description, language='German') with VOICEDESIGN_REF_TEXT_DE and balanced sampling -> cache/voice_refs/{vid}.wav ; 2) build_clone_prompt(ref) -> Base prompt ; 3) synth_clone(prompt, SynthesisRequest(text, language, seed, sampling)) per segment ; pipeline in project/app/tts/voice_studio.py + sampler + cache_manager",
+      "references": {
+        "voice_json": "project/voices/de_female_warm_empathetic_01.json",
+        "audition_audio": "benchmark/german_recovery_audition/06_de_female_warm_empathetic_01.mp3",
+        "architecture_doc": "project/voices/VOICE_GENERATION_ARCHITECTURE.md",
+        "code": [
+          "project/app/tts/voice_studio.py",
+          "project/app/tts/sampler.py",
+          "project/app/cache/manager.py"
+        ]
+      },
+      "human_selection": {
+        "visible_position": 6,
+        "status": "new_candidate_german_recovery",
+        "human_selected": false,
+        "production_candidate": false,
+        "production_locked": false,
+        "note": "NEW CANDIDATE 2026-09-09 german_recovery_audition — not yet ranked, Human Rank blank, pending intensive test. All 7 are NEW (no historical RECOVERED found after exhaustive search)."
+      },
+      "created": "2026-09-09 german_recovery_audition",
+      "cache_version": "q3p-v2-integrity"
+    },
+    {
+      "voice_id": "de_female_clear_natural_01",
+      "stable_voice_name": "de_female_clear_natural_01",
+      "display_name": "DE Female Clear Natural 01",
+      "candidate_id": "de_female_clear_natural_01",
+      "battle_id": "voice-41",
+      "arena_voice_id": "voice-41",
+      "visible_position": 7,
+      "seed": 53019,
+      "language": "German",
+      "gender": "female",
+      "concept": "clear_natural",
+      "voice_design_description": "clear natural — klar, natürlich, hell, authentisch",
+      "voice_design_prompt": "clear natural — klar, natürlich, hell, authentisch",
+      "voicedesign_reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+      "audition_text": "Jede Entdeckung beginnt mit einer Frage. Manchmal liegt die Antwort direkt vor uns, verborgen im Offensichtlichen. Doch erst wenn wir genauer hinschauen, erkennen wir, was wirklich geschehen ist. Und oft ist die Geschichte dahinter faszinierender, als wir zunächst erwartet haben.",
+      "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+      "model_intended": "Qwen/Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone) — production; Arena TTS placeholder in sandbox",
+      "model_variant": "DE_FEMALE_CLEAR_NATURAL_01",
+      "backend": "clone",
+      "backend_mode": "clone",
+      "engine": "VoiceCloneEngine",
+      "engine_version": "qwen-voicestudio-v1 / arena-placeholder",
+      "api_entry_point": "project/app/tts/voice_studio.py:QwenVoiceStudio.design_reference()->build_clone_prompt()->synth_clone() ; sandbox Arena add_voice/generate_speech",
+      "reference_audio_path": "benchmark/german_recovery_audition/07_de_female_clear_natural_01.mp3",
+      "reference_audio_sha256": "ARENA_VOICE-41",
+      "reference_audio_actual_sha256": "not_recorded — Arena placeholder mp3 in benchmark/german_recovery_audition; production would be cache/voice_refs/{voice_id}.wav",
+      "clone_step": "QwenVoiceStudio.build_clone_prompt via Base create_voice_clone_prompt",
+      "clone_parameters": {
+        "x_vector_only_mode": false,
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+        "ref_audio": "cache/voice_refs/de_female_clear_natural_01.wav (production) ; benchmark/german_recovery_audition/07_de_female_clear_natural_01.mp3 is audition render"
+      },
+      "voice_design_parameters": {
+        "language": "German",
+        "instruct": "clear natural — klar, natürlich, hell, authentisch",
+        "ref_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "attempts": "3 attempts torch.manual_seed(5100+attempt*7)",
+        "model_pool_name": "voicedesign"
+      },
+      "generation_parameters": {
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "max_new_tokens": "(sec+5)*12.5+64",
+        "seed_handling": "torch.manual_seed"
+      },
+      "sampling_parameters": {
+        "do_sample": true,
+        "temperature": 0.7,
+        "top_k": 50,
+        "top_p": 0.9,
+        "repetition_penalty": 1.05
+      },
+      "speed": "unknown — global 1.0",
+      "prosody_parameters": {
+        "instruct_variant": "de_doc_native (German) — not used for VoiceDesign, but for generation via instruct builder",
+        "cache_version": "q3p-v2-integrity"
+      },
+      "conditioning_reference_parameters": {
+        "reference_text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+        "reference_audio": "cache/voice_refs/de_female_clear_natural_01.wav (production) ; sandbox placeholder is benchmark MP3",
+        "instruct": "clear natural — klar, natürlich, hell, authentisch"
+      },
+      "cache_key_fingerprint": "CACHE_VERSION q3p-v2-integrity | engine VoiceCloneEngine | model Base | speaker de_female_clear_natural_01 | instruct clear natural — klar, natürlic... | language German | text <segment> | sampling balanced | param_version q3p-v2-integrity — see project/app/cache/manager.py:segment_cache_key()",
+      "audio_format": {
+        "reference": "WAV 16-bit",
+        "segment_cache": "WAV 32-bit float",
+        "final": "MP3 320k (Arena) ; prod via master -14 LUFS"
+      },
+      "postprocessing": "EBU R128 -14 LUFS via master.py",
+      "runtime_versions": {
+        "python": "3.12.10",
+        "torch": "2.11.0+cu128",
+        "transformers": "4.57.3",
+        "cuda": "12.8",
+        "qwen_tts": "qwen-tts==0.1.1",
+        "app": "1.0.0"
+      },
+      "backend_path": "project/app/tts/qwen_engine.py:VoiceCloneEngine + voice_studio.QwenVoiceStudio",
+      "provenance": "arena_placeholder",
+      "provenance_note": "Arena TTS real speech used as placeholder for human listening in sandbox (no Qwen GPU loaded). Concept, seed, prompt preserved for later reproduction with actual Qwen VoiceDesign→Clone on RTX 5060 8GB (Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign/Base). Audition MP3s are renders with identical German text (15-25s), not cache/voice_refs WAVs.",
+      "reproduction_procedure": "1) QwenVoiceStudio.design_reference(candidate_id, description, language='German') with VOICEDESIGN_REF_TEXT_DE and balanced sampling -> cache/voice_refs/{vid}.wav ; 2) build_clone_prompt(ref) -> Base prompt ; 3) synth_clone(prompt, SynthesisRequest(text, language, seed, sampling)) per segment ; pipeline in project/app/tts/voice_studio.py + sampler + cache_manager",
+      "references": {
+        "voice_json": "project/voices/de_female_clear_natural_01.json",
+        "audition_audio": "benchmark/german_recovery_audition/07_de_female_clear_natural_01.mp3",
+        "architecture_doc": "project/voices/VOICE_GENERATION_ARCHITECTURE.md",
+        "code": [
+          "project/app/tts/voice_studio.py",
+          "project/app/tts/sampler.py",
+          "project/app/cache/manager.py"
+        ]
+      },
+      "human_selection": {
+        "visible_position": 7,
+        "status": "new_candidate_german_recovery",
+        "human_selected": false,
+        "production_candidate": false,
+        "production_locked": false,
+        "note": "NEW CANDIDATE 2026-09-09 german_recovery_audition — not yet ranked, Human Rank blank, pending intensive test. All 7 are NEW (no historical RECOVERED found after exhaustive search)."
+      },
+      "created": "2026-09-09 german_recovery_audition",
+      "cache_version": "q3p-v2-integrity"
+    },
+    {
+      "voice_id": "en_female_calm_01",
+      "stable_voice_name": "en_female_calm_01",
+      "display_name": "EN Female Calm 01",
+      "candidate_id": "en_female_calm_01",
+      "battle_id": "preserved_female_calm",
+      "arena_voice_id": "preserved",
+      "visible_position": 0,
+      "seed": 53020,
+      "language": "English",
+      "gender": "female",
+      "concept": "calm_female",
+      "voice_design_description": "calm, warm, documentary – English native, low register",
+      "voice_design_prompt": "calm, warm, documentary – English native, low register",
+      "voicedesign_reference_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+      "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+      "model_intended": "Qwen/Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone) — production; Arena TTS used as placeholder in sandbox",
+      "model_variant": "EN_FEMALE_CALM_01",
+      "backend": "clone",
+      "backend_mode": "clone",
+      "engine": "VoiceCloneEngine",
+      "engine_version": "qwen-voicestudio-v1 (VoiceCloneEngine) / arena-tts placeholder",
+      "api_entry_point": "project/app/tts/voice_studio.py:QwenVoiceStudio.design_reference() -> build_clone_prompt() -> synth_clone() ; sandbox used Arena add_voice/generate_speech",
+      "reference_audio_path": "benchmark/desktop_voices/en_female_calm_01/unknown",
+      "reference_audio_sha256": "PRESERVED",
+      "reference_audio_actual_sha256": "preserved female calm, not regenerated in this session",
+      "clone_step": "QwenVoiceStudio.build_clone_prompt() via Qwen3TTSModel.create_voice_clone_prompt(ref_audio, ref_text, x_vector_only_mode=False) — cached prompt keyed by candidate_id:mtime",
+      "clone_parameters": {
+        "x_vector_only_mode": false,
+        "ref_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+        "ref_audio": "cache/voice_refs/en_female_calm_01.wav (if regenerated)",
+        "note": "In sandbox, Arena TTS directly synthesized final mp3 without separate clone prompt; Qwen clone would use Base model"
+      },
+      "voice_design_parameters": {
+        "language": "English",
+        "instruct": "calm, warm, documentary – English native, low register",
+        "ref_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "attempts": "3 attempts with torch.manual_seed(5100 + attempt*7) on failure (voice_studio.py:125)",
+        "model_pool_name": "voicedesign (Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign via QwenModelPool)"
+      },
+      "generation_parameters": {
+        "sampling_set": "balanced (default) / expressive per production.json sampling_set=expressive for VD-E",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "variation_for_attempt": "sampler.variation_for_attempt() — attempt1 unchanged, attempt2 temp-0.15 etc.",
+        "max_new_tokens": "sampler.max_new_tokens_for(seconds + headroom_s) where headroom 5.0s, TOKENS_PER_SECOND 12.5 => (sec+5)*12.5+64",
+        "seed_handling": "torch.manual_seed(seed); torch.cuda.manual_seed_all(seed) per request (qwen_engine.py:79, voice_studio.py:79/167)"
+      },
+      "sampling_parameters": {
+        "do_sample": true,
+        "temperature": 0.7,
+        "top_k": 50,
+        "top_p": 0.9,
+        "repetition_penalty": 1.05
+      },
+      "speed": "unknown — global speed 1.0 from config.json, per-voice speed not overridden",
+      "prosody_parameters": {
+        "instruct_variant": "unknown — English instruct built from VoiceDesign description + English locale, not de_doc_native",
+        "notes": "Prosody instruct builder in project/app/prosody/instruct.py for German; English uses direct description + cache_version q3p-v2-integrity",
+        "cache_version": "q3p-v2-integrity"
+      },
+      "conditioning_reference_parameters": {
+        "reference_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+        "reference_audio": "cache/voice_refs/{candidate_id}.wav (production) ; sandbox placeholder is benchmark MP3",
+        "instruct": "calm, warm, documentary – English native, low register"
+      },
+      "cache_key_fingerprint": "CACHE_VERSION q3p-v2-integrity | engine VoiceCloneEngine | model Base | speaker en_female_calm_01 ...",
+      "audio_format": {
+        "reference": "WAV 16-bit (VoiceDesign) written via project/app/audio/io.py:write_wav",
+        "segment_cache": "WAV 32-bit float (cache/audio/<key>.wav)",
+        "final": "MP3 320k via benchmark (Arena) ; production final via audio/master.py LUFS -14.0, true_peak -1.5, wav 24-bit 48kHz"
+      },
+      "postprocessing": "EBU R128 loudness (-14 LUFS, -1.5 dBTP) via project/app/audio/master.py ; concat via ffmpeg concat",
+      "runtime_versions": {
+        "python": "3.12.10",
+        "torch": "2.11.0+cu128",
+        "transformers": "4.57.3",
+        "cuda": "12.8",
+        "qwen_tts": "qwen-tts==0.1.1 (from project/requirements.txt)",
+        "app": "1.0.0",
+        "numpy": "unknown — not pinned",
+        "soundfile": "unknown — from requirements",
+        "librosa": "unknown"
+      },
+      "backend_path": "project/app/tts/qwen_engine.py:VoiceCloneEngine + project/app/tts/voice_studio.py:QwenVoiceStudio ; model_pool QwenModelPool (Qwen/Qwen3-TTS-12Hz-1.7B-Base)",
+      "provenance": "preserved",
+      "provenance_note": "Preserved voice — not regenerated via Arena placeholder nor actual_qwen in this session; original reference preserved.",
+      "reproduction_procedure": "1) QwenVoiceStudio.design_reference(candidate_id, description, language='English') with VOICEDESIGN_REF_TEXT_EN and balanced sampling -> cache/voice_refs/{vid}.wav ; 2) build_clone_prompt(ref) -> Base prompt ; 3) synth_clone(prompt, SynthesisRequest(text, language, seed, sampling)) per segment ; pipeline in project/app/tts/voice_studio.py + sampler + cache_manager",
+      "references": {
+        "voice_json": "project/voices/en_female_calm_01.json",
+        "audition_audio": "benchmark/desktop_voices/en_female_calm_01/",
+        "architecture_doc": "project/voices/VOICE_GENERATION_ARCHITECTURE.md",
+        "code": [
+          "project/app/tts/voice_studio.py:design_reference() / build_clone_prompt() / synth_clone()",
+          "project/app/tts/qwen_engine.py:VoiceCloneEngine",
+          "project/app/tts/model_pool.py:QwenModelPool",
+          "project/app/tts/sampler.py:PARAM_SETS, params_for_set, max_new_tokens_for",
+          "project/app/cache/manager.py:segment_cache_key, CACHE_VERSION",
+          "project/app/prosody/instruct.py:VOICEDESIGN_REF_TEXT_DE/EN, ENGLISH_VOICEDESIGN_DESCRIPTIONS",
+          "project/app/paths.py:VOICE_REFS_DIR",
+          "project/config/production.json",
+          "project/versions.json"
+        ]
+      },
+      "human_selection": {
+        "status": "preserved_female_calm",
+        "human_selected": false,
+        "production_candidate": false,
+        "note": "Preserved English female calm — not part of 7-male shortlist, kept as ACTIVE female option, unchanged per task."
+      },
+      "created": "2026-09-09",
+      "cache_version": "q3p-v2-integrity"
+    },
+    {
+      "voice_id": "en_female_calm_02",
+      "stable_voice_name": "en_female_calm_02",
+      "display_name": "EN Female Calm 02",
+      "candidate_id": "en_female_calm_02",
+      "battle_id": "preserved_female_calm",
+      "arena_voice_id": "preserved",
+      "visible_position": 0,
+      "seed": 53021,
+      "language": "English",
+      "gender": "female",
+      "concept": "calm_female",
+      "voice_design_description": "calm, bright, articulate – English native, expressive",
+      "voice_design_prompt": "calm, bright, articulate – English native, expressive",
+      "voicedesign_reference_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+      "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+      "model_intended": "Qwen/Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone) — production; Arena TTS used as placeholder in sandbox",
+      "model_variant": "EN_FEMALE_CALM_02",
+      "backend": "clone",
+      "backend_mode": "clone",
+      "engine": "VoiceCloneEngine",
+      "engine_version": "qwen-voicestudio-v1 (VoiceCloneEngine) / arena-tts placeholder",
+      "api_entry_point": "project/app/tts/voice_studio.py:QwenVoiceStudio.design_reference() -> build_clone_prompt() -> synth_clone() ; sandbox used Arena add_voice/generate_speech",
+      "reference_audio_path": "benchmark/desktop_voices/en_female_calm_02/unknown",
+      "reference_audio_sha256": "PRESERVED",
+      "reference_audio_actual_sha256": "preserved female calm, not regenerated in this session",
+      "clone_step": "QwenVoiceStudio.build_clone_prompt() via Qwen3TTSModel.create_voice_clone_prompt(ref_audio, ref_text, x_vector_only_mode=False) — cached prompt keyed by candidate_id:mtime",
+      "clone_parameters": {
+        "x_vector_only_mode": false,
+        "ref_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+        "ref_audio": "cache/voice_refs/en_female_calm_02.wav (if regenerated)",
+        "note": "In sandbox, Arena TTS directly synthesized final mp3 without separate clone prompt; Qwen clone would use Base model"
+      },
+      "voice_design_parameters": {
+        "language": "English",
+        "instruct": "calm, bright, articulate – English native, expressive",
+        "ref_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+        "sampling_set": "balanced",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "attempts": "3 attempts with torch.manual_seed(5100 + attempt*7) on failure (voice_studio.py:125)",
+        "model_pool_name": "voicedesign (Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign via QwenModelPool)"
+      },
+      "generation_parameters": {
+        "sampling_set": "balanced (default) / expressive per production.json sampling_set=expressive for VD-E",
+        "sampling": {
+          "do_sample": true,
+          "temperature": 0.7,
+          "top_k": 50,
+          "top_p": 0.9,
+          "repetition_penalty": 1.05
+        },
+        "variation_for_attempt": "sampler.variation_for_attempt() — attempt1 unchanged, attempt2 temp-0.15 etc.",
+        "max_new_tokens": "sampler.max_new_tokens_for(seconds + headroom_s) where headroom 5.0s, TOKENS_PER_SECOND 12.5 => (sec+5)*12.5+64",
+        "seed_handling": "torch.manual_seed(seed); torch.cuda.manual_seed_all(seed) per request (qwen_engine.py:79, voice_studio.py:79/167)"
+      },
+      "sampling_parameters": {
+        "do_sample": true,
+        "temperature": 0.7,
+        "top_k": 50,
+        "top_p": 0.9,
+        "repetition_penalty": 1.05
+      },
+      "speed": "unknown — global speed 1.0 from config.json, per-voice speed not overridden",
+      "prosody_parameters": {
+        "instruct_variant": "unknown — English instruct built from VoiceDesign description + English locale, not de_doc_native",
+        "notes": "Prosody instruct builder in project/app/prosody/instruct.py for German; English uses direct description + cache_version q3p-v2-integrity",
+        "cache_version": "q3p-v2-integrity"
+      },
+      "conditioning_reference_parameters": {
+        "reference_text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+        "reference_audio": "cache/voice_refs/{candidate_id}.wav (production) ; sandbox placeholder is benchmark MP3",
+        "instruct": "calm, bright, articulate – English native, expressive"
+      },
+      "cache_key_fingerprint": "CACHE_VERSION q3p-v2-integrity | engine VoiceCloneEngine | model Base | speaker en_female_calm_02 ...",
+      "audio_format": {
+        "reference": "WAV 16-bit (VoiceDesign) written via project/app/audio/io.py:write_wav",
+        "segment_cache": "WAV 32-bit float (cache/audio/<key>.wav)",
+        "final": "MP3 320k via benchmark (Arena) ; production final via audio/master.py LUFS -14.0, true_peak -1.5, wav 24-bit 48kHz"
+      },
+      "postprocessing": "EBU R128 loudness (-14 LUFS, -1.5 dBTP) via project/app/audio/master.py ; concat via ffmpeg concat",
+      "runtime_versions": {
+        "python": "3.12.10",
+        "torch": "2.11.0+cu128",
+        "transformers": "4.57.3",
+        "cuda": "12.8",
+        "qwen_tts": "qwen-tts==0.1.1 (from project/requirements.txt)",
+        "app": "1.0.0",
+        "numpy": "unknown — not pinned",
+        "soundfile": "unknown — from requirements",
+        "librosa": "unknown"
+      },
+      "backend_path": "project/app/tts/qwen_engine.py:VoiceCloneEngine + project/app/tts/voice_studio.py:QwenVoiceStudio ; model_pool QwenModelPool (Qwen/Qwen3-TTS-12Hz-1.7B-Base)",
+      "provenance": "preserved",
+      "provenance_note": "Preserved voice — not regenerated via Arena placeholder nor actual_qwen in this session; original reference preserved.",
+      "reproduction_procedure": "1) QwenVoiceStudio.design_reference(candidate_id, description, language='English') with VOICEDESIGN_REF_TEXT_EN and balanced sampling -> cache/voice_refs/{vid}.wav ; 2) build_clone_prompt(ref) -> Base prompt ; 3) synth_clone(prompt, SynthesisRequest(text, language, seed, sampling)) per segment ; pipeline in project/app/tts/voice_studio.py + sampler + cache_manager",
+      "references": {
+        "voice_json": "project/voices/en_female_calm_02.json",
+        "audition_audio": "benchmark/desktop_voices/en_female_calm_02/",
+        "architecture_doc": "project/voices/VOICE_GENERATION_ARCHITECTURE.md",
+        "code": [
+          "project/app/tts/voice_studio.py:design_reference() / build_clone_prompt() / synth_clone()",
+          "project/app/tts/qwen_engine.py:VoiceCloneEngine",
+          "project/app/tts/model_pool.py:QwenModelPool",
+          "project/app/tts/sampler.py:PARAM_SETS, params_for_set, max_new_tokens_for",
+          "project/app/cache/manager.py:segment_cache_key, CACHE_VERSION",
+          "project/app/prosody/instruct.py:VOICEDESIGN_REF_TEXT_DE/EN, ENGLISH_VOICEDESIGN_DESCRIPTIONS",
+          "project/app/paths.py:VOICE_REFS_DIR",
+          "project/config/production.json",
+          "project/versions.json"
+        ]
+      },
+      "human_selection": {
+        "status": "preserved_female_calm",
+        "human_selected": false,
+        "production_candidate": false,
+        "note": "Preserved English female calm — not part of 7-male shortlist, kept as ACTIVE female option, unchanged per task."
+      },
+      "created": "2026-09-09",
+      "cache_version": "q3p-v2-integrity"
+    }
+  ]
+}

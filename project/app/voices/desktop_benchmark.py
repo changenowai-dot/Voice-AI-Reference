@@ -140,22 +140,44 @@ def run_desktop_voice_benchmark(studio=None) -> dict:
         log.info("Desktop-Voice-Test: %s", vid)
         try:
             if entry.backend_mode == "clone":
-                from ..security.identity_lock import assert_vd_e_usable
-                assert_vd_e_usable(production)
+                # VD-E: strikter Identity-Lock; neue en_* Teststimmen: kein globaler Lock
+                if vid == "vd_e":
+                    from ..security.identity_lock import assert_vd_e_usable
+                    assert_vd_e_usable(production)
                 if studio is not None:
                     from ..tts.test_double import TestDoubleCloneEngine
-                    engine = TestDoubleCloneEngine(allow_design=False)
+                    # Für vd_e locked, für en_* Teststimmen deterministisch je voice_id
+                    if vid == "vd_e":
+                        engine = TestDoubleCloneEngine(allow_design=False,
+                                                       voice_id="VD-E", candidate_id="VD-E")
+                    else:
+                        engine = TestDoubleCloneEngine(allow_design=True,
+                                                       voice_id=vid, candidate_id=vid)
                 else:
                     from ..hardware.detector import detect_hardware
+                    from ..prosody.instruct import ENGLISH_VOICEDESIGN_DESCRIPTIONS, VOICEDESIGN_DESCRIPTIONS
                     from ..tts.qwen_engine import VoiceCloneEngine
-                    engine = VoiceCloneEngine(
-                        detect_hardware(), candidate_id="VD-E",
-                        description="produktion", allow_design=False)
+                    if vid == "vd_e":
+                        engine = VoiceCloneEngine(
+                            detect_hardware(), candidate_id="VD-E",
+                            description="produktion", allow_design=False)
+                    else:
+                        desc = (ENGLISH_VOICEDESIGN_DESCRIPTIONS.get(vid)
+                                or VOICEDESIGN_DESCRIPTIONS.get(vid) or {}).get("description") \
+                                or entry.description
+                        # Referenzpfad prüfen
+                        from .. import paths as _p
+                        rp = _p.ROOT / entry.reference_path if entry.reference_path else None
+                        allow = not (rp and rp.exists())
+                        engine = VoiceCloneEngine(
+                            detect_hardware(), candidate_id=vid,
+                            description=desc, allow_design=allow,
+                            reference_path=rp if rp and rp.exists() else None)
                 engine.load()
-                de = _score_texts(engine, None, [DE_TEST, DE_LONG],
+                de = _score_texts(engine, vid, [DE_TEST, DE_LONG],
                                   "German", out_base / vid / "de",
                                   clone=True)
-                en = _score_texts(engine, None, [EN_TEST, EN_LONG],
+                en = _score_texts(engine, vid, [EN_TEST, EN_LONG],
                                   "English", out_base / vid / "en",
                                   clone=True)
             else:

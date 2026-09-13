@@ -1,0 +1,52 @@
+{
+  "voice_id": "en_female_calm_01",
+  "display_name": "EN Female Calm 01",
+  "gender": "female",
+  "provider": "qwen3-tts",
+  "model": "Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone)",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "English",
+  "native_status": "native",
+  "category": "narrator",
+  "description": "calm, warm, documentary – English native, low register",
+  "backend_mode": "clone",
+  "speaker_name": null,
+  "reference_path": "cache/voice_refs/en_female_calm_01.wav",
+  "production_locked": false,
+  "recommended": false,
+  "default": false,
+  "intended_use": "long-form documentary, psychology, philosophy, science",
+  "status": "test_voice",
+  "register": "warm_low",
+  "style": "calm_documentary",
+  "per_language": {
+    "English": {
+      "native_status": "native",
+      "rank": 21,
+      "recommended": true,
+      "default": false,
+      "description": "calm, warm, low register – velvet documentary, trustworthy"
+    },
+    "German": {
+      "native_status": "cross_language",
+      "rank": 62,
+      "recommended": false,
+      "default": false,
+      "description": "calm, warm – English design (cross-language)"
+    }
+  },
+  "settings": {
+    "seed": 52021,
+    "variant": "EN_CALM_01",
+    "cache_version": "q3p-v2-integrity",
+    "language": "English",
+    "engine": "VoiceCloneEngine",
+    "backend": "clone"
+  },
+  "reference_sha256": "927FE003818AA625DD70A73A4D11E0A2422BE04E86052EC1B542205DFA23BBE0",
+  "reference_generated": "synthetic placeholder (TestDouble-like, for sandbox; on RTX 5060 replace via VoiceDesign model)",
+  "reference_f0_hz": 185
+}

@@ -3,7 +3,9 @@ from .german import (PAUSE_BASE_DE, PAUSE_STRATEGIES,  # noqa: F401
                         dominant_role, german_instruct_hints, hint_allowed,
                         profile_sentence, rotate_anchor, summarize_roles)
 from .instruct import (DEFAULT_GERMAN_VARIANT, INSTRUCT_VARIANTS,  # noqa: F401
+                       ENGLISH_VOICEDESIGN_DESCRIPTIONS,
                        VOICEDESIGN_DESCRIPTIONS, VOICEDESIGN_REF_TEXT_DE,
+                       VOICEDESIGN_REF_TEXT_EN,
                        build_instruct, detect_emotion, speed_instruct,
                        variant_text)
 from .pauses import assign_pauses, pause_after, pause_type  # noqa: F401

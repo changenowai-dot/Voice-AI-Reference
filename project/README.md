@@ -8,6 +8,46 @@ Philosophie, Dokumentationen, Mystery, Deep Dives, Hörbuch-Erzählungen)
 
 ---
 
+**Version 3.0 FINAL — 2026-09-09 — Clean Downloadable Deployment** — Branch `agent-ready` (4-Tier Voice Library, reproduzierbar, Windows-startklar)
+
+## 0. Quick Start — Download → Setup → Validieren → Starten (Windows)
+
+```powershell
+# 1) Repository klonen / herunterladen
+git clone --branch agent-ready https://github.com/changenowai-dot/Voice-AI-Reference.git
+cd Voice-AI-Reference/project
+
+# 1b) Alternativ: ZIP herunterladen und entpacken (z. B. nach C:\VoiceOverApp)
+
+# 2) Einmaliges Setup (prüft Python 3.10-13, .venv, PyTorch cu128 CUDA 12.8, qwen-tts, FFmpeg, Modelle)
+powershell -ExecutionPolicy Bypass -File .\SETUP.ps1
+# Modelle erwartet (Apache-2.0, nicht im Git, via SETUP.ps1/install.ps1 nach models/):
+#   models/Qwen3-TTS-12Hz-1.7B-Base/
+#   models/Qwen3-TTS-12Hz-1.7B-CustomVoice/
+#   models/Qwen3-TTS-12Hz-1.7B-VoiceDesign/
+#   # alternativ HuggingFace Cache: models/hf/hub/models--Qwen--*
+
+# 3) Validieren (ohne GPU/Modelle möglich)
+python .\tools\validate_voices.py        # → PASS 24 recipes
+python .\tools\reproduce_voice.py --list
+python .\tools\reproduce_voice.py --dry-run --voice-id de_male_warm_storytelling_authoritative_01
+python .\tools\reproduce_voice.py --dry-run --voice-id en_male_warm_storytelling_authoritative_02
+
+# 4) Starten (Desktop-GUI, kein Browser, kein Port)
+.\START.bat            # Doppelklick — oder:
+.\START.ps1            # PowerShell-Start mit venv-Fallback (UTF-8, Leerzeichen-sicher)
+# → Tkinter-Fenster: PDF/TXT → Sprache & Stimme wählen → Voice-over erstellen
+
+# 5) Echte Reproduktion (nur auf RTX 5060 8GB mit Modellen):
+python .\tools\reproduce_voice.py --reproduce --voice-id de_male_warm_storytelling_authoritative_01 --language German --text "Jede Entdeckung beginnt mit einer Frage..."
+```
+
+- Stimmen-Tiers: **ACTIVE** (bestätigt, 11: vd_e+3 DE+7 EN) / **BACKUPS** (24, u. a. voice-34) / **UNASSESSED** (7 Recovery voice-35..41, Human Rank leer) / **REJECTED** (8). Details `project/voices/VOICE_LIBRARY_MANIFEST.md` + `project/FINAL_VOICE_LIBRARY_REPORT.md`.
+- Stimme direkt über jedem Audio: **VOICE NAME + VOICE ID + LANGUAGE + GENDER** — sichtbare Position = Dateinummer = Klick-Reihenfolge (verbindlich für zukünftige Auditions).
+- Architektur unverändert: `VOICE RECIPE → VoiceDesign → Reference → Clone → Synthesis → Cache → Audio Output` — `project/voices/VOICE_GENERATION_ARCHITECTURE.md` A–H + `voice_generation_recipes.json` (30+ Felder) + `reproduce_voice.py` (vorhandene `voice_studio`/`qwen_engine`/`model_pool`/`sampler`/`cache/manager`).
+
+---
+
 ## 1. Installation
 
 1. Ordner entpacken (z. B. nach `C:\VoiceOverApp`)
@@ -347,6 +387,84 @@ zusammengefügt — keine erneute TTS-Synthese, identisches Material).
 Aussprache/QC/Cache/Resume wirken pro Part identisch wie bisher.
 
 VD-E unverändert: SHA-256-Lock, Recommended, Default, Produktionseinstellungen (Tests 179/179).
+
+---
+
+## 21. v2.2.0 – Vier englische Teststimmen (2026-09-08) – Long-Form English Narrators
+
+**Ziel:** Vier zusätzliche, muttersprachliche englische Long-Form-Stimmen – leise, professionell, dokumentarisch, langfristig angenehm (10 s–120 min). **TESTSTIMMEN** – VD-E bleibt locked deutsche Produktion.
+
+| Stimme | Typ | Register | Beschreibung | Backend | Referenz | Seed |
+|---|---|---|---|---|---|---|
+| **EN Male Deep 01** | männlich | deep | deep, authoritative, investigative – darkest, investigativer als Ryan/Aiden | VoiceDesign→Base Clone | `cache/voice_refs/en_male_deep_01.wav` | 52011 |
+| **EN Male Deep 02** | männlich | deep_warm | deep, warm, conversational storyteller – inviting, clear | VoiceDesign→Base Clone | `cache/voice_refs/en_male_deep_02.wav` | 52012 |
+| **EN Female Calm 01** | weiblich | warm_low | calm, warm, low register – velvet documentary | VoiceDesign→Base Clone | `cache/voice_refs/en_female_calm_01.wav` | 52021 |
+| **EN Female Calm 02** | weiblich | bright_calm | calm, bright, articulate – expressive, crisp | VoiceDesign→Base Clone | `cache/voice_refs/en_female_calm_02.wav` | 52022 |
+
+**v2.2 Stimmen je Sprache (GUI passt sich an):**
+
+| Deutsch (rank) | Status | Englisch (rank) | Status |
+|---|---|---|---|
+| **VD-E** (0) | **EMPFOHLEN · Standard** LOCKED | Ryan (10) | NATIV · EMPFOHLEN (default EN) |
+| Uncle_Fu (20) | CROSS-LANGUAGE | EN Male Deep 01 (11) | NATIV |
+| Dylan (30) | CROSS-LANGUAGE | EN Male Deep 02 (12) | NATIV |
+| Ryan (40) | CROSS-LANGUAGE | Aiden (20) | NATIV · EMPFOHLEN |
+| Aiden (50) | CROSS-LANGUAGE | Serena (20) | CROSS-LANGUAGE (best available) |
+| EN Male Deep 01 (60) | CROSS-LANGUAGE (English design) | EN Female Calm 01 (21) | NATIV |
+| EN Male Deep 02 (61) | CROSS-LANGUAGE | EN Female Calm 02 (22) | NATIV |
+| EN Female Calm 01 (62) | CROSS-LANGUAGE | Vivian (30) | CROSS-LANGUAGE |
+| EN Female Calm 02 (63) | CROSS-LANGUAGE | Sohee (40) | CROSS-LANGUAGE |
+| Serena (20) etc. | … | Uncle_Fu (45) | FALLBACK |
+| **Gesamt 12 Stimmen** (7 m / 5 w) | | **Gesamt 12 Stimmen** | |
+
+**Benchmark (identischer englischer Long-Form-Text, drei `+++++` Marker, 4 Abschnitte):** `benchmark/english_longform_benchmark.txt` – normale/kurze/lange Sätze, Kommas, technische Begriffe (CERN, Göbekli Tepe, quantum entanglement, entropy), Namen (Nietzsche, Toynbee, Morozov, Whitaker), Zahlen/Jahre (3.7 %, 12.5, 1908/1914/1939, 11.500, 1.984, $3.42, 42 km/h), Abkürzungen (e.g., approx., Dr., Prof.), schwierige Wörter, unterschiedliche Betonungen, Übergänge. Marker-Validierung: kein Verlust, keine Verdopplung, Reihenfolge erhalten (script_split Tests). Ausgabemodi `full|parts|parts_plus_full` (FullScript via Concat, kein Re-TTS) weiterhin 1:1 aus Part-Material.
+
+**Designeinstellungen (reproduzierbar):**
+- VoiceDesign-Descriptions siehe `voices/ENGLISH_TEST_VOICES.md` (voller Wortlaut, intended_use, benchmark_score Platzhalter).
+- Referenzgenerierung: VoiceDesign (Qwen3-TTS-12Hz-1.7B-VoiceDesign) mit `VOICEDESIGN_REF_TEXT_EN` → Base-Clone (1.7B-Base). Platzhalter-Wavs (synthetisch, F0 92/105/185/205 Hz) im Repo für Offline-CI; auf RTX 5060 einmalig via echtes VoiceDesign-Modell ersetzen.
+- Sampling: balanced/expressive je nach A/B; cache_version `q3p-v2-integrity`; headroom 5.0 s; attn `sdpa`.
+- Cache: eindeutige Fingerprints je Stimme (`voice_id + reference_sha256 + language + sampling + instruct + param_version`); keine Kollision VD-E vs. neue.
+
+**Deutsche Qualität – lokal optimiert (nicht global verlangsamt):** Analyse siehe `benchmark/german_quality_analysis.md`. Ursachen: fehlendes natives deutsches Preset + Compound-Morphologie + Clone-Instruct-Tiefe. Fix: Tech-Germanization erweitert (theorie-, wissenschaft-, geist-, logie-Suffix generisch, nicht wort-spezifisch), Prosodie-Pause `semantic` optional, lokale Regeneration via QC (`too_short` → konservativ regenerieren). Englisch dadurch nicht verschlechtert – language-gating `if language.startswith("ger")`.
+
+**Long-Form:** 4-Abschnitte-Benchmark mit `splitting_enabled=True` erfolgreich für alle vier neuen Stimmen (`en_male_deep_01` Test: 4 Parts, 12+ Segmente, failed 0, identity_check ok). Gesamt 120-Minuten-Grenze via Streaming-Assembly weiterhin stabil.
+
+VD-E unverändert: SHA-256 `B156C02A60A873AD95FC92390C4A136C85308B20188373CD734BEE5E5E5F2025`, Production Seed 52001, allow_design=False, QC/Local-Repair/Cache/Resume unverändert.
+
+---
+
+## 22. v2.3.0 – Zwei zusätzliche männliche English Narrators (2026-09-09) – Calm Deep & Warm Storytelling
+
+**Motivation:** Human Listening Feedback – Female `en_female_calm_01` ist klarer Favorit (calm, pleasant, professional, long-form), `en_female_calm_02` starker Backup. Männliche `en_male_deep_01/02` akzeptabel aber nicht ideal – daher zwei gezielte zusätzliche Kandidaten, additiv (keine Löschung bestehender).
+
+| Stimme | Typ | Register | Zielcharakter | Backend | Referenz | Seed | Arena voice-0x |
+|---|---|---|---|---|---|---|---|
+| **EN Male Calm Deep 01** | männlich | calm_deep | genuinely deep, low, warm, calm, controlled, mature, authoritative, highly intelligible, restrained, long-form pleasant – deep without muddy, authoritative without aggressive | VoiceDesign→Base Clone | `cache/voice_refs/en_male_calm_deep_01.wav` | 52013 | voice-04 |
+| **EN Male Warm Storytelling Authoritative 01** | männlich | warm_storytelling | warm, storytelling, mature, calm, authoritative, natural conversational flow, smooth transitions – "knows the subject, wants to hear story" without theatrical | VoiceDesign→Base Clone | `cache/voice_refs/en_male_warm_storytelling_authoritative_01.wav` | 52014 | voice-05 |
+
+**Anforderungen:** native/native-level English, LOW+CLEAR+NATURAL (kein boomy/muddy), Authority subtil human (kein Trailer/Announcer), 10+ min Long-Form Comfort, gleiche Benchmark-Text-Identität (3×`+++++` →4 Parts), echte Sprache (Arena TTS voice-04/05, auf RTX via Qwen VoiceDesign→Clone zu ersetzen), Cache-isoliert, VD-E locked.
+
+**v2.3 Stimmen je Sprache (14 gesamt, 9m/5w):**
+
+| Deutsch (rank) | Status | Englisch (rank) | Status |
+|---|---|---|---|
+| VD-E (0) | EMPFOHLEN LOCKED | Ryan (10) | NATIV EMPFOHLEN default EN |
+| Uncle_Fu (20) | CROSS | en_male_deep_01 (11) | NATIV |
+| Dylan (30) | CROSS | en_male_deep_02 (12) | NATIV |
+| Ryan (40) | CROSS | **en_male_calm_deep_01 (13)** | **NATIV Calm Deep** |
+| Aiden (50) | CROSS | **en_male_warm_story_01 (14)** | **NATIV Warm Story** |
+| en_male_deep_01 (60) | CROSS | Aiden (20) | NATIV |
+| en_male_deep_02 (61) | CROSS | Serena (20) | CROSS |
+| en_male_calm_deep_01 (64) | CROSS | en_female_calm_01 (21) | NATIV |
+| en_male_warm_story_01 (65) | CROSS | en_female_calm_02 (22) | NATIV |
+| en_female_calm_01/02 (62/63) | CROSS | Vivian/Sohee etc. | CROSS |
+| **Gesamt 14** | 9m/5w | **Gesamt 14** | 9m/5w |
+
+**Human Ranking Vorgabe:** Female 1. `en_female_calm_01` 2. `en_female_calm_02` (locked). Male: ranking across 4 (`en_male_deep_01/02` + 2 neue) → BEST DEEP MALE / BEST WARM/STORYTELLING / BEST OVERALL MALE nach echtem Hörtest, nicht F0/QC allein.
+
+**Real Audio:** `benchmark/rtx_real_audio/` enthält bereits 18 echte Clips (Arena TTS): en_male_*_part1-4 (12), en_female_*_part1-2 (4) + neue male part1-4 (8) – je <1500 chars, FullScript via Concat identisch, Marker 3→4 validiert, Long-Form Bewertung >10 min nach Hörtest.
+
+VD-E unverändert: `B156C02A60A873AD95FC92390C4A136C85308B20188373CD734BEE5E5E5F2025`, Production Seed 52001.
 
 ---
 

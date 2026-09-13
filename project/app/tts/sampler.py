@@ -62,5 +62,6 @@ def max_new_tokens_for(seconds: float, headroom_s: float | None = None) -> int:
     return int((seconds + hr) * TOKENS_PER_SECOND + 64)
 
 
-PARAM_SET_VERSION = "q3p-v2-integrity"   # Produktion (§5): nie alten Cache
+PARAM_SET_VERSION = "q3p-v2-integrity"
+CACHE_VERSION = PARAM_SET_VERSION  # alias für manager/validator kompatibilität   # Produktion (§5): nie alten Cache
                                          # stillschweigend weiterverwenden

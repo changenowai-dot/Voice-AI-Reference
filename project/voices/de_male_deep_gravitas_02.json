@@ -1,0 +1,57 @@
+{
+  "voice_id": "de_male_deep_gravitas_02",
+  "display_name": "DE Male Deep Gravitas 02",
+  "gender": "male",
+  "provider": "arena-tts",
+  "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "German",
+  "native_status": "native",
+  "category": "narrator",
+  "description": "deep gravitas — sehr tief, wuchtig, seriös, dokumentarisch",
+  "backend_mode": "clone",
+  "speaker_name": null,
+  "reference_path": "benchmark/german_recovery_audition/01_de_male_deep_gravitas_02.mp3",
+  "production_locked": false,
+  "recommended": false,
+  "default": false,
+  "intended_use": "long-form documentary, history, science, psychology, philosophy",
+  "status": "new_candidate_german_recovery",
+  "register": "deep_gravitas",
+  "style": "deep_gravitas",
+  "per_language": {
+    "German": {
+      "native_status": "native",
+      "rank": 15,
+      "recommended": false,
+      "default": false,
+      "description": "deep gravitas — sehr tief, wuchtig, seriös, dokumentarisch"
+    },
+    "English": {
+      "native_status": "cross_language",
+      "rank": 95,
+      "recommended": false,
+      "default": false,
+      "description": "deep_gravitas – German design (cross-language)"
+    }
+  },
+  "settings": {
+    "seed": 53013,
+    "variant": "DE_MALE_DEEP_GRAVITAS_02",
+    "cache_version": "q3p-v2-integrity",
+    "language": "German",
+    "engine": "VoiceCloneEngine",
+    "backend": "clone",
+    "arena_voice_id": "voice-35",
+    "visible_position": 1,
+    "round": "german_recovery_audition",
+    "recovery": true,
+    "source": "new_candidate — no suitable historical German voice found after thorough search (only 7 historical existed, all excluded per task)"
+  },
+  "reference_sha256": "ARENA_VOICE-35",
+  "reference_generated": "real speech via Arena voice-35 – german_recovery_audition identical German short text; not TestDouble sine",
+  "source_detail": "NEW CANDIDATE — created because thorough search in project/voices, benchmark, voice_generation_recipes.json, git history found zero additional historical German candidates beyond the 7 already tested (voice-28..34). All 7 are therefore NEW, not RECOVERED."
+}

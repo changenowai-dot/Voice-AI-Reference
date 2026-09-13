@@ -66,6 +66,7 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
         self._build_ui()
         self._refresh_identity_badge()
         self._init_drag_drop()
+        self._on_format_change()
         threading.Timer(0.2, self._startup_checks).start()
 
     # ------------------------------------------------------------- Style
@@ -175,10 +176,28 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
         ttk.Label(row1, text="Ausgabeformat",
                   style="Card.TLabel").pack(side=LEFT, padx=(16, 0))
         self.format_var = tk.StringVar(value="WAV + MP3")
-        ttk.Combobox(row1, textvariable=self.format_var, width=10,
+        fmt_box = ttk.Combobox(row1, textvariable=self.format_var, width=12,
+                               state="readonly",
+                               values=["WAV + MP3", "WAV only", "MP3 only"])
+        fmt_box.pack(side=LEFT, padx=8)
+        fmt_box.bind("<<ComboboxSelected>>",
+                     lambda _e: self._on_format_change())
+
+        # WAV-Bittiefe + MP3-Bitrate separat (nicht mehr vermischt)
+        ttk.Label(row1, text="WAV", style="Muted.TLabel").pack(
+            side=LEFT, padx=(12, 0))
+        self.wav_bits_var = tk.StringVar(value="24 Bit")
+        ttk.Combobox(row1, textvariable=self.wav_bits_var, width=6,
                      state="readonly",
-                     values=["WAV + MP3", "nur WAV"]).pack(side=LEFT,
-                                                           padx=8)
+                     values=["16 Bit", "24 Bit"]).pack(side=LEFT, padx=4)
+        ttk.Label(row1, text="MP3", style="Muted.TLabel").pack(
+            side=LEFT, padx=(8, 0))
+        self.mp3_bitrate_var = tk.StringVar(value="320 kbps")
+        self.mp3_bitrate_box = ttk.Combobox(
+            row1, textvariable=self.mp3_bitrate_var, width=8,
+            state="readonly", values=["128 kbps", "192 kbps", "320 kbps"])
+        self.mp3_bitrate_box.pack(side=LEFT, padx=4)
+
         row1b = ttk.Frame(opt_card)
         row1b.pack(fill=X, padx=8, pady=(0, 6))
         self.split_var = tk.BooleanVar(value=False)
@@ -285,6 +304,26 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
     def _update_outmode_state(self):
         self.outmode_box.config(
             state="readonly" if self.split_var.get() else "disabled")
+
+    def _on_format_change(self):
+        """MP3-Bitrate/MP3-Button deaktivieren wenn kein MP3 erzeugt wird,
+        und umgekehrt. (Keine stillen Alt-Dateien mehr anzeigen.)"""
+        fmt = self.format_var.get()
+        want_mp3 = fmt != "WAV only"
+        want_wav = fmt != "MP3 only"
+        # Bitrate-Box nur aktiv wenn MP3 erzeugt wird
+        try:
+            self.mp3_bitrate_box.config(
+                state="readonly" if want_mp3 else "disabled")
+        except Exception:
+            pass
+        # WAV-Button aktiv je nach Format
+        # (Buttons werden erst in _set_running_ui/on_done konfiguriert; wir
+        # deaktivieren hier vorab wenn das Format nicht passt.)
+        if not want_wav:
+            self.last_wav = ""
+        if not want_mp3:
+            self.last_mp3 = ""
 
     # ------------------------------------------------------------ Drag&Drop
     def _init_drag_drop(self):
@@ -427,8 +466,25 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
                 f"Stimme ‚{entry.display_name}‘ ist in der installierten "
                 "Modellversion nicht verfügbar (§13).")
             return
-        formats = ["wav"] + (["mp3"] if self.format_var.get() != "nur WAV"
-                             else [])
+        # Ausgabeformat aus den neuen getrennten GUI-Feldern ableiten
+        fmt_label = self.format_var.get()
+        if fmt_label == "WAV only":
+            output_format = "wav"
+        elif fmt_label == "MP3 only":
+            output_format = "mp3"
+        else:
+            output_format = "wav_mp3"
+        # WAV-Bittiefe & MP3-Bitrate
+        wav_bits = 24
+        if "16" in self.wav_bits_var.get():
+            wav_bits = 16
+        mp3_br = "320k"
+        br_txt = self.mp3_bitrate_var.get()
+        for br in ("128", "192", "320"):
+            if br in br_txt:
+                mp3_br = f"{br}k"
+                break
+
         mode_map = {"Gesamtdatei (Standard)": "full",
                     "Nur Parts (Part_001…)": "parts",
                     "Parts + Gesamtdatei (FullScript)": "parts_plus_full"}
@@ -437,7 +493,11 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
                 "voice_id": voice_id,
                 "speed": float(self.speed_var.get()),
                 "output_dir": self.outdir_var.get(),
-                "formats": formats,
+                # Beides schicken – output_format hat Vorrang in Runner/Pipeline
+                "formats": output_format,
+                "output_format": output_format,
+                "wav_bit_depth": wav_bits,
+                "mp3_bitrate": mp3_br,
                 "splitting_enabled": bool(self.split_var.get()),
                 "output_mode": mode_map.get(self.outmode_var.get(),
                                             "full")}
@@ -513,12 +573,21 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
                          f"{s.get('failed')} · QC: {s.get('qc')} · Dauer: "
                          f"{format_duration(s.get('duration_s') or elapsed)}")
                 self.last_summary = s
-                self.last_wav = s.get("wav") or ""
-                self.last_mp3 = s.get("mp3") or ""
-                self.btn_wav.config(state="normal" if self.last_wav else
-                                    "disabled")
-                self.btn_mp3.config(state="normal" if self.last_mp3 else
-                                    "disabled")
+                # Nur Dateien aktiv schalten, die TATSÄCHLICH erzeugt wurden
+                # (nicht alte Alt-Dateien aus vorigen Läufen).
+                wav = s.get("wav") or ""
+                mp3 = s.get("mp3") or ""
+                # Absicherung gegen Alt-Dateien: existiert der Pfad wirklich?
+                if wav and not Path(wav).exists():
+                    wav = ""
+                if mp3 and not Path(mp3).exists():
+                    mp3 = ""
+                self.last_wav = wav
+                self.last_mp3 = mp3
+                self.btn_wav.config(state="normal" if self.last_wav
+                                    else "disabled")
+                self.btn_mp3.config(state="normal" if self.last_mp3
+                                    else "disabled")
                 if result.summary:
                     # done-Event enthält Report-Pfad
                     pass

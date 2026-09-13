@@ -1,0 +1,52 @@
+{
+  "voice_id": "en_male_deep_02",
+  "display_name": "EN Male Deep 02",
+  "gender": "male",
+  "provider": "qwen3-tts",
+  "model": "Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone)",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "English",
+  "native_status": "native",
+  "category": "narrator",
+  "description": "deep, warm, conversational storyteller – English native",
+  "backend_mode": "clone",
+  "speaker_name": null,
+  "reference_path": "cache/voice_refs/en_male_deep_02.wav",
+  "production_locked": false,
+  "recommended": false,
+  "default": false,
+  "intended_use": "long-form storytelling, science, psychology, history",
+  "status": "test_voice",
+  "register": "deep_warm",
+  "style": "warm_storyteller",
+  "per_language": {
+    "English": {
+      "native_status": "native",
+      "rank": 12,
+      "recommended": true,
+      "default": false,
+      "description": "deep, warm, conversational – storyteller, inviting clarity"
+    },
+    "German": {
+      "native_status": "cross_language",
+      "rank": 61,
+      "recommended": false,
+      "default": false,
+      "description": "deep, warm – English design (cross-language)"
+    }
+  },
+  "settings": {
+    "seed": 52012,
+    "variant": "EN_DEEP_02",
+    "cache_version": "q3p-v2-integrity",
+    "language": "English",
+    "engine": "VoiceCloneEngine",
+    "backend": "clone"
+  },
+  "reference_sha256": "5E86E61E58C0CCEDAF94BECB47D482925EEF77B00EBEB0B917248FF4E21B3B34",
+  "reference_generated": "synthetic placeholder (TestDouble-like, for sandbox; on RTX 5060 replace via VoiceDesign model)",
+  "reference_f0_hz": 105
+}

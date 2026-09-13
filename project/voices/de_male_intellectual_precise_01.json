@@ -1,0 +1,57 @@
+{
+  "voice_id": "de_male_intellectual_precise_01",
+  "display_name": "DE Male Intellectual Precise 01",
+  "gender": "male",
+  "provider": "arena-tts",
+  "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "German",
+  "native_status": "native",
+  "category": "narrator",
+  "description": "intellectual precise — intelligent, präzise, kultiviert, klar",
+  "backend_mode": "clone",
+  "speaker_name": null,
+  "reference_path": "benchmark/german_recovery_audition/03_de_male_intellectual_precise_01.mp3",
+  "production_locked": false,
+  "recommended": false,
+  "default": false,
+  "intended_use": "long-form documentary, history, science, psychology, philosophy",
+  "status": "new_candidate_german_recovery",
+  "register": "intellectual_precise",
+  "style": "intellectual_precise",
+  "per_language": {
+    "German": {
+      "native_status": "native",
+      "rank": 17,
+      "recommended": false,
+      "default": false,
+      "description": "intellectual precise — intelligent, präzise, kultiviert, klar"
+    },
+    "English": {
+      "native_status": "cross_language",
+      "rank": 97,
+      "recommended": false,
+      "default": false,
+      "description": "intellectual_precise – German design (cross-language)"
+    }
+  },
+  "settings": {
+    "seed": 53015,
+    "variant": "DE_MALE_INTELLECTUAL_PRECISE_01",
+    "cache_version": "q3p-v2-integrity",
+    "language": "German",
+    "engine": "VoiceCloneEngine",
+    "backend": "clone",
+    "arena_voice_id": "voice-37",
+    "visible_position": 3,
+    "round": "german_recovery_audition",
+    "recovery": true,
+    "source": "new_candidate — no suitable historical German voice found after thorough search (only 7 historical existed, all excluded per task)"
+  },
+  "reference_sha256": "ARENA_VOICE-37",
+  "reference_generated": "real speech via Arena voice-37 – german_recovery_audition identical German short text; not TestDouble sine",
+  "source_detail": "NEW CANDIDATE — created because thorough search in project/voices, benchmark, voice_generation_recipes.json, git history found zero additional historical German candidates beyond the 7 already tested (voice-28..34). All 7 are therefore NEW, not RECOVERED."
+}

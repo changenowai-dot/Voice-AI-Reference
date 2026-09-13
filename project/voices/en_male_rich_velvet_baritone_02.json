@@ -1,0 +1,59 @@
+{
+  "voice_id": "en_male_rich_velvet_baritone_02",
+  "display_name": "EN Male Rich Velvet Baritone Smooth",
+  "gender": "male",
+  "provider": "arena-tts",
+  "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "English",
+  "native_status": "native",
+  "category": "narrator",
+  "description": "rich velvet baritone smooth – luxuriously smooth, rounded, elegant, warm authority",
+  "backend_mode": "clone",
+  "speaker_name": null,
+  "reference_path": "benchmark/fast_audition_round02/04_rich_velvet_baritone.mp3",
+  "production_locked": false,
+  "recommended": false,
+  "default": false,
+  "intended_use": "long-form documentary, history, science, psychology, philosophy, investigative",
+  "status": "rejected_human",
+  "register": "rich_velvet_baritone",
+  "style": "rich_velvet_baritone",
+  "per_language": {
+    "English": {
+      "native_status": "native",
+      "rank": 30,
+      "recommended": false,
+      "default": false,
+      "description": "rich velvet baritone smooth – luxuriously smooth, rounded, elegant, warm authority"
+    },
+    "German": {
+      "native_status": "cross_language",
+      "rank": 110,
+      "recommended": false,
+      "default": false,
+      "description": "rich_velvet_baritone – English design (cross-language)"
+    }
+  },
+  "settings": {
+    "seed": 52030,
+    "variant": "EN_MALE_RICH_VELVET_BARITONE_02",
+    "cache_version": "q3p-v2-integrity",
+    "language": "English",
+    "engine": "VoiceCloneEngine",
+    "backend": "clone",
+    "arena_voice_id": "voice-21",
+    "round": "fast_audition_round02",
+    "visible_position": 4
+  },
+  "reference_sha256": "ARENA_VOICE-21",
+  "reference_generated": "real speech via Arena voice-21 – fast_audition_round02 identical short text 15-25s; not TestDouble sine",
+  "human_selected": false,
+  "production_candidate": false,
+  "rejected": true,
+  "rejected_reason": "Not selected in round02 visible position 4/10 (2026-09-09) — retains history, not production candidate",
+  "rejected_position": 4
+}

@@ -148,21 +148,39 @@ def generate_with_qc(engine, request: SynthesisRequest, text: str,
         try:
             if attempt == 1:
                 sampling, instruct = dict(base_sampling), base_instruct
+                # Attempt 1 behält den ursprünglichen Segment-Seed exakt
+                # bei (keine Veränderung, keine Rezept-/Seed-Änderung).
+                att_seed = request.seed if request.seed is not None else 0
             else:
                 changes = attempt_changes(attempt, last_issues,
                                           base_sampling, base_instruct)
                 sampling, instruct = changes["sampling"], changes["instruct"]
+                # Deterministische, VON attempt 1 VERSCHIEDENE Seeds pro
+                # Retry. Wir verwenden PRIM-Zahlen als Offset (keine neuen
+                # Abhängigkeiten, kein random.random(), kein Uhrzeit-Seed),
+                # damit der Lauf vollständig reproduzierbar ist, aber
+                # jeder Versuch einen anderen RNG-Zustand bekommt. Das
+                # alte Muster identischer 0.16-s-Ausgaben entstand dadurch,
+                # dass in qwen_engine/voice_studio `if request.seed:` bei
+                # Seed 0 den torch-RNG NICHT neu setzte.
+                base = request.seed if request.seed is not None else 0
+                if attempt == 2:
+                    att_seed = int(base) + 10009
+                else:
+                    att_seed = int(base) + 100003
             req = SynthesisRequest(
                 text=request.text,
                 language=request.language,
                 speaker=request.speaker,
                 instruct=instruct,
                 sampling=sampling,
-                # Neuer Seed pro Versuch – deterministisch (base + attempt)
-                seed=(request.seed or 0) + attempt * 1013,
+                seed=int(att_seed),
                 max_seconds_hint=request.max_seconds_hint,
                 speed=request.speed)
-            ar.params_used = {"seed": req.seed, "sampling": sampling}
+            err_cls = (changes.get("error_class")
+                       if attempt > 1 else "first")
+            ar.params_used = {"seed": req.seed, "sampling": sampling,
+                              "attempt": attempt, "error_class": err_cls}
             result = engine.synthesize(req)
             ar.waveform = result.waveform
             ar.sample_rate = result.sample_rate

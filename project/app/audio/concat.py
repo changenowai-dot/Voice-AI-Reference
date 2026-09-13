@@ -63,8 +63,8 @@ def concat_wavs(in_paths: list, out_path, bit_depth: int = 24) -> dict:
                             break
                         out.write(block)
                         total += len(block)
-        if sr_out and out.sampler != sr_out:      # Header-Rate korrigieren
-            pass                                   # (sf schreibt korrekt)
+        # Header-Rate bereits korrekt (sf nutzt sr_out ab erstem Input); check optional
+        # if sr_out and out.samplerate != sr_out: pass
         return {"ok": True, "method": "soundfile",
                 "seconds": round(total / (sr_out or 24000), 2)}
     except ImportError:

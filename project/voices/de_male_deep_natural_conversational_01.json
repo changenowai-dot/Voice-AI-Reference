@@ -1,0 +1,66 @@
+{
+  "voice_id": "de_male_deep_natural_conversational_01",
+  "display_name": "DE Male Deep Natural Conversational",
+  "gender": "male",
+  "provider": "arena-tts",
+  "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "German",
+  "native_status": "native",
+  "category": "narrator",
+  "description": "deep natural conversational – tief, natürlich, direkt, modern, sehr menschlich",
+  "backend_mode": "clone",
+  "speaker_name": null,
+  "reference_path": "benchmark/fast_audition_de/05_de_male_deep_natural_conversational.mp3",
+  "production_locked": false,
+  "recommended": true,
+  "default": false,
+  "intended_use": "long-form documentary, history, science, psychology, philosophy",
+  "status": "saved_human_shortlist",
+  "register": "deep_natural_conversational",
+  "style": "deep_natural_conversational",
+  "per_language": {
+    "German": {
+      "native_status": "native",
+      "rank": 14,
+      "recommended": true,
+      "default": false,
+      "description": "deep natural conversational – tief, natürlich, direkt, modern, sehr menschlich"
+    },
+    "English": {
+      "native_status": "cross_language",
+      "rank": 94,
+      "recommended": false,
+      "default": false,
+      "description": "deep_natural_conversational – German design (cross-language)"
+    }
+  },
+  "settings": {
+    "seed": 53005,
+    "variant": "DE_MALE_DEEP_NATURAL_CONVERSATIONAL_01",
+    "cache_version": "q3p-v2-integrity",
+    "language": "German",
+    "engine": "VoiceCloneEngine",
+    "backend": "clone",
+    "arena_voice_id": "voice-32",
+    "visible_position": 5,
+    "round": "de_fast_audition"
+  },
+  "reference_sha256": "ARENA_VOICE-32",
+  "reference_generated": "real speech via Arena voice-32 – de_fast_audition identical German short text; not TestDouble sine",
+  "human_selected": true,
+  "production_candidate": true,
+  "saved_human_shortlist": true,
+  "human_listening_position": 5,
+  "human_listening_position_verified": true,
+  "original_position": 5,
+  "verification_sample_generated": true,
+  "shortlist_note": "GERMAN HUMAN SHORTLIST — VERIFIED CANDIDATE — Original Position 5, voice-32, de_male_deep_natural_conversational_01 — very good / best",
+  "verification_text": "Jede Entdeckung beginnt mit einer Frage. Manchmal liegt die Antwort direkt vor uns, verborgen im Offensichtlichen. Doch erst wenn wir genauer hinschauen, erkennen wir, was wirklich geschehen ist. Und oft ist die Geschichte dahinter faszinierender, als wir zunächst erwartet haben.",
+  "verification_audio": "benchmark/fast_audition_de_verification/02_verification_de_male_deep_natural_conversational_01_voice-32.mp3",
+  "verification_provenance": "arena_placeholder — same VoiceDesign/Clone config as original fast_audition_de, re-rendered via Arena voice-ids, not actual_qwen",
+  "german_human_shortlist_verified": true
+}

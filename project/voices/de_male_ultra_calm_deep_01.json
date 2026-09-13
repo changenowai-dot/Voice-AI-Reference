@@ -1,0 +1,60 @@
+{
+  "voice_id": "de_male_ultra_calm_deep_01",
+  "display_name": "DE Male Ultra Calm Deep",
+  "gender": "male",
+  "provider": "arena-tts",
+  "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "German",
+  "native_status": "native",
+  "category": "narrator",
+  "description": "ultra calm deep – sehr tief, ruhig, warm, souverän, entspannte Langform",
+  "backend_mode": "clone",
+  "speaker_name": null,
+  "reference_path": "benchmark/fast_audition_de/01_de_male_ultra_calm_deep.mp3",
+  "production_locked": false,
+  "recommended": false,
+  "default": false,
+  "intended_use": "long-form documentary, history, science, psychology, philosophy",
+  "status": "rejected_human",
+  "register": "ultra_calm_deep",
+  "style": "ultra_calm_deep",
+  "per_language": {
+    "German": {
+      "native_status": "native",
+      "rank": 10,
+      "recommended": false,
+      "default": false,
+      "description": "ultra calm deep – sehr tief, ruhig, warm, souverän, entspannte Langform"
+    },
+    "English": {
+      "native_status": "cross_language",
+      "rank": 90,
+      "recommended": false,
+      "default": false,
+      "description": "ultra_calm_deep – German design (cross-language)"
+    }
+  },
+  "settings": {
+    "seed": 53001,
+    "variant": "DE_MALE_ULTRA_CALM_DEEP_01",
+    "cache_version": "q3p-v2-integrity",
+    "language": "German",
+    "engine": "VoiceCloneEngine",
+    "backend": "clone",
+    "arena_voice_id": "voice-28",
+    "visible_position": 1,
+    "round": "de_fast_audition"
+  },
+  "reference_sha256": "ARENA_VOICE-28",
+  "reference_generated": "real speech via Arena voice-28 – de_fast_audition identical German short text; not TestDouble sine",
+  "human_selected": false,
+  "production_candidate": false,
+  "rejected": true,
+  "human_listening_position": 1,
+  "original_position": 1,
+  "rejected_reason": "Not selected — Original Position 1, voice-28 — removed from active shortlist (2026-09-09), retains history/recipes, not deleted"
+}

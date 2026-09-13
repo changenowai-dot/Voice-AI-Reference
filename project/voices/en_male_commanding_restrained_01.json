@@ -1,0 +1,52 @@
+{
+  "voice_id": "en_male_commanding_restrained_01",
+  "display_name": "EN Male Commanding Restrained 01",
+  "gender": "male",
+  "provider": "arena-tts",
+  "model": "Arena TTS (real speech) \u2013 placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+  "language_support": [
+    "German",
+    "English"
+  ],
+  "native_language": "English",
+  "native_status": "native",
+  "category": "narrator",
+  "description": "commanding restrained \u2013 deep confident credible strong authority no aggression",
+  "backend_mode": "clone",
+  "speaker_name": null,
+  "reference_path": "benchmark/male_deep_candidates/09_commanding_restrained/part1.mp3",
+  "production_locked": false,
+  "recommended": false,
+  "default": false,
+  "intended_use": "long-form documentary, history, science, psychology, philosophy, investigative",
+  "status": "test_voice_premium_10",
+  "register": "commanding_restrained",
+  "style": "commanding_restrained",
+  "per_language": {
+    "English": {
+      "native_status": "native",
+      "rank": 23,
+      "recommended": false,
+      "default": false,
+      "description": "commanding restrained \u2013 deep confident credible strong authority no aggression"
+    },
+    "German": {
+      "native_status": "cross_language",
+      "rank": 93,
+      "recommended": false,
+      "default": false,
+      "description": "commanding_restrained \u2013 English design (cross-language)"
+    }
+  },
+  "settings": {
+    "seed": 52023,
+    "variant": "EN_MALE_COMMANDING_RESTRAINED_01",
+    "cache_version": "q3p-v2-integrity",
+    "language": "English",
+    "engine": "VoiceCloneEngine",
+    "backend": "clone",
+    "arena_voice_id": "voice-14"
+  },
+  "reference_sha256": "ARENA_VOICE-14",
+  "reference_generated": "real speech via Arena voice-14 \u2013 4 parts benchmark + FullScript scheduled; not TestDouble sine"
+}

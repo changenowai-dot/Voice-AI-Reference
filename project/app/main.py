@@ -1,4 +1,4 @@
-﻿"""VoiceOverApp â€“ Einstiegspunkt.
+"""VoiceOverApp â€“ Einstiegspunkt.
 
 Standard: lokale Web-OberflÃ¤che (START.bat). ZusÃ¤tzlich:
   python app/main.py --headless            Input-Ordner ohne UI verarbeiten
@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+from pathlib import Path
 
 # HF-Cache & Offline-Verhalten zentral setzen, BEVOR torch/hf importieren
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -27,19 +28,134 @@ from app.logging_setup import get_logger, setup_logging  # noqa: E402
 
 
 def _make_engine(engine_name: str, cfg: dict):
+    """Engine-Auswahl nach production config und voice_id (§12/§13).
+    
+    Verwendet VoiceRegistry um die korrekte Engine basierend auf backend_mode zu erstellen:
+    - clone (VD-E) → VoiceCloneEngine mit Base model
+    - customvoice → QwenTTSEngine mit CustomVoice model
+    """
+    log = get_logger("main.engine")
+    log.debug("[DIAG-A] _make_engine() entered")
+    
     from app.hardware.detector import (detect_hardware, recommend_model_size,
                                        recommend_torch_dtype)
+    from app.security.identity_lock import load_production
+    from app.voices.registry import VoiceRegistry
+    
+    log.debug("[DIAG-A.1] Calling detect_hardware()")
     hw = detect_hardware()
+    log.debug("[DIAG-A.2] detect_hardware() returned: mode=%s", hw.mode)
+    
     adv = cfg.get("advanced", {})
+    
     if engine_name == "test_double":
         from app.tts.test_double import TestDoubleEngine
         return TestDoubleEngine(), hw
-    from app.tts.qwen_engine import QwenTTSEngine
-    size = recommend_model_size(hw, adv.get("prefer_model_size", "auto"))
-    device = adv.get("device", "auto")
-    eng = QwenTTSEngine(model_size=size,
-                        dtype_hint=recommend_torch_dtype(hw))
-    return eng, hw
+    
+    # Resolve models directory from VOICEOVER_RUNTIME_ROOT if set
+    runtime_root = os.environ.get("VOICEOVER_RUNTIME_ROOT")
+    if runtime_root:
+        models_dir = Path(runtime_root) / "models"
+        log.debug("[DIAG-E] Model root resolved from VOICEOVER_RUNTIME_ROOT: %s", models_dir)
+    else:
+        models_dir = None  # Let engine use default paths.MODELS_DIR
+        log.debug("[DIAG-E] Model root: using default paths.MODELS_DIR")
+    
+    # Load production config to get voice_id
+    log.debug("[DIAG-A.3] Calling load_production()")
+    production = load_production()
+    log.debug("[DIAG-A.4] load_production() returned: voice_id=%s", production.get("voice_id"))
+
+    voice_id = production.get("voice_id", "vd_e")
+
+    # Look up voice profile
+    log.debug("[DIAG-C] Creating VoiceRegistry")
+    registry = VoiceRegistry()
+    entry = registry.get(voice_id)
+    log.debug("[DIAG-C] VoiceRegistry resolved: voice_id=%s, backend_mode=%s", voice_id, entry.backend_mode if entry else None)
+    if entry is None:
+        raise RuntimeError(f"Unbekannte Stimme: {voice_id!r}")
+
+    # Resolve voice NATIVE language from profile settings (critical for
+    # English clone voices — without this the VoiceCloneEngine defaulted
+    # to German, using the wrong reference text and producing garbage audio).
+    from app.jobs.runner import _resolve_voice_native_language, _resolve_voice_seed
+    voice_language = _resolve_voice_native_language(registry, entry)
+    voice_seed = _resolve_voice_seed(registry, entry)
+
+    # Create engine based on backend_mode
+    if entry.backend_mode == "clone":
+        from app.tts.qwen_engine import VoiceCloneEngine
+        # VD-E: strikter Identity-Lock (§12/§24)
+        if entry.voice_id == "vd_e":
+            from app.security.identity_lock import assert_vd_e_usable
+            log.debug("[DIAG-B] Calling assert_vd_e_usable() for VD-E")
+            assert_vd_e_usable(production)
+            log.debug("[DIAG-B] assert_vd_e_usable() passed")
+            log.debug("[DIAG-D] Creating VoiceCloneEngine (candidate_id=VD-E, allow_design=False)")
+            eng = VoiceCloneEngine(
+                hw=hw,
+                candidate_id="VD-E",
+                description="produktion",
+                language="German",
+                models_dir=models_dir,
+                attn_implementation=adv.get("attn_implementation") or None,
+                allow_design=False
+            )
+            log.debug("[DIAG-D] VoiceCloneEngine VD-E created")
+            return eng, hw
+        # Andere Clone-Stimmen (en_*/de_*/Premium-Rezepte)
+        from app.prosody.instruct import (ENGLISH_VOICEDESIGN_DESCRIPTIONS,
+                                          VOICEDESIGN_DESCRIPTIONS)
+        desc_entry = (ENGLISH_VOICEDESIGN_DESCRIPTIONS.get(entry.voice_id)
+                      or VOICEDESIGN_DESCRIPTIONS.get(entry.voice_id) or {})
+        description = (desc_entry.get("description")
+                       or entry.description
+                       or f"{voice_language} narrator")
+        from app import paths as _p
+        ref_path = None
+        allow_design = True
+        if entry.reference_path:
+            rp = _p.ROOT / entry.reference_path
+            if rp.exists():
+                ref_path = rp
+                allow_design = False
+            else:
+                allow = True
+                log.info("Clone-Stimme %s: Referenz fehlt, VoiceDesign wird erzeugt: %s",
+                         entry.voice_id, rp)
+        else:
+            allow = True
+        log.debug("[DIAG-D] Creating VoiceCloneEngine (candidate_id=%s, language=%s, allow_design=%s)",
+                  entry.voice_id, voice_language, allow_design)
+        candidate_id = entry.voice_id
+        eng = VoiceCloneEngine(
+            hw=hw,
+            candidate_id=candidate_id,
+            description=description,
+            language=voice_language,
+            seed=voice_seed,
+            models_dir=models_dir,
+            attn_implementation=adv.get("attn_implementation") or None,
+            allow_design=allow_design,
+            reference_path=ref_path if ref_path and ref_path.exists() else None
+        )
+        log.debug("[DIAG-D] VoiceCloneEngine %s created", entry.voice_id)
+        return eng, hw
+
+    else:
+        # CustomVoice backend (§13)
+        from app.tts.qwen_engine import QwenTTSEngine
+        size = recommend_model_size(hw, adv.get("prefer_model_size", "auto"))
+        device = adv.get("device", "auto")
+        
+        eng = QwenTTSEngine(hw=hw,
+                            model_size=size,
+                            models_dir=models_dir,
+                            dtype_hint=recommend_torch_dtype(hw),
+                            device_hint=device if device != "auto" else None,
+                            attn_implementation=adv.get("attn_implementation") or None)
+        return eng, hw
 
 
 def cmd_headless(args) -> int:
@@ -260,6 +376,10 @@ def main() -> int:
                              "Standard ist die Desktop-GUI")
     parser.add_argument("--headless", action="store_true",
                         help="ohne GUI: input/ verarbeiten (CLI-Pipeline)")
+    parser.add_argument("--input", type=str,
+                        help="Eingabedatei oder -ordner für headless-Modus")
+    parser.add_argument("--output", type=str,
+                        help="Ausgabeverzeichnis für headless-Modus")
     parser.add_argument("--files", nargs="*", help="bestimmte Dateien")
     parser.add_argument("--engine", default="qwen",
                         choices=["qwen", "test_double"],
@@ -379,7 +499,7 @@ def route_mode(args) -> str:
     """
     if getattr(args, "webserver", False) or getattr(args, "ui", False):
         return "webserver"
-    cli_flags = ("headless", "files", "job", "benchmark", "download_models",
+    cli_flags = ("headless", "input", "output", "files", "job", "benchmark", "download_models",
                  "info", "version", "german_baseline",
                  "german_baseline_force", "german_ab", "german_speakers",
                  "phase2_run", "phase2_pauses", "phase2_pick",
