@@ -124,7 +124,7 @@ def run(voice_id: str, text: str, language: str, out_dir: Path,
         # Unabhängiger direkter Kontrollaufruf mit neuem Seed:
         (4, base_seed + 200003,   dict(sampling), "independent-new-seed"),
     ]
-    for i, attn, att_seed, samp, label in all_cases:
+    for attn, att_seed, samp, label in all_cases:
         # Je Versuch einen kleinen max_new_tokens-Hint basierend auf Textlänge
         max_s = max(4.0, len(text) / (13.8 if native_lang.lower().startswith("ger") else 15.0))
         req = SynthesisRequest(text=text, language=native_lang,
