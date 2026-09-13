@@ -16,7 +16,7 @@ konsistent anwenden. Keine Änderung an Sampling/QC/Rezepten.
 """
 from __future__ import annotations
 
-from .logging_setup import get_logger
+from ..logging_setup import get_logger
 
 log = get_logger("tts.rng")
 
