@@ -138,11 +138,17 @@ class QwenTTSEngine(TTSEngine):
         self.load()
         import torch
 
-        # deterministischer Seed pro Anfrage (Reproduzierbarkeit)
-        if request.seed:
-            torch.manual_seed(request.seed)
+        # deterministischer Seed pro Anfrage (Reproduzierbarkeit).
+        # WICHTIG: Seed 0 ist ein gültiger deterministischer Torch-Seed.
+        # Die alte Prüfung `if request.seed:` behandelte 0 als falsy und
+        # setzte KEINEN manuellen Seed – dadurch liefen Retries mit dem
+        # Rest-Zustand des RNG aus dem vorigen Versuch, was identische
+        # 0.16-s-/Silence-Ausgaben erklärte. Wir prüfen deshalb explizit
+        # auf `is not None`.
+        if request.seed is not None:
+            torch.manual_seed(int(request.seed))
             if torch.cuda.is_available():
-                torch.cuda.manual_seed_all(request.seed)
+                torch.cuda.manual_seed_all(int(request.seed))
 
         gen_kwargs = dict(request.sampling or {})
         gen_kwargs.setdefault("max_new_tokens",

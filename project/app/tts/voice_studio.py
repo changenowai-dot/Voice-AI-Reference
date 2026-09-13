@@ -76,10 +76,10 @@ class QwenVoiceStudio(BaseVoiceStudio):
         import time
         model = self.pool.get("customvoice")
         import torch
-        if request.seed:
-            torch.manual_seed(request.seed)
+        if request.seed is not None:
+            torch.manual_seed(int(request.seed))
             if torch.cuda.is_available():
-                torch.cuda.manual_seed_all(request.seed)
+                torch.cuda.manual_seed_all(int(request.seed))
         gen_kwargs = dict(request.sampling or {})
         from .sampler import max_new_tokens_for
         gen_kwargs.setdefault("max_new_tokens",
@@ -188,10 +188,10 @@ class QwenVoiceStudio(BaseVoiceStudio):
         import time
         model = self.pool.get("base")
         import torch
-        if request.seed:
-            torch.manual_seed(request.seed)
+        if request.seed is not None:
+            torch.manual_seed(int(request.seed))
             if torch.cuda.is_available():
-                torch.cuda.manual_seed_all(request.seed)
+                torch.cuda.manual_seed_all(int(request.seed))
         gen_kwargs = dict(request.sampling or {})
         from .sampler import max_new_tokens_for
         gen_kwargs.setdefault("max_new_tokens",
