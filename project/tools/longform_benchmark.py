@@ -1,29 +1,31 @@
 #!/usr/bin/env python3
-"""Long-form baseline for 7 selected premium voices (RTX 5060).
+"""Long-form baseline runner.
 
-Runs the production Pipeline over fixed ~1000-1500 word DE/EN test texts with
-each target voice, writes WAV (+ MP3 if ffmpeg is available), a per-voice
-metrics JSON, a segment table, and a combined Markdown summary under:
+Two supported modes, both write per-voice WAV + metrics JSON + segment table
+and a combined Markdown summary under the chosen output root:
 
-    project/reproduction/longform/<voice_id>/
+  Baseline (default, 7 selected voices) -> project/reproduction/longform/<vid>/
+  Top-3 real run (--top3 or --voices top3) -> project/reproduction/TOP3_LONGFORM_REAL/<vid>/
 
-The script NEVER overwrites existing voice reproductions (test_short.wav /
-test_audition.wav) and does NOT invoke VoiceDesign if a reference WAV is
-already present. It prefers the Qwen VoiceDesign reference WAV in
-cache/voice_refs/<voice_id>.wav (produced by reproduce_premium.py / the
-RTX 5060 runs); if that is missing but the registry contains an MP3
-reference, the VoiceCloneEngine auto-transcodes it to 24 kHz mono WAV once.
+CLI:
+    --voices CSV            comma-separated voice_ids (default: the 7 selected).
+                            Special token "top3" expands to the three
+                            user-favourite voices (see TOP3_VOICES below).
+    --top3                  Shorthand for --voices top3 --out
+                            project/reproduction/TOP3_LONGFORM_REAL.
+    --fresh                 Disable the *segment audio* cache for this run so
+                            every segment is genuinely re-synthesised.
+                            Reference WAVs / VoiceClone prompts are still
+                            reused; existing baseline cache on disk is NOT
+                            deleted.
+    --out DIR               Override output directory.
+    --allow-design          Allow VoiceDesign fallback if reference WAV/MP3 is
+                            missing (default: skip that voice).
 
-Run on the RTX 5060 Windows host after voice-35..41 (and the 8 previously
-reproduced candidates) exist as reference WAVs, or at least after the
-MP3 audition references are available (they will be transcoded to WAV
-on first use):
-
-    python project\\tools\\longform_benchmark.py
-
-Or from repo root:
-
-    python project/tools/longform_benchmark.py
+The script NEVER overwrites existing short/audition WAVs. It prefers the
+Qwen VoiceDesign reference WAV in cache/voice_refs/<vid>.wav; if missing but
+the registry contains an MP3 reference, VoiceCloneEngine auto-transcodes it
+to 24 kHz mono WAV once.
 """
 from __future__ import annotations
 
@@ -58,8 +60,9 @@ from app.prosody.instruct import (ENGLISH_VOICEDESIGN_DESCRIPTIONS,
 
 log = get_logger("longform")
 
-# The seven selected voices for this round.
-TARGET_VOICES = [
+# The seven voices for the main baseline. These keep running as before so
+# existing 7/7 baseline results remain comparable.
+DEFAULT_VOICES = [
     # English
     "en_male_deep_clear_insightful_01",
     "en_male_warm_grounded_humanist_01",
@@ -70,6 +73,30 @@ TARGET_VOICES = [
     "de_male_intellectual_precise_01",
     "de_female_warm_empathetic_01",
 ]
+
+# Backwards-compat alias (kept so external callers/notes referring to the old
+# name keep working).
+TARGET_VOICES = list(DEFAULT_VOICES)
+
+# The user's three favourite voices for the dedicated "real" validation run.
+TOP3_VOICES = [
+    "de_female_warm_empathetic_01",
+    "de_female_deep_warm_documentary_01",
+    "en_male_warm_grounded_humanist_01",
+]
+
+# Arena voice ids – mirrors reproduce_premium.REVERSE_PRIORITY without
+# importing that heavy script during summary generation.
+_ARENA_ID_BY_VOICE = {
+    "en_male_deep_authoritative_scholar_01":   "VOICE22_READY",
+    "en_male_deep_clear_insightful_01":        "VOICE24_READY",
+    "en_male_warm_grounded_humanist_01":       "VOICE25_READY",
+    "en_male_extremely_natural_deep_conversational_01": "VOICE27_READY",
+    "de_male_deep_natural_conversational_01":  "VOICE32_READY",
+    "de_female_deep_warm_documentary_01":      "VOICE33_READY",
+    "de_female_deep_calm_intelligent_01":      "VOICE34_READY",
+    "de_female_warm_empathetic_01":            "VOICE40_READY",
+}
 
 BENCH_TEXTS = {
     "English": _PROJECT_ROOT / "benchmark" / "longform_text_en.txt",
@@ -178,7 +205,8 @@ def _segment_stats(engine, cfg: dict, text: str):
 
 
 def run_one(registry: VoiceRegistry, voice_id: str, out_root: Path,
-            allow_design: bool) -> dict:
+            allow_design: bool, fresh: bool = False,
+            run_tag: str | None = None) -> dict:
     entry = registry.get(voice_id)
     if entry is None:
         return {"voice_id": voice_id, "ok": False, "error": "not in registry"}
@@ -203,7 +231,11 @@ def run_one(registry: VoiceRegistry, voice_id: str, out_root: Path,
         return {"voice_id": voice_id, "ok": False, "error": f"engine load: {e}"}
     engine_load_s = time.perf_counter() - t_engine_start
 
-    # Stable cfg for the pipeline (single voice, no voice switching mid-run)
+    # Stable cfg for the pipeline (single voice, no voice switching mid-run).
+    # When --fresh is set we disable the *segment audio* cache only, so this
+    # pipeline instance truly re-synthesises every segment. Reference WAVs /
+    # VoiceClone prompts continue to be reused and the on-disk cache for other
+    # runs is NOT touched or deleted.
     cfg = {
         "language": language,
         "preset": "deep_documentary",
@@ -220,7 +252,7 @@ def run_one(registry: VoiceRegistry, voice_id: str, out_root: Path,
         "wav_sample_rate": 24000,
         "mp3_bitrate": "320k",
         "advanced": {
-            "cache_enabled": True,
+            "cache_enabled": bool(not fresh),
             "segment_target_chars": 420,
             "segment_min_chars": 120,
             "segment_max_chars": 700,
@@ -230,7 +262,7 @@ def run_one(registry: VoiceRegistry, voice_id: str, out_root: Path,
             "target_lufs": -14.0,
             "true_peak_dbtp": -1.5,
             "attn_implementation": "sdpa",
-            # stable sampling, no silent per-process hash drift
+            "longform_run_tag": run_tag or "",
         },
         "german": {
             "instruct_variant": "de_doc_native",
@@ -273,9 +305,13 @@ def run_one(registry: VoiceRegistry, voice_id: str, out_root: Path,
     wav_sha = _sha256_file(wav_path) if wav_path.exists() else ""
 
     # Record run metadata
+    segments_reused = int(report.get("reused") or 0)
+    segments_regen = int(report.get("regenerated") or 0)
+    segments_failed = int(report.get("failed_segments") or 0)
+    new_generation = bool(report.get("ok") and segments_reused == 0 and fresh)
     result = {
         "voice_id": voice_id,
-        "arena_voice_id": getattr(entry, "arena_id", ""),
+        "arena_voice_id": _ARENA_ID_BY_VOICE.get(voice_id, "") or getattr(entry, "arena_id", ""),
         "language": language,
         "production_seed": seed,
         "sampling": BALANCED_SAMPLING,
@@ -290,12 +326,15 @@ def run_one(registry: VoiceRegistry, voice_id: str, out_root: Path,
         "wav": str(wav_path),
         "wav_sha256": wav_sha,
         "segments_attempted": report.get("segments"),
-        "segments_reused": report.get("reused"),
-        "segments_regenerated": report.get("regenerated"),
-        "segments_failed": report.get("failed_segments"),
+        "segments_reused": segments_reused,
+        "segments_regenerated": segments_regen,
+        "segments_failed": segments_failed,
         "avg_qc_score": report.get("avg_score"),
         "duration_s": report.get("duration_s"),
         "master": report.get("master", {}),
+        "fresh": bool(fresh),
+        "new_generation": new_generation,
+        "run_tag": run_tag or "",
     }
     (out_dir / "longform_metrics.json").write_text(
         json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -317,75 +356,175 @@ def run_one(registry: VoiceRegistry, voice_id: str, out_root: Path,
     return result
 
 
-def _write_summary(results: list[dict], out_root: Path) -> None:
+def _write_summary(results: list[dict], out_root: Path, title: str,
+                   voices: list[str], fresh: bool, run_tag: str | None) -> None:
     lines = []
-    lines.append("# Long-Form Baseline – 7 Selected Voices\n")
-    lines.append(f"Generated: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+    lines.append(f"# {title}\n")
+    lines.append(f"Generated: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    lines.append(f"Voices: {len(voices)} ({', '.join(voices)})")
+    lines.append(f"Fresh (segment cache disabled): {'YES' if fresh else 'NO (segments may be reused)'}")
+    if run_tag:
+        lines.append(f"Run tag: {run_tag}")
+    lines.append("")
     lines.append("| Arena-ID | voice_id | Lang | Seed | Status | Words | Segs | "
-                 "Dur (s) | Ref/Engine load (s) | Total (s) | Avg QC | WAV SHA256 | Issues |")
-    lines.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|")
+                 "Dur (s) | Reused | Regen | Failed | Avg QC | NeuGen | WAV SHA256 | Issues |")
+    lines.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
     for r in results:
-        aid = ""
-        # Try to resolve arena id from reproduce_premium's mapping
-        try:
-            from tools import reproduce_premium as rp
-            aid = rp.REVERSE_PRIORITY.get(r["voice_id"], "")
-        except Exception:
-            pass
+        aid = r.get("arena_voice_id") or _ARENA_ID_BY_VOICE.get(r["voice_id"], "")
         status = "OK" if r.get("ok") else "FAIL"
+        if r.get("new_generation"):
+            new_gen = "JA"
+        elif r.get("ok"):
+            new_gen = "NEIN"
+        else:
+            new_gen = "-"
         issues = "; ".join(filter(None, r.get("warnings", [])[:3] + r.get("errors", [])[:2])) or ""
         lines.append(
             f"| {aid} | {r['voice_id']} | {r.get('language','')} | "
             f"{r.get('production_seed','')} | {status} | "
             f"{r.get('plan',{}).get('words','')} | {r.get('plan',{}).get('n_segments','')} | "
-            f"{r.get('duration_s','')} | {r.get('engine_load_s','')} | "
-            f"{r.get('total_elapsed_s','')} | {r.get('avg_qc_score','')} | "
+            f"{r.get('duration_s','')} | {r.get('segments_reused','')} | "
+            f"{r.get('segments_regenerated','')} | {r.get('segments_failed','')} | "
+            f"{r.get('avg_qc_score','')} | {new_gen} | "
             f"{(r.get('wav_sha256','')[:16]+'...') if r.get('wav_sha256') else ''} | "
             f"{issues[:80]} |"
         )
     lines.append("\n## Markers\n")
     for m in ("VOICE22_READY","VOICE23_READY","VOICE24_READY","VOICE25_READY",
               "VOICE27_READY","VOICE32_READY","VOICE33_READY","VOICE34_READY",
+              "VOICE40_READY",
               "VOICE09_PROTECTED","VOICE12_PROTECTED","VOICE30_PRESERVED",
               "GOLDEN_REFERENCE_UNCHANGED","NO_GOLDEN_REFERENCE_CHANGE",
               "LONGFORM_BASELINE_READY"):
         lines.append(f"- {m}")
     (out_root / "SUMMARY.md").write_text("\n".join(lines), encoding="utf-8")
 
+    # Machine-readable summary for downstream tooling.
+    run_summary = {
+        "title": title,
+        "generated": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "voices": voices,
+        "n_voices_requested": len(voices),
+        "n_ok": sum(1 for r in results if r.get("ok")),
+        "n_fail": sum(1 for r in results if not r.get("ok")),
+        "fresh": bool(fresh),
+        "run_tag": run_tag or "",
+        "all_new_generation": bool(
+            fresh
+            and all(r.get("new_generation") for r in results if r.get("ok"))
+            and all(r.get("ok") for r in results)
+        ),
+        "out_root": str(out_root),
+        "results": results,
+    }
+    (out_root / "run_summary.json").write_text(
+        json.dumps(run_summary, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _resolve_voice_list(raw_voices: str | None) -> tuple[list[str], bool]:
+    """Parse the --voices CSV. Accepts the magic token "top3".
+
+    Returns (voice_list, is_top3_mode).
+    """
+    if not raw_voices:
+        return list(DEFAULT_VOICES), False
+    tokens = [t.strip() for t in raw_voices.split(",") if t.strip()]
+    out: list[str] = []
+    is_top3 = False
+    for t in tokens:
+        if t.lower() == "top3":
+            out.extend(TOP3_VOICES)
+            is_top3 = True
+        else:
+            out.append(t)
+    return out, is_top3
+
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Long-form baseline runner.")
-    ap.add_argument("--voices", type=str, default=",".join(TARGET_VOICES),
-                    help="Comma-separated voice_ids (default: the 7 selected).")
+    ap.add_argument("--voices", type=str, default=None,
+                    help="Comma-separated voice_ids. Accepts the special "
+                         "token 'top3' for the three user-favourite voices. "
+                         "Default (no flag): the 7-voice baseline set.")
+    ap.add_argument("--top3", action="store_true",
+                    help="Shorthand: run the three user-favourite voices and "
+                         "write to project/reproduction/TOP3_LONGFORM_REAL by "
+                         "default. Equivalent to --voices top3.")
+    ap.add_argument("--fresh", action="store_true",
+                    help="Disable segment-audio caching for this run so every "
+                         "segment is genuinely re-synthesised. Reference "
+                         "WAVs / VoiceClone prompts still reused; existing "
+                         "cache on disk is NOT deleted.")
     ap.add_argument("--allow-design", action="store_true",
                     help="Allow VoiceDesign fallback if reference WAV/MP3 is "
                          "missing. Default: skip that voice.")
     ap.add_argument("--out", type=str, default=None,
-                    help="Output directory (default: project/reproduction/longform).")
+                    help="Output directory (default depends on mode: "
+                         "project/reproduction/longform for baseline, "
+                         "project/reproduction/TOP3_LONGFORM_REAL for --top3).")
     args = ap.parse_args()
 
     setup_logging()
     paths.ensure_directories()
-    out_root = Path(args.out) if args.out else _PROJECT_ROOT / "reproduction" / "longform"
+
+    # Resolve voice list + defaults
+    if args.top3:
+        voices = list(TOP3_VOICES)
+        top3_mode = True
+        title = "Long-Form TOP-3 Real Run"
+        default_out = _PROJECT_ROOT / "reproduction" / "TOP3_LONGFORM_REAL"
+    else:
+        voices, top3_mode = _resolve_voice_list(args.voices)
+        title = ("Long-Form TOP-3 Real Run" if top3_mode
+                 else "Long-Form Baseline – 7 Selected Voices")
+        default_out = (_PROJECT_ROOT / "reproduction" / "TOP3_LONGFORM_REAL"
+                       if top3_mode
+                       else _PROJECT_ROOT / "reproduction" / "longform")
+
+    out_root = Path(args.out) if args.out else default_out
     out_root.mkdir(parents=True, exist_ok=True)
 
-    voices = [v.strip() for v in args.voices.split(",") if v.strip()]
+    # A fresh run gets a unique tag (recorded in run_summary.json / metrics).
+    run_tag: str | None = None
+    if args.fresh:
+        run_tag = f"longform-{time.strftime('%Y%m%d-%H%M%S')}-{os.getpid()}"
+        log.info("Fresh run requested: segment cache will be disabled (tag=%s)",
+                 run_tag)
+
+    log.info("Mode: %s | voices=%d -> %s | fresh=%s",
+             title, len(voices), out_root, bool(args.fresh))
+
     registry = VoiceRegistry()
 
     results = []
     for i, vid in enumerate(voices, 1):
         log.info("===== (%d/%d) %s =====", i, len(voices), vid)
-        r = run_one(registry, vid, out_root, allow_design=args.allow_design)
+        r = run_one(registry, vid, out_root,
+                    allow_design=args.allow_design,
+                    fresh=bool(args.fresh),
+                    run_tag=run_tag)
         results.append(r)
-        log.info("[%s] ok=%s dur=%ss err=%s", vid, r.get("ok"),
-                 r.get("duration_s"), r.get("errors"))
+        log.info("[%s] ok=%s dur=%ss reused=%s regen=%s failed=%s err=%s",
+                 vid, r.get("ok"), r.get("duration_s"),
+                 r.get("segments_reused"), r.get("segments_regenerated"),
+                 r.get("segments_failed"), r.get("errors"))
 
-    _write_summary(results, out_root)
+    _write_summary(results, out_root, title=title, voices=voices,
+                   fresh=bool(args.fresh), run_tag=run_tag)
 
     n_ok = sum(1 for r in results if r.get("ok"))
     n_fail = sum(1 for r in results if not r.get("ok"))
-    log.info("Long-form baseline complete: %d ok / %d fail -> %s",
-             n_ok, n_fail, out_root / "SUMMARY.md")
+    log.info("%s complete: %d ok / %d fail -> %s",
+             title, n_ok, n_fail, out_root / "SUMMARY.md")
+
+    # Surface a non-zero exit when fresh mode failed to guarantee new segs.
+    if args.fresh and n_fail == 0:
+        non_fresh = [r["voice_id"] for r in results
+                     if r.get("ok") and int(r.get("segments_reused") or 0) != 0]
+        if non_fresh:
+            log.error("Fresh run requested but segments were reused for: %s",
+                      ", ".join(non_fresh))
+            return 2
     return 0 if n_fail == 0 else 1
 
 
