@@ -50,14 +50,39 @@ class QualityScore:
 
     @property
     def critical(self) -> bool:
-        """Harte Regeln (Anforderung 21): kritische Fehler erzwingen
-        Regeneration – auch bei Score 85+."""
-        hard = {"too_short", "too_long", "clipping", "dropout", "nan",
-                "monotone", "long_pause", "noise_like"}
+        """Katastrophale Fehler (Anforderung 21): Audio ist unbrauchbar
+        (keine Stimme, Rauschen, NaN, Dropouts, Clipping, Stille) –
+        MUSS regeneriert werden, auch bei Score 85+.
+
+        Dauer-/Prosodieabweichungen (too_short/too_long/monotone/long_pause
+        /duration_implausible/rate_out_of_range/question_melody_missing)
+        sind QUALITÄTS-Probleme, keine Integritätsfehler: sie beeinflussen
+        den Score/das Ranking, blockieren aber NICHT die Final-Gate,
+        wenn die Sprachqualität ansonsten hoch ist und alle Retries
+        keine bessere Alternative liefern. Andernfalls würden 90+-Score,
+        klar stimmhafte Segmente wegen einer Dauerabweichung von wenigen
+        Prozent verworfen – ein Fehlalarm, der im Host-Log massiv
+        auftrat (z.B. score=93.1, dur=26.9s, f0=200Hz, LUFS=-19 als
+        "kritisch" eingestuft und blockiert).
+
+        0.16s-Stille/Kollaps wird weiterhin zuverlässig blockiert:
+        qc.check() fügt in diesem Fall immer "silence" (hard-set) hinzu.
+        """
+        # Nur wirklich unbrauchbare Audio-Integritätsfehler
+        hard = {"clipping", "dropout", "nan", "noise_like", "silence"}
         if hard & set(self.issues):
             return True
+        # German-seitig: nur "keine Sprache" ist katastrophal.
+        # duration_implausible/rate_out_of_range/question_melody_missing
+        # sind Qualitäts-Probleme (Prosodie/Aussprache), keine
+        # Integritätsfehler – sie werden über den Score/Ranking
+        # abgebildet, blockieren aber nicht die Final-Gate.
         g = self.german or {}
-        return bool(g.get("critical"))
+        if g.get("critical"):
+            gi = set(g.get("issues") or [])
+            if "no_voiced_speech" in gi:
+                return True
+        return False
 
     def to_dict(self) -> dict:
         return {
