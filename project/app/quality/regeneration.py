@@ -51,7 +51,7 @@ def _classify(issues: list[str]) -> str:
     if s & {"rate_out_of_range"}:
         return "rate"
     if s & {"too_short", "too_long", "duration_implausible", "dropout",
-            "nan", "noise_like"}:
+            "nan", "noise_like", "silence", "no_voiced_speech", "too_quiet"}:
         return "pronunciation"
     if s & {"monotone"}:
         return "monotone"
@@ -59,7 +59,7 @@ def _classify(issues: list[str]) -> str:
         return "rhythm"
     if s & {"clipping"}:
         return "clipping"
-    if s & {"too_quiet", "too_loud"}:
+    if s & {"too_loud"}:
         return "loudness"
     return "generic"
 
@@ -216,14 +216,21 @@ def generate_with_qc(engine, request: SynthesisRequest, text: str,
 
     if best is None and attempts:
         best = attempts[-1]
-    # leicht unter Schwelle aber valide -> akzeptieren + protokollieren
+    # Akzeptanzregel: NICHT kritisch UND Score über 60 % der Schwelle.
+    # Der alte Code überschrieb „accepted“ fälschlicherweise auch dann
+    # auf True, wenn der Score unter 60 % lag – damit landeten
+    # 0.16-s-/Silence-Varianten teilweise fälschlich als „best“ im
+    # Final-Gate. Final-Gate blockiert sie zwar noch, aber eine saubere
+    # accepted=false von Anfang an verhindert, dass Regeneration früh
+    # abbricht.
     accepted = bool(best and not best.error and not best.critical
                     and best.score >= min_score * 0.6)
-    if best and not best.error and (best.critical or best.score < min_score):
-        accepted = not best.critical
-        qlog(f"SEG best={best.score:.1f}/DE={best.german_score} unter "
-             f"Schwelle ({min_score}/{min_german_score}) – "
-             + ("kritisch, markiert" if best.critical else
-                "akzeptiert als beste verfügbare Version") +
-             f". Probleme: {','.join(best.issues)}")
+    if best and not best.error:
+        if best.critical or best.score < min_score:
+            qlog(f"SEG best={best.score:.1f}/DE={best.german_score} unter "
+                 f"Schwelle ({min_score}/{min_german_score}) – "
+                 + ("kritisch, markiert" if best.critical else
+                    ("akzeptiert als beste verfügbare Version"
+                     if accepted else "zu schwach – weiterer Versuch nötig"))
+                 + f". Probleme: {','.join(best.issues)}")
     return {"attempts": attempts, "best": best, "accepted": accepted}

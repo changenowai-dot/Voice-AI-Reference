@@ -292,16 +292,28 @@ class Pipeline:
                 offsets = sampling_offsets(dominant_role(seg.text), sem,
                                            se_int, self.variation_strength)
                 seg_sampling = apply_sampling_offsets(seg_sampling, offsets)
-            # Deterministischer Segment-Seed. Wichtig: Python's eingebautes
-            # hash() ist pro Prozess NICHT stabil (PYTHONHASHSEED) und würde
-            # bei jedem Lauf andere Segment-Seeds liefern. Wir verwenden
-            # deshalb sha256 über den stabilen Cache-Key (der bereits
-            # speaker/instruct/language/text/sampling/param_version kodiert).
-            if production_seed:
-                seg_seed = int(production_seed)
+            # Deterministischer Segment-Seed.
+            #
+            # Standard-Modus ("global"): alle Segmente einer Stimme laufen
+            # mit demselben production_seed (so funktioniert V1 stabil
+            # 25/25 ohne jegliche Regenerationen und ohne Final-Gate-
+            # Blockaden – das ist der VOICE-1-Regressionschutz).
+            #
+            # Modus "per_segment": ein deterministischer, pro Segment
+            # UNTERScheidbarer Seed wird aus sha256(voice_seed + cache_key)
+            # abgeleitet. Das ist der Stabilitäts-Fix für Stimmen, bei
+            # denen der globale Seed systematisch 0.16-s-/Silence- oder
+            # Daueroszillationen erzeugt (V2/V3). Der Seed bleibt über
+            # Läufe hinweg 100% reproduzierbar.
+            from hashlib import sha256
+            seed_mode = str(adv.get("segment_seed_mode", "global")).lower()
+            if seed_mode == "per_segment" or not production_seed:
+                seed_material = (f"{production_seed}:{key}"
+                                 if production_seed is not None else key)
+                seg_seed = int(sha256(seed_material.encode("utf-8"))
+                               .hexdigest()[:8], 16)
             else:
-                from hashlib import sha256
-                seg_seed = int(sha256(key.encode("utf-8")).hexdigest()[:8], 16)
+                seg_seed = int(production_seed)
             request = SynthesisRequest(
                 text=seg.text, language=language, speaker=speaker,
                 instruct=instruct, sampling=seg_sampling,
