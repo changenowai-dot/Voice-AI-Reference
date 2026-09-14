@@ -35,6 +35,7 @@ import json
 import os
 import sys
 import time
+import traceback
 from pathlib import Path
 
 _THIS = Path(__file__).resolve()
@@ -216,190 +217,378 @@ def _segment_stats(engine, cfg: dict, text: str):
     return segments, durations
 
 
+def _safe_vram_log() -> dict:
+    """Bestmögliche VRAM-Info (ohne Architekturumbau). Leer, falls CUDA
+    nicht verfügbar ist (z.B. Test-Doubles oder CPU-Modus)."""
+    try:
+        import torch
+        if not torch.cuda.is_available():
+            return {}
+        dev = torch.cuda.current_device()
+        free, total = torch.cuda.mem_get_info(dev)
+        return {
+            "device": torch.cuda.get_device_name(dev),
+            "total_mb": round(total / 1024 / 1024),
+            "free_mb_before": round(free / 1024 / 1024),
+        }
+    except Exception:
+        return {}
+
+
+def _count_silence_patterns(segments_jsonl: Path) -> dict:
+    """Zählt sehr kurze / Stille-/Rausch-/F0=0-Fälle aus dem
+    Segment-Diagnoselog. Berücksichtigt echte Dauer + RMS + LUFS/Issues,
+    damit nicht jeder einzelne F0=0-Wert fälschlich als Silence zählt."""
+    very_short = silence = noise = no_voiced = zero_f0 = 0
+    if not segments_jsonl.exists():
+        return {"very_short_count": 0, "silence_count": 0,
+                "noise_like_count": 0, "no_voiced_speech_count": 0,
+                "zero_f0_count": 0, "silence_pattern_detected": False}
+    import math
+    with open(segments_jsonl, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                d = json.loads(line)
+            except Exception:
+                continue
+            if d.get("status") != "ok":
+                continue
+            # Best-Attempt-Dauer ermitteln (chosen_attempt)
+            best = None
+            for a in d.get("attempts", []):
+                if a.get("attempt") == d.get("chosen_attempt"):
+                    best = a; break
+            if best is None and d.get("attempts"):
+                best = d["attempts"][-1]
+            if best is None:
+                continue
+            dur = float(best.get("duration_s") or 0.0)
+            rms = float(best.get("rms") or 0.0)
+            lufs = float(best.get("lufs") or 0.0)
+            f0 = float(best.get("f0_hz") or 0.0)
+            issues = set(best.get("issues") or [])
+            if dur <= 0.5:
+                very_short += 1
+            if f0 == 0:
+                zero_f0 += 1
+            if "silence" in issues:
+                silence += 1
+            if "noise_like" in issues:
+                noise += 1
+            if "no_voiced_speech" in issues:
+                no_voiced += 1
+    pattern = (very_short > 0 or silence > 0 or noise > 0 or no_voiced > 0)
+    return {
+        "very_short_count": very_short,
+        "silence_count": silence,
+        "noise_like_count": noise,
+        "no_voiced_speech_count": no_voiced,
+        "zero_f0_count": zero_f0,
+        "silence_pattern_detected": bool(pattern),
+    }
+
+
+def _cuda_cleanup_between_voices() -> None:
+    """Best-effort VRAM/CUDA-Cleanup zwischen Stimmen."""
+    try:
+        import gc, torch
+        gc.collect()
+        if torch.cuda.is_available():
+            try: torch.cuda.synchronize()
+            except Exception: pass
+            torch.cuda.empty_cache()
+    except Exception:
+        pass
+
+
+def _write_voice_metrics(result: dict, out_dir: Path) -> None:
+    try:
+        (out_dir / "longform_metrics.json").write_text(
+            json.dumps(result, ensure_ascii=False, indent=2, default=str),
+            encoding="utf-8")
+    except Exception as e:
+        log.warning("longform_metrics.json für %s nicht schreibbar: %s",
+                    out_dir.name, e)
+    plan = result.get("plan") or {}
+    seg_table = [{
+        "segments_planned": plan.get("n_segments"),
+        "est_min_s": plan.get("est_min_s"),
+        "est_max_s": plan.get("est_max_s"),
+        "est_avg_s": plan.get("est_avg_s"),
+        "segments_failed": result.get("segments_failed"),
+        "segments_successful": result.get("segments_successful"),
+        "wav_complete": result.get("wav_complete"),
+        "complete_success": result.get("complete_success"),
+    }]
+    try:
+        (out_dir / "segment_plan.json").write_text(
+            json.dumps(seg_table, ensure_ascii=False, indent=2),
+            encoding="utf-8")
+    except Exception:
+        pass
+
+
 def run_one(registry: VoiceRegistry, voice_id: str, out_root: Path,
             allow_design: bool, fresh: bool = False,
             run_tag: str | None = None) -> dict:
     entry = registry.get(voice_id)
+    base: dict = {
+        "voice_id": voice_id,
+        "ok": False,
+        "complete_success": False,
+        "wav_complete": False,
+        "fresh": bool(fresh),
+        "new_generation": False,
+        "segment_cache_enabled": bool(not fresh),
+        "warnings": [],
+        "errors": [],
+        "error": "",
+        "exception_type": "",
+        "run_tag": run_tag or "",
+    }
     if entry is None:
-        return {"voice_id": voice_id, "ok": False, "error": "not in registry"}
+        base.update({"error": "not in registry", "exception_type": "LookupError"})
+        return base
 
     language = _resolve_voice_native_language(registry, entry)
     seed = _resolve_voice_seed(registry, entry)
-
     out_dir = out_root / voice_id
     out_dir.mkdir(parents=True, exist_ok=True)
+    segments_log = out_dir / "segments.jsonl"
+    try:
+        if segments_log.exists():
+            segments_log.unlink()
+    except OSError:
+        pass
+    segments_logged = 0
 
     text_path = _write_input_text(out_dir, language)
     text = text_path.read_text(encoding="utf-8")
 
-    # Build engine (loads ref WAV, builds clone prompt; ONCE per voice)
-    t_engine_start = time.perf_counter()
+    engine = None
+    hw = None
+    plan = {"n_segments": 0, "words": 0, "est_total_s": 0}
+    report: dict = {"ok": False}
+    engine_load_s = 0.0
+    vram_before = _safe_vram_log()
+
+    def _seg_cb(diag: dict) -> None:
+        nonlocal segments_logged
+        diag["voice_id"] = voice_id
+        diag["run_tag"] = run_tag or ""
+        diag["ts"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+        try:
+            with open(segments_log, "a", encoding="utf-8") as f:
+                f.write(json.dumps(diag, ensure_ascii=False) + "\n")
+            segments_logged += 1
+        except Exception as e:
+            log.warning("segments.jsonl write fehlgeschlagen: %s", e)
+
     try:
+        t0 = time.perf_counter()
         engine, hw = _resolve_reference(voice_id, entry, language, seed,
                                         allow_design=allow_design)
         engine.load()
-    except Exception as e:
-        log.exception("[%s] Engine/Reference load failed", voice_id)
-        return {"voice_id": voice_id, "ok": False, "error": f"engine load: {e}"}
-    engine_load_s = time.perf_counter() - t_engine_start
+        engine_load_s = time.perf_counter() - t0
 
-    # Stable cfg for the pipeline (single voice, no voice switching mid-run).
-    # When --fresh is set we disable the *segment audio* cache only, so this
-    # pipeline instance truly re-synthesises every segment. Reference WAVs /
-    # VoiceClone prompts continue to be reused and the on-disk cache for other
-    # runs is NOT touched or deleted.
-    cfg = {
-        "language": language,
-        "preset": "deep_documentary",
-        "voice_profile": entry.voice_id,
-        "voice": {
-            "id": entry.voice_id,
-            "speaker": entry.voice_id,   # clone uses candidate_id as speaker
-            "production_seed": seed,
-        },
-        "speed": 1.0,
-        "output_dir": str(out_dir),
-        "output_format": "wav",          # baseline WAV only (faster); MP3 optional via ffmpeg
-        "wav_bit_depth": 16,
-        "wav_sample_rate": 24000,
-        "mp3_bitrate": "320k",
-        "advanced": {
-            "cache_enabled": bool(not fresh),
-            "segment_target_chars": 420,
-            "segment_min_chars": 120,
-            "segment_max_chars": 700,
-            "qc_enabled": True,
-            "qc_max_attempts": 3,
-            "qc_min_score": 78,
-            "target_lufs": -14.0,
-            "true_peak_dbtp": -1.5,
-            "attn_implementation": "sdpa",
-            "longform_run_tag": run_tag or "",
-        },
-        "german": {
-            "instruct_variant": "de_doc_native",
-            "min_german_score": 75.0,
-            "tech_germanization": True,
-            "variation": {"enabled": None, "strength": "subtle"},
-        },
-    }
+        cfg = {
+            "language": language,
+            "preset": "deep_documentary",
+            "voice_profile": entry.voice_id,
+            "voice": {"id": entry.voice_id, "speaker": entry.voice_id,
+                      "production_seed": seed},
+            "speed": 1.0,
+            "output_dir": str(out_dir),
+            "output_format": "wav",
+            "wav_bit_depth": 16,
+            "wav_sample_rate": 24000,
+            "mp3_bitrate": "320k",
+            "advanced": {
+                "cache_enabled": bool(not fresh),
+                "segment_target_chars": 420,
+                "segment_min_chars": 120,
+                "segment_max_chars": 700,
+                "qc_enabled": True,
+                "qc_max_attempts": 3,
+                "qc_min_score": 78,
+                "target_lufs": -14.0,
+                "true_peak_dbtp": -1.5,
+                "attn_implementation": "sdpa",
+                "longform_run_tag": run_tag or "",
+            },
+            "german": {
+                "instruct_variant": "de_doc_native",
+                "min_german_score": 75.0,
+                "tech_germanization": True,
+                "variation": {"enabled": None, "strength": "subtle"},
+            },
+        }
+        segments, est_dur = _segment_stats(engine, cfg, text)
+        plan = {
+            "n_segments": len(segments),
+            "words": len([w for w in text.split() if w.strip()]),
+            "est_total_s": round(sum(est_dur), 1),
+            "est_min_s": round(min(est_dur), 2) if est_dur else 0,
+            "est_max_s": round(max(est_dur), 2) if est_dur else 0,
+            "est_avg_s": round(sum(est_dur) / len(est_dur), 2) if est_dur else 0,
+        }
+        log.info("[%s] Plan: %d segments, %d words, ~%.1fs est",
+                 voice_id, plan["n_segments"], plan["words"], plan["est_total_s"])
 
-    # Pre-compute segmentation plan (no synthesis yet)
-    segments, est_dur = _segment_stats(engine, cfg, text)
-    plan = {
-        "n_segments": len(segments),
-        "words": len([w for w in text.split() if w.strip()]),
-        "est_total_s": round(sum(est_dur), 1),
-        "est_min_s": round(min(est_dur), 2) if est_dur else 0,
-        "est_max_s": round(max(est_dur), 2) if est_dur else 0,
-        "est_avg_s": round(sum(est_dur) / len(est_dur), 2) if est_dur else 0,
-    }
-    log.info("[%s] Plan: %d segments, %d words, ~%.1fs est",
-             voice_id, plan["n_segments"], plan["words"], plan["est_total_s"])
-
-    progress = ProgressReporter()
-
-    # Run synthesis
-    t0 = time.perf_counter()
-    pipeline = Pipeline(cfg, engine, progress=progress)
-    try:
+        progress = ProgressReporter()
+        pipeline = Pipeline(cfg, engine, progress=progress,
+                            segment_callback=_seg_cb)
+        t1 = time.perf_counter()
         report = pipeline.process_file(text_path)
+        synth_s = time.perf_counter() - t1
     except Exception as e:
-        log.exception("[%s] Pipeline failed", voice_id)
-        engine.unload()
-        return {"voice_id": voice_id, "ok": False, "error": f"pipeline: {e}",
-                "plan": plan, "engine_load_s": round(engine_load_s, 2)}
-    synth_s = time.perf_counter() - t0
-    engine.unload()
+        log.exception("[%s] Run failed", voice_id)
+        base.update({
+            "ok": False,
+            "error": f"pipeline: {e}",
+            "exception_type": type(e).__name__,
+            "traceback": traceback.format_exc(limit=8),
+            "plan": plan,
+            "engine_load_s": round(engine_load_s, 2),
+            "hardware": hw.to_dict() if hw is not None else {},
+            "vram_before": vram_before,
+        })
+        _write_voice_metrics(base, out_dir)
+        if engine is not None:
+            try: engine.unload()
+            except Exception: pass
+        _cuda_cleanup_between_voices()
+        return base
+    finally:
+        if engine is not None:
+            try: engine.unload()
+            except Exception: pass
+        _cuda_cleanup_between_voices()
 
-    # Collect output metrics
     wav_path = Path(report.get("wav") or "")
-    wav_sha = _sha256_file(wav_path) if wav_path.exists() else ""
-
-    # Record run metadata
+    wav_ok = bool(wav_path and wav_path.exists() and wav_path.is_file())
+    wav_sha = _sha256_file(wav_path) if wav_ok else ""
     segments_reused = int(report.get("reused") or 0)
     segments_regen = int(report.get("regenerated") or 0)
     segments_failed = int(report.get("failed_segments") or 0)
-    new_generation = bool(report.get("ok") and segments_reused == 0 and fresh)
+    segments_planned = int(report.get("segments_planned")
+                           or report.get("segments")
+                           or plan.get("n_segments") or 0)
+    segments_successful = int(report.get("segments_successful")
+                              or max(segments_planned - segments_failed, 0))
+    wav_complete = bool(report.get("wav_complete", False))
+    new_generation = bool(fresh and segments_reused == 0 and report.get("ok"))
+    complete_success = bool(report.get("ok") and wav_ok and wav_complete
+                            and segments_failed == 0)
+    vram_after = _safe_vram_log()
+    silence_stats = _count_silence_patterns(segments_log)
+
     result = {
-        "voice_id": voice_id,
-        "arena_voice_id": _ARENA_ID_BY_VOICE.get(voice_id, "") or getattr(entry, "arena_id", ""),
+        **base,
+        "arena_voice_id": (_ARENA_ID_BY_VOICE.get(voice_id, "")
+                           or getattr(entry, "arena_id", "")),
         "language": language,
         "production_seed": seed,
         "sampling": BALANCED_SAMPLING,
         "plan": plan,
         "engine_load_s": round(engine_load_s, 2),
-        "total_elapsed_s": round(synth_s, 2),
-        "engine": engine.info(),
-        "hardware": hw.to_dict(),
-        "warnings": report.get("warnings", []),
+        "total_elapsed_s": round(report.get("elapsed_s", synth_s), 2),
+        "engine": engine.info() if engine is not None else {},
+        "hardware": hw.to_dict() if hw is not None else {},
+        "vram_before": vram_before,
+        "vram_after": vram_after,
+        "warnings": list(report.get("warnings", []) or []),
         "errors": [] if report.get("ok") else [report.get("error", "")],
         "ok": bool(report.get("ok")),
-        "wav": str(wav_path),
+        "wav": str(wav_path) if wav_ok else "",
         "wav_sha256": wav_sha,
-        "segments_attempted": report.get("segments"),
+        "wav_exists": wav_ok,
+        "segments_planned": segments_planned,
+        "segments_attempted": int(report.get("segments") or segments_planned),
+        "segments_successful": segments_successful,
         "segments_reused": segments_reused,
         "segments_regenerated": segments_regen,
         "segments_failed": segments_failed,
         "avg_qc_score": report.get("avg_score"),
         "duration_s": report.get("duration_s"),
         "master": report.get("master", {}),
-        "fresh": bool(fresh),
         "new_generation": new_generation,
-        "run_tag": run_tag or "",
+        "wav_complete": wav_complete,
+        "complete_success": complete_success,
+        "segment_log": str(segments_log),
+        "segments_logged": segments_logged,
+        "silence_pattern": silence_stats,
     }
-    (out_dir / "longform_metrics.json").write_text(
-        json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-
-    # Per-segment table
-    seg_table = []
-    if report.get("ok"):
-        # Segments aren't individually saved in the pipeline's return; we
-        # report plan+global stats here. The WAV is the authoritative output.
-        seg_table.append({
-            "segments_planned": plan["n_segments"],
-            "est_min_s": plan["est_min_s"],
-            "est_max_s": plan["est_max_s"],
-            "est_avg_s": plan["est_avg_s"],
-        })
-    (out_dir / "segment_plan.json").write_text(
-        json.dumps(seg_table, ensure_ascii=False, indent=2), encoding="utf-8")
-
+    _write_voice_metrics(result, out_dir)
     return result
 
 
 def _write_summary(results: list[dict], out_root: Path, title: str,
                    voices: list[str], fresh: bool, run_tag: str | None) -> None:
+    n_requested = len(voices)
+    n_completed = sum(1 for r in results if r.get("ok"))
+    n_full = sum(1 for r in results if r.get("complete_success"))
+    n_voice_fails = sum(1 for r in results if not r.get("ok"))
+    all_new = bool(fresh
+                   and all(r.get("new_generation") for r in results if r.get("ok"))
+                   and n_voice_fails == 0
+                   and all(int(r.get("segments_reused") or 0) == 0
+                           for r in results))
     lines = []
     lines.append(f"# {title}\n")
     lines.append(f"Generated: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-    lines.append(f"Voices: {len(voices)} ({', '.join(voices)})")
-    lines.append(f"Fresh (segment cache disabled): {'YES' if fresh else 'NO (segments may be reused)'}")
+    lines.append(f"Voices requested: {n_requested}")
+    lines.append(f"Voices completed (pipeline ok): {n_completed}")
+    lines.append(f"Voices complete_success: {n_full}")
+    lines.append(f"Fresh (segment cache disabled): {'YES' if fresh else 'NO'}")
+    lines.append(f"segment_cache_enabled: {not fresh}")
     if run_tag:
         lines.append(f"Run tag: {run_tag}")
     lines.append("")
-    lines.append("| Arena-ID | voice_id | Lang | Seed | Status | Words | Segs | "
-                 "Dur (s) | Reused | Regen | Failed | Avg QC | NeuGen | WAV SHA256 | Issues |")
-    lines.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
+    lines.append("| Arena-ID | voice_id | Lang | Seed | Status | Complete | Words | "
+                 "Planned | OK | Dur(s) | Reused | Regen | Failed | AvgQC | NeuGen | WAV SHA | Issues |")
+    lines.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
     for r in results:
         aid = r.get("arena_voice_id") or _ARENA_ID_BY_VOICE.get(r["voice_id"], "")
         status = "OK" if r.get("ok") else "FAIL"
+        complete = "JA" if r.get("complete_success") else ("NEIN" if r.get("ok") else "-")
         if r.get("new_generation"):
             new_gen = "JA"
         elif r.get("ok"):
             new_gen = "NEIN"
         else:
             new_gen = "-"
-        issues = "; ".join(filter(None, r.get("warnings", [])[:3] + r.get("errors", [])[:2])) or ""
+        issues = "; ".join(filter(None, (r.get("warnings", [])[:3] + r.get("errors", [])[:2])))
+        issues += ((" | exc=" + r.get("exception_type","")) if r.get("exception_type") else "")
         lines.append(
             f"| {aid} | {r['voice_id']} | {r.get('language','')} | "
-            f"{r.get('production_seed','')} | {status} | "
-            f"{r.get('plan',{}).get('words','')} | {r.get('plan',{}).get('n_segments','')} | "
+            f"{r.get('production_seed','')} | {status} | {complete} | "
+            f"{r.get('plan',{}).get('words','')} | "
+            f"{r.get('segments_planned','')} | {r.get('segments_successful','')} | "
             f"{r.get('duration_s','')} | {r.get('segments_reused','')} | "
             f"{r.get('segments_regenerated','')} | {r.get('segments_failed','')} | "
             f"{r.get('avg_qc_score','')} | {new_gen} | "
             f"{(r.get('wav_sha256','')[:16]+'...') if r.get('wav_sha256') else ''} | "
-            f"{issues[:80]} |"
+            f"{(issues or '')[:100]} |"
+        )
+    if fresh:
+        lines.append(f"\nFresh watchdog: all_new_generation={all_new}")
+        reused_voices = [r['voice_id'] for r in results
+                         if r.get('ok') and int(r.get('segments_reused') or 0) != 0]
+        if reused_voices:
+            lines.append(f"- WARNING: segment-cache reuse detected: {', '.join(reused_voices)}")
+    lines.append("\n## Silence/Short-Segment Pattern\n")
+    for r in results:
+        sp = r.get("silence_pattern") or {}
+        lines.append(
+            f"- {r['voice_id']}: very_short={sp.get('very_short_count',0)} "
+            f"silence={sp.get('silence_count',0)} noise_like={sp.get('noise_like_count',0)} "
+            f"no_voiced_speech={sp.get('no_voiced_speech_count',0)} "
+            f"zero_f0={sp.get('zero_f0_count',0)} "
+            f"silence_pattern_detected={sp.get('silence_pattern_detected',False)}"
         )
     lines.append("\n## Markers\n")
     for m in ("VOICE22_READY","VOICE23_READY","VOICE24_READY","VOICE25_READY",
@@ -409,28 +598,35 @@ def _write_summary(results: list[dict], out_root: Path, title: str,
               "GOLDEN_REFERENCE_UNCHANGED","NO_GOLDEN_REFERENCE_CHANGE",
               "LONGFORM_BASELINE_READY"):
         lines.append(f"- {m}")
-    (out_root / "SUMMARY.md").write_text("\n".join(lines), encoding="utf-8")
+    try:
+        (out_root / "SUMMARY.md").write_text("\n".join(lines), encoding="utf-8")
+    except Exception as e:
+        log.warning("SUMMARY.md konnte nicht geschrieben werden: %s", e)
 
-    # Machine-readable summary for downstream tooling.
     run_summary = {
         "title": title,
         "generated": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "voices": voices,
-        "n_voices_requested": len(voices),
-        "n_ok": sum(1 for r in results if r.get("ok")),
-        "n_fail": sum(1 for r in results if not r.get("ok")),
+        "n_voices_requested": n_requested,
+        "n_completed_ok": n_completed,
+        "n_complete_success": n_full,
+        "n_voice_failures": n_voice_fails,
         "fresh": bool(fresh),
+        "segment_cache_enabled": bool(not fresh),
         "run_tag": run_tag or "",
-        "all_new_generation": bool(
-            fresh
-            and all(r.get("new_generation") for r in results if r.get("ok"))
-            and all(r.get("ok") for r in results)
-        ),
+        "all_new_generation": bool(all_new and n_voice_fails == 0
+                                  and n_completed == n_requested
+                                  and n_full == n_requested),
+        "all_wav_complete": bool(n_full == n_requested),
         "out_root": str(out_root),
         "results": results,
     }
-    (out_root / "run_summary.json").write_text(
-        json.dumps(run_summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    try:
+        (out_root / "run_summary.json").write_text(
+            json.dumps(run_summary, ensure_ascii=False, indent=2, default=str),
+            encoding="utf-8")
+    except Exception as e:
+        log.warning("run_summary.json konnte nicht geschrieben werden: %s", e)
 
 
 def _resolve_voice_list(raw_voices: str | None) -> tuple[list[str], bool]:
@@ -482,7 +678,6 @@ def main() -> int:
     # Resolve voice list + defaults
     if args.top3:
         voices = list(TOP3_VOICES)
-        top3_mode = True
         title = "Long-Form TOP-3 Real Run"
         default_out = _PROJECT_ROOT / "reproduction" / "TOP3_LONGFORM_REAL"
     else:
@@ -496,7 +691,6 @@ def main() -> int:
     out_root = Path(args.out) if args.out else default_out
     out_root.mkdir(parents=True, exist_ok=True)
 
-    # A fresh run gets a unique tag (recorded in run_summary.json / metrics).
     run_tag: str | None = None
     if args.fresh:
         run_tag = f"longform-{time.strftime('%Y%m%d-%H%M%S')}-{os.getpid()}"
@@ -507,37 +701,54 @@ def main() -> int:
              title, len(voices), out_root, bool(args.fresh))
 
     registry = VoiceRegistry()
+    results: list[dict] = []
+    exit_code = 0
+    try:
+        for i, vid in enumerate(voices, 1):
+            log.info("===== (%d/%d) %s =====", i, len(voices), vid)
+            r = run_one(registry, vid, out_root,
+                        allow_design=args.allow_design,
+                        fresh=bool(args.fresh),
+                        run_tag=run_tag)
+            results.append(r)
+            log.info(
+                "[%s] ok=%s complete=%s dur=%ss reused=%s regen=%s failed=%s err=%s",
+                vid, r.get("ok"), r.get("complete_success"), r.get("duration_s"),
+                r.get("segments_reused"), r.get("segments_regenerated"),
+                r.get("segments_failed"), r.get("errors"))
+    except KeyboardInterrupt:
+        log.error("Benchmark durch Benutzer abgebrochen")
+        exit_code = 130
+    except BaseException:
+        log.exception("Benchmark-Loop durch unerwarteten Fehler abgebrochen")
+        exit_code = 1
+    finally:
+        _write_summary(results, out_root, title=title, voices=voices,
+                       fresh=bool(args.fresh), run_tag=run_tag)
 
-    results = []
-    for i, vid in enumerate(voices, 1):
-        log.info("===== (%d/%d) %s =====", i, len(voices), vid)
-        r = run_one(registry, vid, out_root,
-                    allow_design=args.allow_design,
-                    fresh=bool(args.fresh),
-                    run_tag=run_tag)
-        results.append(r)
-        log.info("[%s] ok=%s dur=%ss reused=%s regen=%s failed=%s err=%s",
-                 vid, r.get("ok"), r.get("duration_s"),
-                 r.get("segments_reused"), r.get("segments_regenerated"),
-                 r.get("segments_failed"), r.get("errors"))
-
-    _write_summary(results, out_root, title=title, voices=voices,
-                   fresh=bool(args.fresh), run_tag=run_tag)
-
+    # Exit-Logik:
+    #   0 = alle Stimmen complete_success
+    #   2 = fresh-mode violation (reused > 0)
+    #   1 = sonstige technische/Voice-Fehler
     n_ok = sum(1 for r in results if r.get("ok"))
     n_fail = sum(1 for r in results if not r.get("ok"))
-    log.info("%s complete: %d ok / %d fail -> %s",
-             title, n_ok, n_fail, out_root / "SUMMARY.md")
+    n_complete = sum(1 for r in results if r.get("complete_success"))
+    log.info("%s complete: %d ok / %d fail / %d complete -> %s",
+             title, n_ok, n_fail, n_complete, out_root / "SUMMARY.md")
 
-    # Surface a non-zero exit when fresh mode failed to guarantee new segs.
-    if args.fresh and n_fail == 0:
+    if args.fresh:
         non_fresh = [r["voice_id"] for r in results
                      if r.get("ok") and int(r.get("segments_reused") or 0) != 0]
         if non_fresh:
             log.error("Fresh run requested but segments were reused for: %s",
                       ", ".join(non_fresh))
             return 2
-    return 0 if n_fail == 0 else 1
+    # Wenn wir schon in der Schleife einen hard-Exit hatten, behalten wir den.
+    if exit_code != 0:
+        return exit_code
+    if n_complete != len(voices):
+        return 1
+    return 0
 
 
 if __name__ == "__main__":

@@ -78,11 +78,13 @@ class PipelineCancelled(RuntimeError):
 
 class Pipeline:
     def __init__(self, cfg: dict, engine, progress=None,
-                 vram_guard: VRAMGuard | None = None):
+                 vram_guard: VRAMGuard | None = None,
+                 segment_callback=None):
         self.cfg = cfg
         self.engine = engine
         self.progress = progress
         self.guard = vram_guard or VRAMGuard()
+        self.segment_callback = segment_callback  # optional diagnostics hook
         self.cache = CacheManager(enabled=bool(
             cfgmod.get(cfg, "advanced.cache_enabled", True)))
         gcfg0 = cfg.get("german", {}) or {}
@@ -319,14 +321,64 @@ class Pipeline:
                 german_meta=german_meta,
                 progress_cb=_regen_progress)
             best: AttemptResult | None = result["best"]
+            attempts = result.get("attempts") or []
+
+            # Per-attempt Diagnostik an den Callback geben, damit der
+            # Benchmark sie persistent schreiben kann.
+            seg_diag = {
+                "seg_index": seg.index,
+                "text_hash": meta.get("text_hash", ""),
+                "base_seed": int(seg_seed),
+                "sampling": seg_sampling,
+                "expected_s": round(expected_s, 2),
+                "instruct": instruct,
+                "attempts": [],
+            }
+            for ar in attempts:
+                m = ar.metrics or {}
+                seg_diag["attempts"].append({
+                    "attempt": ar.attempt,
+                    "seed": (ar.params_used or {}).get("seed"),
+                    "sampling": (ar.params_used or {}).get("sampling"),
+                    "error_class": (ar.params_used or {}).get("error_class"),
+                    "score": round(float(ar.score or 0.0), 2),
+                    "german_score": ar.german_score,
+                    "duration_s": (m.get("duration_s")
+                                   if m else (float(len(ar.waveform)) /
+                                              float(ar.sample_rate)
+                                              if ar.waveform is not None and
+                                              ar.sample_rate else 0.0)),
+                    "rms": m.get("rms"),
+                    "f0_hz": m.get("f0_hz"),
+                    "lufs": m.get("lufs"),
+                    "silence_ratio": m.get("silence_ratio"),
+                    "issues": list(ar.issues or []),
+                    "critical": bool(ar.critical),
+                    "error": ar.error,
+                })
+
+            accepted_in_retry = False
+            failure_reason = ""
+            final_gate_passed = False
+            chosen_wave = None
+            chosen_sr = 24000
+            chosen_score = 0.0
+            chosen_attempt = None
 
             if best is None or best.waveform is None:
                 # OOM-Notfallpfad: Segment an Satzgrenze halbieren (Anf. 4)
                 wav_sr = self._split_fallback(request, seg, qc)
                 if wav_sr is None:
                     failed_segments += 1
-                    state.set_segment(seg.index, "failed", attempts=len(result["attempts"]),
-                                      error="Synthese endgültig fehlgeschlagen")
+                    failure_reason = "Synthese endgültig fehlgeschlagen"
+                    state.set_segment(seg.index, "failed", attempts=len(attempts),
+                                      error=failure_reason)
+                    if self.segment_callback:
+                        seg_diag.update({"status": "failed",
+                                         "failure_reason": failure_reason,
+                                         "final_gate_passed": False})
+                        try: self.segment_callback(seg_diag)
+                        except Exception: pass
                     continue
                 wav, sr = wav_sr
                 # §4: Auch Split-Fallback VOR Übernahme erneut QC-prüfen
@@ -336,17 +388,26 @@ class Pipeline:
                                      min_score=min_score * 0.75)
                 if not gate.passed:
                     failed_segments += 1
+                    failure_reason = (f"Split-Fallback im Final-Gate blockiert: "
+                                      f"{gate.reason}")
                     state.set_segment(
                         seg.index, "failed",
-                        attempts=len(result["attempts"]),
-                        error=f"Split-Fallback im Final-Gate blockiert: "
-                              f"{gate.reason}")
+                        attempts=len(attempts),
+                        error=failure_reason)
                     log.error("Segment %d verworfen (Final-Gate): %s",
                               seg.index, gate.reason)
+                    if self.segment_callback:
+                        seg_diag.update({"status": "failed",
+                                         "failure_reason": failure_reason,
+                                         "final_gate_passed": False})
+                        try: self.segment_callback(seg_diag)
+                        except Exception: pass
                     continue
-                best = AttemptResult(attempt=99, score=gate.score,
-                                     waveform=wav, sample_rate=sr)
-                regenerated += 1
+                chosen_wave, chosen_sr = wav, sr
+                chosen_score = float(gate.score)
+                chosen_attempt = 99
+                accepted_in_retry = True   # split-fallback = regenerated
+                final_gate_passed = True
             else:
                 # §4: kritisches/niedriges „best“ NICHT blind übernehmen –
                 # erneute, unabhängige QC-Prüfung vor Cache/Audio
@@ -357,23 +418,37 @@ class Pipeline:
                                      min_score=min_score * 0.75)
                 if not gate.passed:
                     failed_segments += 1
+                    failure_reason = f"Final-Gate blockiert: {gate.reason}"
                     state.set_segment(
                         seg.index, "failed",
-                        attempts=len(result["attempts"]),
-                        error=f"Final-Gate blockiert: {gate.reason}")
+                        attempts=len(attempts),
+                        error=failure_reason)
                     log.error("Segment %d verworfen (Final-Gate): %s",
                               seg.index, gate.reason)
+                    if self.segment_callback:
+                        seg_diag.update({"status": "failed",
+                                         "failure_reason": failure_reason,
+                                         "final_gate_passed": False})
+                        try: self.segment_callback(seg_diag)
+                        except Exception: pass
                     continue
-                best.score = gate.score
-                if len(result["attempts"]) > 1:
+                chosen_wave = best.waveform
+                chosen_sr = best.sample_rate
+                chosen_score = float(gate.score)
+                chosen_attempt = int(best.attempt)
+                final_gate_passed = True
+                if len(attempts) > 1:
+                    accepted_in_retry = True
                     regenerated += 1
 
-            score_val = float(best.score)
-            score_obj_metrics = best.metrics or {}
-            self.cache.put(key, best.waveform, best.sample_rate, {
+            # Segment hat Final-Gate bestanden – Audio übernehmen.
+            score_val = float(chosen_score)
+            score_obj_metrics = best.metrics if best is not None and best.metrics else {}
+            self.cache.put(key, chosen_wave, chosen_sr, {
                 "ok": True, "score": score_val,
-                "german_score": best.german_score,
-                "issues": best.issues, "metrics": score_obj_metrics,
+                "german_score": (best.german_score if best is not None else None),
+                "issues": (best.issues if best is not None else []),
+                "metrics": score_obj_metrics,
                 "speaker": speaker, "language": language,
                 "text_preview": safe_preview(seg.text, 100),
                 "instruct": instruct,
@@ -382,12 +457,24 @@ class Pipeline:
             })
             scores.append(score_val)
             state.set_segment(seg.index, "done", score=score_val,
-                              attempts=len(result["attempts"]))
-            segment_audio.append((best.waveform, best.sample_rate, seg))
+                              attempts=len(attempts))
+            segment_audio.append((chosen_wave, chosen_sr, seg))
             self._emit(tts_percent=int((pos + 1) / n_seg * 100),
                        qc_percent=100)
             plog(f"SEG {seg.index:04d} fertig: score={score_val:.1f} "
-                 f"versuche={len(result['attempts'])} cache=reused={reused}")
+                 f"versuche={len(attempts)} cache=reused={reused}")
+            if self.segment_callback:
+                seg_diag.update({
+                    "status": "ok",
+                    "final_gate_passed": final_gate_passed,
+                    "regenerated": bool(accepted_in_retry),
+                    "chosen_attempt": chosen_attempt,
+                    "final_score": round(score_val, 2),
+                    "failure_reason": "",
+                })
+                try: self.segment_callback(seg_diag)
+                except Exception:
+                    pass
 
         # 9) Zusammenfügen (Streaming in Datei, §18 Long-Form) -------------------
         if not segment_audio:
@@ -460,7 +547,10 @@ class Pipeline:
             "wav": final_wav,
             "mp3": final_mp3,
             "output_format": output_format,
-            "segments": n_seg, "reused": reused,
+            "segments": n_seg,
+            "segments_planned": n_seg,
+            "segments_successful": len(segment_audio),
+            "reused": reused,
             "regenerated": regenerated,
             "failed_segments": failed_segments,
             "avg_score": round(float(np.mean(scores)), 1) if scores else None,
@@ -468,6 +558,12 @@ class Pipeline:
             "master": master_report,
             "elapsed_s": round(elapsed, 1),
             "project_id": project_id,
+            # wav_complete = ALLE geplanten Segmente waren erfolgreich und
+            # ein Output-WAV geschrieben wurde (kann ggf. noch leer sein –
+            # Benchmark validiert zusätzlich Existenz/Grösse/Lesbarkeit).
+            "wav_complete": bool(segment_audio and len(segment_audio) == n_seg
+                                 and out_path and Path(out_path).exists())
+                             and len(segment_audio) == n_seg,
         })
         qlog(f"FILE {input_path.name}: ok segments={n_seg} reused={reused} "
              f"regen={regenerated} failed={failed_segments} "
