@@ -477,8 +477,26 @@ class Pipeline:
                     pass
 
         # 9) Zusammenfügen (Streaming in Datei, §18 Long-Form) -------------------
+        n_successful = len(segment_audio)  # vor Freigabe sichern
         if not segment_audio:
-            report["error"] = "Keine Segmente erfolgreich."
+            elapsed = time.perf_counter() - t_start
+            report.update({
+                "ok": False,
+                "wav": None,
+                "mp3": None,
+                "segments": n_seg,
+                "segments_planned": n_seg,
+                "segments_successful": 0,
+                "reused": reused,
+                "regenerated": regenerated,
+                "failed_segments": failed_segments,
+                "avg_score": round(float(np.mean(scores)), 1) if scores else None,
+                "duration_s": 0.0,
+                "elapsed_s": round(elapsed, 1),
+                "project_id": project_id,
+                "wav_complete": False,
+                "error": "Keine Segmente erfolgreich.",
+            })
             state.set_phase("failed")
             return report
         state.set_phase("assembling")
@@ -508,8 +526,11 @@ class Pipeline:
             project_median_lufs=median_lufs,
             precomputed_lufs=collected_lufs,
             speed=speed)
-        segment_audio.clear()          # Speicher freigeben (Anforderung 4)
-        del segment_audio
+        # Wellenformen-Referenzen freigeben (Anforderung 4); Variable bleibt
+        # als leere Liste gebunden, damit der finale Report ohne
+        # UnboundLocalError auf die bereits in n_successful gesicherten
+        # Zählwerte zugreifen kann.
+        segment_audio.clear()
 
         # 10) Mastering (Anforderung 40+41; dateibasiert, streaming) -----------
         self._emit(phase="mastering")
@@ -542,6 +563,11 @@ class Pipeline:
         state.set_phase("completed",
                         wav=final_wav or "",
                         mp3=final_mp3 or "")
+        # wav_complete = ALLE geplanten Segmente waren erfolgreich UND ein
+        # Output-WAV existiert (Benchmark validiert zusätzlich Grösse/
+        # Lesbarkeit/Dauer).
+        wav_complete = bool(n_successful == n_seg
+                            and final_wav and Path(final_wav).exists())
         report.update({
             "ok": True,
             "wav": final_wav,
@@ -549,7 +575,7 @@ class Pipeline:
             "output_format": output_format,
             "segments": n_seg,
             "segments_planned": n_seg,
-            "segments_successful": len(segment_audio),
+            "segments_successful": n_successful,
             "reused": reused,
             "regenerated": regenerated,
             "failed_segments": failed_segments,
@@ -558,12 +584,7 @@ class Pipeline:
             "master": master_report,
             "elapsed_s": round(elapsed, 1),
             "project_id": project_id,
-            # wav_complete = ALLE geplanten Segmente waren erfolgreich und
-            # ein Output-WAV geschrieben wurde (kann ggf. noch leer sein –
-            # Benchmark validiert zusätzlich Existenz/Grösse/Lesbarkeit).
-            "wav_complete": bool(segment_audio and len(segment_audio) == n_seg
-                                 and out_path and Path(out_path).exists())
-                             and len(segment_audio) == n_seg,
+            "wav_complete": wav_complete,
         })
         qlog(f"FILE {input_path.name}: ok segments={n_seg} reused={reused} "
              f"regen={regenerated} failed={failed_segments} "
