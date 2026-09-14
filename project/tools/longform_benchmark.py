@@ -418,16 +418,15 @@ def run_one(registry: VoiceRegistry, voice_id: str, out_root: Path,
                 "true_peak_dbtp": -1.5,
                 "attn_implementation": "sdpa",
                 "longform_run_tag": run_tag or "",
-                # Seed-Modus: V1 (de_female_warm_empathetic_01) läuft stabil
-                # mit globalem Seed 53018 und wird NICHT angetastet
-                # (Regressionsschutz). V2/V3 leiden unter systemischen
-                # 0.16s-/Silence-/Daueroszillationen mit demselben Seed
-                # pro Segment → deterministische per-Segment-Seeds.
-                "segment_seed_mode": (
-                    "per_segment" if entry.voice_id in (
-                        "de_female_deep_warm_documentary_01",
-                        "en_male_warm_grounded_humanist_01",
-                    ) else "global"),
+                # Seed-Modus: per-segment deterministische Seeds. Jeder
+                # Segment-Text bekommt einen eigenen, über sha256(key)
+                # abgeleiteten Seed (100% reproduzierbar). Dadurch
+                # entkoppeln sich Segmente voneinander: falls ein
+                # einzelner Seed in einen EOS-Kollaps (0.16s-Stille)
+                # oder eine Daueroszillation gerät, zieht das nicht
+                # alle 25 Segmente mit. Ein globaler Seed hingegen
+                # produzierte auf dem Host bei bestimmten Umgebungen
+                # (torch 2.11/cu128/sdpa) totalen Kollaps (0/25 OK).
             },
             "german": {
                 "instruct_variant": "de_doc_native",

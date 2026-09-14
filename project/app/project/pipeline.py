@@ -306,14 +306,20 @@ class Pipeline:
             # Daueroszillationen erzeugt (V2/V3). Der Seed bleibt über
             # Läufe hinweg 100% reproduzierbar.
             from hashlib import sha256
-            seed_mode = str(adv.get("segment_seed_mode", "global")).lower()
-            if seed_mode == "per_segment" or not production_seed:
+            seed_mode = str(adv.get("segment_seed_mode", "per_segment")).lower()
+            if seed_mode == "global" and production_seed is not None:
+                # Explizit erzwungener globaler Modus (nur für
+                # kontrollierte A/B-Tests; im Longform-Benchmark
+                # wird standardmäßig per_segment verwendet).
+                seg_seed = int(production_seed)
+            else:
+                # Per-Segment-Modus (Default): deterministischer
+                # Segment-Seed aus sha256(voice_seed + cache_key) –
+                # pro Segment ANDERER Seed, aber über Läufe identisch.
                 seed_material = (f"{production_seed}:{key}"
                                  if production_seed is not None else key)
                 seg_seed = int(sha256(seed_material.encode("utf-8"))
                                .hexdigest()[:8], 16)
-            else:
-                seg_seed = int(production_seed)
             request = SynthesisRequest(
                 text=seg.text, language=language, speaker=speaker,
                 instruct=instruct, sampling=seg_sampling,

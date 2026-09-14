@@ -46,13 +46,18 @@ class AttemptResult:
 # ---------------------------------------------------------------------------
 def _classify(issues: list[str]) -> str:
     s = set(issues)
+    # EOS/Silence-Kollaps hat Vorrang: das ist ein anderes Fehlerbild
+    # als "Wort wurde verschluckt" und erfordert eine Diversifizierung
+    # mit HÖHERER Temperatur, nicht niedrigerer.
+    if s & {"silence", "no_voiced_speech", "noise_like", "dropout", "nan"}:
+        return "silence_eos"
     if s & {"question_melody_missing"}:
         return "question_melody"
     if s & {"rate_out_of_range"}:
         return "rate"
-    if s & {"too_short", "too_long", "duration_implausible", "dropout",
-            "nan", "noise_like", "silence", "no_voiced_speech", "too_quiet"}:
-        return "pronunciation"
+    if s & {"too_short", "too_long", "duration_implausible",
+            "too_quiet"}:
+        return "duration"
     if s & {"monotone"}:
         return "monotone"
     if s & {"mechanical_rhythm", "mechanical_pauses"}:
@@ -65,13 +70,17 @@ def _classify(issues: list[str]) -> str:
 
 
 _INSTRUCT_FIXES = {
+    "silence_eos": "Speak the entire passage naturally from beginning to end "
+                   "in one continuous utterance; do not stop early.",
+    "duration": "Articulate every word clearly and calmly, especially names "
+                "and numbers; do not skip or repeat words.",
     "pronunciation": "Articulate every word clearly and calmly, especially "
                      "names and numbers; do not skip or repeat words.",
-    "monotone": "Use a lively but controlled German sentence melody with "
-                "natural pitch movement.",
-    "question_melody": "This is a question: end with a clearly rising German "
+    "monotone": "Use a lively but controlled sentence melody with natural "
+                "pitch movement.",
+    "question_melody": "This is a question: end with clearly rising "
                        "question intonation.",
-    "rate": "Keep a steady, natural German speaking pace.",
+    "rate": "Keep a steady, natural speaking pace.",
     "rhythm": "Vary phrase lengths naturally like a human narrator; avoid "
               "a mechanical beat.",
     "loudness": "Keep loudness perfectly even with the surrounding text.",
@@ -86,23 +95,43 @@ def attempt_changes(attempt: int, prev_issues: list[str],
     cls = _classify(prev_issues)
     sampling = dict(base_sampling)
     instruct = base_instruct
+    base_temp = float(sampling.get("temperature", 0.7))
     if attempt == 2:
-        if cls == "pronunciation":
+        if cls == "silence_eos":
+            # EOS-Kollaps: mit höherer Temperatur + größerer
+            # Nucleus-Spanne aus dem Attraktor ausbrechen
+            # (niedrigere Temperatur würde den Kollaps nur verstärken)
+            sampling["temperature"] = min(1.05, base_temp + 0.20)
+            sampling["top_p"] = 0.95
+            sampling["top_k"] = 80
+            sampling["repetition_penalty"] = 1.02
+        elif cls in ("pronunciation", "duration"):
             sampling["temperature"] = max(
-                0.45, sampling.get("temperature", 0.7) - 0.15)
+                0.50, base_temp - 0.10)
             sampling["repetition_penalty"] = 1.08
         elif cls in ("monotone", "rhythm"):
             sampling["temperature"] = min(
-                0.95, sampling.get("temperature", 0.7) + 0.15)
+                0.95, base_temp + 0.15)
             sampling["top_p"] = 0.92
         elif cls == "rate":
             pass                            # nur Instruct
         else:
             sampling = variation_for_attempt(2, sampling)
     else:  # Versuch 3+: andere Richtung als Versuch 2
-        if cls in ("pronunciation", "monotone", "rhythm"):
-            sampling.update({"temperature": 0.55, "top_p": 0.85,
-                             "top_k": 40, "repetition_penalty": 1.10})
+        if cls == "silence_eos":
+            # Stärkerer Ausbruchsversuch: hohe Temperatur, engeres top_k
+            # gegen Rauschen, Repetition-Penalty leicht zurücknehmen,
+            # damit das Modell nicht sofort wieder ins EOS fällt.
+            sampling.update({"temperature": 0.95, "top_p": 0.98,
+                             "top_k": 120, "repetition_penalty": 1.00})
+        elif cls in ("duration", "pronunciation"):
+            sampling.update({"temperature": max(0.50, base_temp - 0.15),
+                             "top_p": 0.85, "top_k": 40,
+                             "repetition_penalty": 1.10})
+        elif cls in ("monotone", "rhythm"):
+            sampling.update({"temperature": min(0.95, base_temp + 0.20),
+                             "top_p": 0.92, "top_k": 60,
+                             "repetition_penalty": 1.05})
         else:
             sampling = variation_for_attempt(3, sampling)
     fix = _INSTRUCT_FIXES.get(cls, "")
@@ -164,10 +193,12 @@ def generate_with_qc(engine, request: SynthesisRequest, text: str,
                 # dass in qwen_engine/voice_studio `if request.seed:` bei
                 # Seed 0 den torch-RNG NICHT neu setzte.
                 base = request.seed if request.seed is not None else 0
+                # Größere Prim-Offsets, damit Retries bei EOS-Kollaps
+                # tatsächlich den RNG-Zustand verlassen.
                 if attempt == 2:
-                    att_seed = int(base) + 10009
+                    att_seed = int(base) + 7919
                 else:
-                    att_seed = int(base) + 100003
+                    att_seed = int(base) + 1299709
             req = SynthesisRequest(
                 text=request.text,
                 language=request.language,
