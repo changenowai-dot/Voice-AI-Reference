@@ -31,6 +31,8 @@ ISSUE_LABELS = {
     "monotone": "Auffällig monotone Satzmelodie (F0-Varianz sehr gering)",
     "mechanical_rhythm": "Sehr gleichförmiger Rhythmus (KI-typisch)",
     "noise_like": "Rauschartiges Spektrum (Artefakt)",
+    "tonal_artifact": "Tonales/Nicht-Sprach-Artefakt (Sinuston/Feedback/Sirene)",
+    "low_voiced_content": "Zu wenig stimmhafte Sprache im Segment (Flüstern/Ton/Rauschen)",
     "dc_offset": "Gleichspannungsversatz",
     "edge_silence": "Überlange Randstille",
     "silence": "Segment besteht fast nur aus Stille",
@@ -67,9 +69,18 @@ class QualityScore:
 
         0.16s-Stille/Kollaps wird weiterhin zuverlässig blockiert:
         qc.check() fügt in diesem Fall immer "silence" (hard-set) hinzu.
+
+        Tonale/halbleere Artefakte (Sinustöne, Feedback-Pfeifen, Brumm-
+        töne, fast-tonale Synthesizer-Fehler) werden über die
+        Sprach-Integritätsprüfung erkannt ("tonal_artifact" /
+        "low_voiced_content") und ebenfalls HARD geblockt. Das waren
+        die im Human-Listen festgestellten falsch-positiven: sie haben
+        eine plausible F0/LUFS und geringes Rauschen, sind aber keine
+        verständliche Sprache.
         """
         # Nur wirklich unbrauchbare Audio-Integritätsfehler
-        hard = {"clipping", "dropout", "nan", "noise_like", "silence"}
+        hard = {"clipping", "dropout", "nan", "noise_like", "silence",
+                "tonal_artifact", "low_voiced_content"}
         if hard & set(self.issues):
             return True
         # German-seitig: nur "keine Sprache" ist katastrophal.
@@ -149,8 +160,18 @@ class SegmentQC:
         expected_s = chars / self.chars_per_sec
         dur = m["duration_s"]
         ratio = dur / expected_s if expected_s > 0 else 1.0
-        if ratio < 0.62:
-            score.pronunciation_plausibility = _clamp(45 + 55 * (ratio / 0.62))
+        if ratio < 0.40:
+            # Extrem zu kurz: selbst bei sauberem Waveform ist der
+            # Inhalt verloren → starke Herabsetzung. Unter 0.5s
+            # zusätzlich low_voiced_content / unbrauchbar.
+            score.pronunciation_plausibility = _clamp(
+                10.0 + 40.0 * (ratio / 0.40))
+            issues.append("too_short")
+            if dur >= 0.5 and voiced_ratio < 0.35:
+                issues.append("low_voiced_content")
+        elif ratio < 0.62:
+            score.pronunciation_plausibility = _clamp(
+                45 + 50 * (ratio / 0.62))
             issues.append("too_short")
         elif ratio > 1.55:
             score.pronunciation_plausibility = _clamp(
@@ -184,6 +205,67 @@ class SegmentQC:
         if m.get("silence_ratio", 0.0) > 0.9:
             integ -= 30.0
             issues.append("silence")
+
+        # ---- Sprach-Integrität (keine ASR, aber robust gegen
+        # tonale/halbleere Artefakte, die bei altem QC als "gute Stimme"
+        # durchkamen) ----------------------------------------------------
+        #
+        # Menschliche Sprache hat einen breiten Frequenzgehalt
+        # (Formanten F1-F3 + Zischlaute), hohe Momentan-Frequenz-
+        # Variation und einen ZCR/Spectral-Centroid deutlich über
+        # einem reinen Sinuston/Brummton. Diese Heuristiken ersetzen
+        # KEINE ASR, trennen aber verlässlich:
+        #   - reine Sinus-/Brummtöne          → tonal_artifact (BLOCK)
+        #   - sehr schmalbandige Synthese     → tonal_artifact (BLOCK)
+        #   - Flüstern/Rauschen ohne Stimme   → low_voiced_content (BLOCK)
+        #   - normale stimmhafte Sprache      → keine Flag
+        voiced_ratio = m.get("voiced_ratio", 0.0)
+        cent_mean = m.get("spectral_centroid_mean", 0.0)
+        cent_std = m.get("spectral_centroid_std", 0.0)
+        zcr = m.get("zcr_per_s", 0.0)
+        sf = m["spectral_flatness"]
+
+        # Achtung: Starke Übersteuerung (clipping) erzeugt ebenfalls
+        # Rechteck-ähnliche, sehr tonale Spektren – da clipping bereits
+        # als katastrophal klassifiziert ist, blenden wir es hier aus,
+        # damit "tonal_artifact" nur echte Nichttöne (Sinuston/Brumm/
+        # Feedback-Pfeifen) meint.
+        is_clipped = m["clip_ratio"] > 0.0005
+        # (a) Fast-reiner Ton (niedrig-mittlere Frequenz): sehr flache
+        #     Momentanfrequenz + schmaler Schwerpunkt + sehr geringes
+        #     Spektralrauschen. Reiner Sinus/Zwei-Ton-Brumm hat
+        #     cent_std nahe 0, sf≈0. Selbst monotone Vokale mit
+        #     mehreren Harmonischen erreichen cent_std~25+ und
+        #     cent_mean~900-1200, also trennen wir hier sauber.
+        # cent_mean < 500 Hz: Sprache (selbst tiefe Männerstimmen)
+        # hat durch F2/F3 und Zischlaute einen Spektral-Schwerpunkt
+        # deutlich über 600–800 Hz. Nur Sinustöne/Brummtöne liegen
+        # unter 500 Hz bei sehr kleinem cent_std und sehr niedrigem sf.
+        if (m["duration_s"] >= 0.5 and not is_clipped
+                and cent_std < 80.0
+                and cent_mean < 500.0
+                and sf < 0.10):
+            integ -= 60.0
+            issues.append("tonal_artifact")
+        # (b) Schmalbandiger Pfeifton / Feedback bei höherer Frequenz:
+        #     cent_mean kann auch über 800 Hz liegen (z.B. 1.2 kHz
+        #     Feedback), aber cent_std ist nahe 0 und das Spektrum ist
+        #     extrem tonal (sf < 0.05). Sprache hat cent_std ≫ 100 Hz
+        #     durch Formantbewegung/Konsonanten/Zischlaute.
+        elif (m["duration_s"] >= 0.5 and not is_clipped
+                and cent_std < 30.0
+                and sf < 0.05):
+            integ -= 60.0
+            issues.append("tonal_artifact")
+        # (c) Zu wenig stimmhafter Anteil: trotz Dauer im plausiblen
+        #     Bereich ist weniger als 40% der Frames "voiced"
+        #     (F0 erkannt). Das fängt Flüstern/Rauschen/Atem/Ton-
+        #     fragmente ein, die LUFS-technisch gut klingen aber
+        #     keine nachweisbare stimmhafte Sprache enthalten.
+        elif m["duration_s"] >= 0.5 and voiced_ratio < 0.35:
+            integ -= 50.0
+            issues.append("low_voiced_content")
+
         score.audio_integrity = _clamp(integ)
 
         # ---- Pausen natürlich? ----------------------------------------------
@@ -203,7 +285,20 @@ class SegmentQC:
         # ---- Prosodie (F0-Variation) ---------------------------------------
         f0cv = m.get("f0_cv", 0.0)
         if m.get("f0_median_hz", 0) > 0:
-            if f0cv < 0.015:
+            # Sehr sehr geringe F0-Variation KOMBINIERT mit hohem Stimm-
+            # anteil und sehr tonalem Spektrum → praktisch ein
+            # Sinus-Drohne (wird oben als tonal_artifact erkannt).
+            # Die "monotone"-Flagge bleibt für flache menschliche
+            # Prosodie reserviert (nicht blockierend), aber ein
+            # buchstäblicher Ein-Ton f0cv<0.005 ist nie Sprache.
+            if f0cv < 0.005 and voiced_ratio > 0.8 and cent_mean < 800.0:
+                # Ist bereits über tonal_artifact abgedeckt, falls
+                # nicht: zusätzlich als drone markieren.
+                if "tonal_artifact" not in issues:
+                    integ -= 60.0
+                    issues.append("tonal_artifact")
+                score.prosody = _clamp(30.0)
+            elif f0cv < 0.015:
                 score.prosody = _clamp(55.0)
                 issues.append("monotone")
             elif f0cv < 0.03:
@@ -214,6 +309,12 @@ class SegmentQC:
                 score.prosody = _clamp(92.0 + 26.0 * min(f0cv / 0.12, 1.0))
         else:
             score.prosody = 60.0                 # keine Stimme erkannt
+            # Englisch: ohne German-Score gibt es keine no_voiced_speech-
+            # Flag. Wenn gar keine F0 erkannt wird UND mehr als 0.5s lang
+            # UND nicht bereits über silence erfasst → low_voiced_content.
+            if m["duration_s"] >= 0.5 and "silence" not in issues:
+                issues.append("low_voiced_content")
+        score.audio_integrity = _clamp(integ)
         score.prosody = _clamp(score.prosody - pause_pen * 0.6)
 
         # ---- Konsistenz (Lautheit/Tonlage vs. Projekt) ----------------------
