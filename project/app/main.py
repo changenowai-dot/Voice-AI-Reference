@@ -113,19 +113,39 @@ def _make_engine(engine_name: str, cfg: dict):
                        or entry.description
                        or f"{voice_language} narrator")
         from app import paths as _p
+        import os as _os
         ref_path = None
-        allow_design = True
+        # HARD DEFAULT: allow_design=False – gleiche Semantik wie in
+        # app/jobs/runner.py. Stummer VoiceDesign-Fallback ist verboten.
+        allow_design = bool(_os.environ.get(
+            "VOICEOVER_ALLOW_VOICEDESIGN_MATERIALIZE"))
         if entry.reference_path:
             rp = _p.ROOT / entry.reference_path
             if rp.exists():
                 ref_path = rp
                 allow_design = False
             else:
-                allow = True
-                log.info("Clone-Stimme %s: Referenz fehlt, VoiceDesign wird erzeugt: %s",
+                if not allow_design:
+                    raise RuntimeError(
+                        f"Produktions-Referenz fehlt für Stimme "
+                        f"‚{entry.display_name}‘ ({entry.voice_id}): {rp}\n\n"
+                        f"Die kanonische Referenz muss zuerst über die "
+                        f"VoiceDesign->Clone-Pipeline erzeugt werden "
+                        f"(cache/voice_refs/{entry.voice_id}.wav).\n"
+                        f"Auf dem Host mit GPU + Qwen3-TTS-12Hz-1.7B-"
+                        f"VoiceDesign:\n"
+                        f"    python project/tools/materialize_references.py "
+                        f"--voice-id {entry.voice_id} --language {voice_language}\n"
+                        f"Bis dahin ist die Stimme im GUI deaktiviert.")
+                log.info("Clone-Stimme %s: Referenz fehlt, VoiceDesign wird "
+                         "erzeugt (explizit freigegeben): %s",
                          entry.voice_id, rp)
+                allow_design = True
         else:
-            allow = True
+            if not allow_design:
+                raise RuntimeError(
+                    f"Clone-Stimme ‚{entry.display_name}‘ hat keine "
+                    f"Referenz konfiguriert und Auto-Design ist deaktiviert.")
         log.debug("[DIAG-D] Creating VoiceCloneEngine (candidate_id=%s, language=%s, allow_design=%s)",
                   entry.voice_id, voice_language, allow_design)
         candidate_id = entry.voice_id

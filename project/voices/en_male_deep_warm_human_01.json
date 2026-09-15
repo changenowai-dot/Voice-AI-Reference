@@ -3,7 +3,7 @@
   "display_name": "EN Male Deep Warm Human",
   "gender": "male",
   "provider": "qwen3-tts",
-  "model": "Qwen3-TTS-12Hz-1.7B-Base (VoiceClone)",
+  "model": "Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone)",
   "language_support": [
     "German",
     "English"
@@ -14,7 +14,7 @@
   "description": "deep warm human – genuine warmth with natural depth, trusted mature storyteller, kind and direct",
   "backend_mode": "clone",
   "speaker_name": null,
-  "reference_path": "benchmark/fast_audition_round02/07_deep_clear_insightful.mp3",
+  "reference_path": "cache/voice_refs/en_male_deep_warm_human_01.wav",
   "production_locked": false,
   "recommended": false,
   "default": false,

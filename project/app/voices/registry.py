@@ -566,6 +566,7 @@ class VoiceRegistry:
 
     # -- Roh-Zugriff (alle Stimmen, sprachunabhängig) ---------------------
     def entries(self) -> list[VoiceProfileEntry]:
+        from .. import paths as _p
         order = ["vd_e", "uncle_fu", "dylan", "ryan", "aiden",
                  "serena", "vivian", "sohee",
                  "en_male_deep_01", "en_male_deep_02",
@@ -576,18 +577,47 @@ class VoiceRegistry:
         out = []
         for vid in ids:
             d = self._profiles[vid]
+            backend = str(d.get("backend_mode", "customvoice"))
+            ref_p = d.get("reference_path")
+            # Verfügbarkeit berechnen:
+            #  - CustomVoice-Built-ins: immer verfügbar (keine Referenz nötig)
+            #  - clone mit vorhandener Produktions-Referenz (cache/voice_refs/…wav)
+            #    → verfügbar
+            #  - clone ohne vorhandene Referenz → NICHT verfügbar
+            #    (kein VoiceDesign-Fallback, um Stimm-Korruption zu vermeiden)
+            #  - Explizites available=false im JSON überschreibt alles.
+            avail = d.get("available")
+            avail_note = str(d.get("availability_note", ""))
+            if avail is None:
+                if backend == "customvoice":
+                    avail = True
+                elif backend == "clone" and ref_p:
+                    rp = _p.ROOT / ref_p
+                    if rp.exists() and rp.suffix.lower() == ".wav":
+                        avail = True
+                    else:
+                        avail = False
+                        if not avail_note:
+                            avail_note = (
+                                "Produktions-Referenz fehlt "
+                                f"({ref_p}). Stimme muss zuerst über "
+                                "tools/materialize_references.py auf einem "
+                                "Host mit Qwen3-TTS-12Hz-1.7B-VoiceDesign "
+                                "materialisiert werden.")
+                else:
+                    avail = False
             out.append(VoiceProfileEntry(
                 voice_id=vid,
                 display_name=str(d.get("display_name", vid)),
                 gender=str(d.get("gender", "male")),
-                backend_mode=str(d.get("backend_mode", "customvoice")),
+                backend_mode=backend,
                 speaker_name=d.get("speaker_name"),
-                reference_path=d.get("reference_path"),
+                reference_path=ref_p,
                 production_locked=bool(d.get("production_locked", False)),
                 recommended=bool(d.get("recommended", False)),
                 default=bool(d.get("default", False)),
-                available=d.get("available"),
-                availability_note=str(d.get("availability_note", "")),
+                available=avail,
+                availability_note=avail_note,
                 description=str(d.get("description", "")),
                 model=str(d.get("model", "")),
                 language_support=list(d.get("language_support",

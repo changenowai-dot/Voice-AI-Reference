@@ -3,7 +3,7 @@
   "display_name": "EN Male Dark Documentary 01",
   "gender": "male",
   "provider": "qwen3-tts",
-  "model": "Qwen3-TTS-12Hz-1.7B-Base (VoiceClone)",
+  "model": "Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone)",
   "language_support": [
     "German",
     "English"
@@ -14,7 +14,7 @@
   "description": "dark documentary gravitas – deep dark serious trustworthy",
   "backend_mode": "clone",
   "speaker_name": null,
-  "reference_path": "benchmark/fast_audition_round02/03_dark_intellectual_investigative.mp3",
+  "reference_path": "cache/voice_refs/en_male_dark_documentary_01.wav",
   "production_locked": false,
   "recommended": false,
   "default": false,

@@ -346,16 +346,45 @@ class VoiceCloneEngine(TTSEngine):
         self._prompt = self.studio.build_clone_prompt(self._ref)
 
     def _ensure_wav_reference(self, ref_path: Path) -> Path:
-        """If ref_path points to an MP3/M4A/OGG/FLAC, transcode to 24 kHz mono
-        WAV in cache/voice_refs/_converted/ on first use and return that WAV.
-        WAV inputs pass through unchanged. Missing files are returned as-is so
-        the caller can trigger VoiceDesign (allow_design=True) or fail with a
-        clear error (allow_design=False)."""
+        """Production-reference guard.
+
+        A production clone-conditioning reference MUST be a 24 kHz mono WAV
+        living under ``cache/voice_refs/`` (or another location explicitly
+        supplied by a test harness / runtime override), previously generated
+        by ``QwenVoiceStudio.design_reference()``.
+
+        Audition-MP3s (benchmark/fast_audition*/*.mp3 etc.) are final renders
+        for human listening — they speak the AUDITION text ("Every discovery
+        begins with a question…" / "Jede Entdeckung beginnt…") while
+        ``build_clone_prompt`` is called with ``VOICEDESIGN_REF_TEXT_EN/DE``
+        ("There is a book…" / "Es gibt ein Buch…"). Passing them through
+        would create a text/audio mismatch → corrupt clone prompt → garbled
+        output. We therefore refuse non-WAV references outright in
+        production and only accept them if the caller explicitly set the
+        ``VOICEOVER_REFS_ACCEPT_NONWAV`` env flag (test harness / explicit
+        user override). Missing files are returned as-is so the caller can
+        trigger VoiceDesign (allow_design=True) or fail with a clear error
+        (allow_design=False).
+        """
+        import os as _os
         if not ref_path.exists():
             return ref_path
         suf = ref_path.suffix.lower()
         if suf == ".wav":
             return ref_path
+        accept_nonwav = bool(_os.environ.get("VOICEOVER_REFS_ACCEPT_NONWAV"))
+        if not accept_nonwav:
+            from .engine_base import TTSError
+            raise TTSError(
+                f"Produktions-Referenz {ref_path} ist kein WAV "
+                f"(Suffix '{suf}'). Audition-/Benchmark-MP3s sind Hör-Renders, "
+                "keine Clone-Konditionierungsreferenzen (Text/Audio-Mismatch "
+                "→ korrumpierter Prompt → Stimm-Korruption).\n"
+                "Die kanonische Referenz muss per VoiceDesign erzeugt "
+                "werden und unter cache/voice_refs/ als 24 kHz mono WAV "
+                "vorliegen. Nutze tools/materialize_references.py auf dem "
+                "GPU-Host oder setze VOICEOVER_REFS_ACCEPT_NONWAV=1 nur für "
+                "explizite Tests.")
         from .. import paths as _p
         from hashlib import sha256
         conv_dir = _p.VOICE_REFS_DIR / "_converted"
@@ -366,8 +395,6 @@ class VoiceCloneEngine(TTSEngine):
         out_wav = conv_dir / f"{ref_path.stem}_{digest}_24k_mono.wav"
         if out_wav.exists():
             return out_wav
-        # Attempt ffmpeg transcode: 24 kHz mono PCM s16le (matches the
-        # VoiceDesign reference format).
         try:
             from ..audio.ffmpeg import run_ffmpeg
             ok, _msg = run_ffmpeg([
@@ -376,8 +403,11 @@ class VoiceCloneEngine(TTSEngine):
                 "-c:a", "pcm_s16le", str(out_wav),
             ], timeout_s=120)
             if ok and out_wav.exists() and out_wav.stat().st_size > 0:
-                log.info("Reference %s -> WAV transcoded to %s",
-                         ref_path, out_wav)
+                log.warning(
+                    "Reference %s ist kein WAV — akzeptiert nur, weil "
+                    "VOICEOVER_REFS_ACCEPT_NONWAV gesetzt ist. "
+                    "Transkodiert nach %s (Text/Audio-Mismatch möglich!).",
+                    ref_path, out_wav)
                 return out_wav
             log.warning("ffmpeg-Transkodierung fehlgeschlagen (%s); "
                         "versuche Original-Pfad direkt zu verwenden.", _msg)

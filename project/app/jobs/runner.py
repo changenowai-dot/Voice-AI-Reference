@@ -250,20 +250,48 @@ def build_engine(spec: JobSpec, production: dict):
                        or (f"{voice_language} narrator"))
         from .. import paths as _p
         ref_path = None
-        allow_design = True
+        # HARD DEFAULT: allow_design=False. Niemals stumm VoiceDesign
+        # anwerfen, nur weil eine Referenz fehlt. Das würde (a) das
+        # nicht-installierte VoiceDesign-Modell anfordern und (b) eine
+        # beliebige / korrumpierte Prompt-Erzeugung auslösen.
+        # Explizite Materialisierung (z. B. tools/materialize_references.py)
+        # muss VOICEOVER_ALLOW_VOICEDESIGN_MATERIALIZE=1 setzen.
+        import os as _os
+        allow_design = bool(_os.environ.get(
+            "VOICEOVER_ALLOW_VOICEDESIGN_MATERIALIZE"))
         if entry.reference_path:
             rp = _p.ROOT / entry.reference_path
             if rp.exists():
                 ref_path = rp
-                allow_design = False
+                allow_design = False    # vorhandene Referenz > Design
                 emit("stage", stage="voice_load", voice=entry.display_name,
-                     detail=f"Referenz vorhanden ({voice_language}): {rp.name}")
+                     detail=f"Produktions-Referenz vorhanden ({voice_language}): {rp.name}")
             else:
+                if not allow_design:
+                    # Keine stumme Auto-Generierung: klarer Fehler mit
+                    # Hinweis auf das Materialisierungs-Tool. Benutzer
+                    # sieht das dann im GUI-Fehlerdialog.
+                    raise RuntimeError(
+                        f"Produktions-Referenz fehlt für Stimme "
+                        f"‚{entry.display_name}‘ ({entry.voice_id}): {rp}\n\n"
+                        f"Die kanonische Referenz muss zuerst über die "
+                        f"VoiceDesign->Clone-Pipeline erzeugt werden "
+                        f"(cache/voice_refs/{entry.voice_id}.wav).\n"
+                        f"Auf dem Host mit GPU + Qwen3-TTS-12Hz-1.7B-"
+                        f"VoiceDesign:\n"
+                        f"    python project/tools/materialize_references.py "
+                        f"--voice-id {entry.voice_id} --language {voice_language}\n"
+                        f"Bis dahin ist die Stimme im GUI deaktiviert.")
                 emit("stage", stage="voice_load", voice=entry.display_name,
-                     detail=f"Referenz fehlt – wird einmalig via VoiceDesign "
-                            f"erzeugt ({voice_language})")
+                     detail=f"Referenz fehlt – wird via VoiceDesign "
+                            f"materialisiert ({voice_language})")
                 allow_design = True
         else:
+            # Kein reference_path: kein clone-Betrieb möglich ohne Design.
+            if not allow_design:
+                raise RuntimeError(
+                    f"Clone-Stimme ‚{entry.display_name}‘ hat keine "
+                    f"Referenz konfiguriert und Auto-Design ist deaktiviert.")
             emit("stage", stage="voice_load", voice=entry.display_name,
                  detail=f"VoiceDesign-Modus ({voice_language}, seed={voice_seed})")
         # candidate_id wird 1:1 als Dateiname unter cache/voice_refs/ verwendet;

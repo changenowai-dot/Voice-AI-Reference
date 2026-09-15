@@ -2,8 +2,8 @@
   "voice_id": "en_male_investigative_mystery_01",
   "display_name": "EN Male Investigative Mystery 01",
   "gender": "male",
-  "provider": "arena-tts",
-  "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+  "provider": "qwen3-tts",
+  "model": "Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone)",
   "language_support": [
     "German",
     "English"
@@ -14,7 +14,7 @@
   "description": "investigative mystery – deep low controlled tension mystery",
   "backend_mode": "clone",
   "speaker_name": null,
-  "reference_path": "benchmark/fast_audition/06_investigative_mystery.mp3",
+  "reference_path": "cache/voice_refs/en_male_investigative_mystery_01.wav",
   "production_locked": false,
   "recommended": false,
   "default": false,

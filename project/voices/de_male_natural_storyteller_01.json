@@ -2,8 +2,8 @@
   "voice_id": "de_male_natural_storyteller_01",
   "display_name": "DE Male Natural Storyteller 01",
   "gender": "male",
-  "provider": "arena-tts",
-  "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+  "provider": "qwen3-tts",
+  "model": "Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone)",
   "language_support": [
     "German",
     "English"
@@ -14,7 +14,7 @@
   "description": "natural storyteller — natürlich, erzählerisch, direkt, menschlich",
   "backend_mode": "clone",
   "speaker_name": null,
-  "reference_path": "benchmark/german_recovery_audition/04_de_male_natural_storyteller_01.mp3",
+  "reference_path": "cache/voice_refs/de_male_natural_storyteller_01.wav",
   "production_locked": false,
   "recommended": false,
   "default": false,
