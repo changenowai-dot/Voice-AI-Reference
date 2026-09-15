@@ -45,6 +45,30 @@ sys.path.insert(0, str(PROJECT))
 os.environ["VOICEOVER_ALLOW_VOICEDESIGN_MATERIALIZE"] = "1"
 
 
+def _locate_models_dir() -> Path | None:
+    if os.environ.get("VOICEOVER_MODELS_DIR"):
+        p = Path(os.environ["VOICEOVER_MODELS_DIR"])
+        if p.exists():
+            return p
+    for c in [
+        PROJECT / "models",
+        ROOT.parent / "VoiceOverApp-AgentReady-Latest" / "project" / "models",
+        ROOT.parent.parent / "VoiceOverApp-AgentReady-Latest" / "project" / "models",
+    ]:
+        if c.exists() and (
+            (c / "Qwen3-TTS-12Hz-1.7B-Base").exists()
+            or (c / "Qwen3-TTS-12Hz-1.7B-VoiceDesign").exists()
+            or (c / "hf").exists()
+        ):
+            return c
+    return None
+
+
+_m = _locate_models_dir()
+if _m is not None:
+    os.environ["VOICEOVER_MODELS_DIR"] = str(_m)
+
+
 def _sha256(p: Path) -> str:
     h = hashlib.sha256()
     with p.open("rb") as f:
@@ -160,11 +184,14 @@ def materialize(voice_id: str, language: str | None, dry_run: bool = False):
               "this sandbox. Run on RTX 5060 host with all three Qwen models "
               "installed.", file=sys.stderr)
         sys.exit(3)
-    from app.hardware.detector import detect_hardware
+    from app.hardware.detector import detect_hardware, recommend_torch_dtype
     from app.tts.model_pool import QwenModelPool
     from app.tts.voice_studio import QwenVoiceStudio
     hw = detect_hardware()
-    print(f"  hardware:    device={hw.device} dtype={hw.dtype}")
+    device = "cuda" if hw.mode.startswith("gpu") else "cpu"
+    dtype = recommend_torch_dtype(hw)
+    print(f"  hardware:    mode={hw.mode} device={device} dtype={dtype} "
+          f"gpu={hw.gpu_name or 'none'}")
     pool = QwenModelPool(hw)
     studio = QwenVoiceStudio(pool)
     ref = studio.design_reference(candidate_id=voice_id, description=desc,
