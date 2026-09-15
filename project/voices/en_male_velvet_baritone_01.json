@@ -14,7 +14,7 @@
   "description": "velvet baritone – deep exceptionally smooth warm rich rounded",
   "backend_mode": "clone",
   "speaker_name": null,
-  "reference_path": "benchmark/male_deep_candidates/07_velvet_baritone/part1.mp3",
+  "reference_path": "benchmark/fast_audition/07_velvet_baritone.mp3",
   "production_locked": true,
   "recommended": true,
   "default": false,
