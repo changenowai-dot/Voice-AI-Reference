@@ -3,7 +3,7 @@
   "display_name": "EN Male Warm Storytelling Authoritative 01",
   "gender": "male",
   "provider": "qwen3-tts",
-  "model": "Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone)",
+  "model": "Qwen3-TTS-12Hz-1.7B-Base (VoiceClone)",
   "language_support": [
     "German",
     "English"
@@ -14,7 +14,7 @@
   "description": "warm storytelling authoritative – English native long-form",
   "backend_mode": "clone",
   "speaker_name": null,
-  "reference_path": "cache/voice_refs/en_male_warm_storytelling_authoritative_01.wav",
+  "reference_path": "benchmark/fast_audition/03_warm_storyteller.mp3",
   "production_locked": false,
   "recommended": false,
   "default": false,

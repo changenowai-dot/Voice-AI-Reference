@@ -2,8 +2,8 @@
   "voice_id": "en_male_deep_warm_human_01",
   "display_name": "EN Male Deep Warm Human",
   "gender": "male",
-  "provider": "arena-tts",
-  "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+  "provider": "qwen3-tts",
+  "model": "Qwen3-TTS-12Hz-1.7B-Base (VoiceClone)",
   "language_support": [
     "German",
     "English"
@@ -14,7 +14,7 @@
   "description": "deep warm human – genuine warmth with natural depth, trusted mature storyteller, kind and direct",
   "backend_mode": "clone",
   "speaker_name": null,
-  "reference_path": "benchmark/fast_audition/12_deep_warm_human.mp3",
+  "reference_path": "benchmark/fast_audition_round02/07_deep_clear_insightful.mp3",
   "production_locked": false,
   "recommended": false,
   "default": false,
