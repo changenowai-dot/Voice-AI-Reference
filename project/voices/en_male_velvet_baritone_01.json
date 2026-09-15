@@ -47,6 +47,7 @@
     "backend": "clone",
     "arena_voice_id": "voice-12"
   },
+  "reference_text": "VOICEDESIGN_REF_TEXT_EN",
   "reference_sha256": "ARENA_VOICE-12",
   "reference_generated": "real speech via Arena voice-12 – 4 parts benchmark + FullScript scheduled; not TestDouble sine",
   "human_favorite": true,

@@ -49,6 +49,7 @@
     "round": "fast_audition_round02",
     "visible_position": 6
   },
+  "reference_text": "VOICEDESIGN_REF_TEXT_EN",
   "reference_sha256": "ARENA_VOICE-23",
   "reference_generated": "real speech via Arena voice-23 – fast_audition_round02 identical short text 15-25s; not TestDouble sine",
   "human_selected": true,

@@ -145,8 +145,7 @@ def list_missing():
 
 def materialize(voice_id: str, language: str | None, dry_run: bool = False):
     from app import paths as _p
-    from app.prosody.instruct import (VOICEDESIGN_REF_TEXT_DE,
-                                      VOICEDESIGN_REF_TEXT_EN)
+    from app.voices.registry import resolve_reference_text
     reg = _load_registry()
     recipes = _load_recipes()
     entry = reg.get(voice_id)
@@ -160,8 +159,11 @@ def materialize(voice_id: str, language: str | None, dry_run: bool = False):
     desc, seed, default_lang = _description_for(voice_id, entry, recipes)
     lang = language or default_lang or ("English" if voice_id.startswith("en_")
                                         else "German")
-    ref_text = (VOICEDESIGN_REF_TEXT_EN if lang == "English"
-                else VOICEDESIGN_REF_TEXT_DE)
+    # Use the canonical reference text registered for the voice
+    # (VoiceProfileEntry.reference_text / resolve_reference_text).
+    # Never hard-code per-language defaults here.
+    ref_text = entry.reference_text or resolve_reference_text(
+        entry.reference_text_key, lang)
     out = _p.VOICE_REFS_DIR / f"{voice_id}.wav"
     print(f"\n=== MATERIALIZE {voice_id} ===")
     print(f"  language:    {lang}")

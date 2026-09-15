@@ -461,10 +461,13 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
             self.registry.get(voice_id), self.lang_var.get()) \
             if self.registry.get(voice_id) else None
         if entry and entry.available is False:
+            note = entry.availability_note or (
+                "Stimme ist in der installierten Modellversion nicht "
+                "verfügbar (§13).")
             messagebox.showerror(
                 "Stimme nicht verfügbar",
-                f"Stimme ‚{entry.display_name}‘ ist in der installierten "
-                "Modellversion nicht verfügbar (§13).")
+                f"Stimme ‚{entry.display_name}‘ ist derzeit nicht verfügbar.\n\n"
+                + note)
             return
         # Ausgabeformat aus den neuen getrennten GUI-Feldern ableiten
         fmt_label = self.format_var.get()

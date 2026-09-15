@@ -46,6 +46,7 @@
     "engine": "VoiceCloneEngine",
     "backend": "clone"
   },
+  "reference_text": "VOICEDESIGN_REF_TEXT_EN",
   "reference_sha256": "5E86E61E58C0CCEDAF94BECB47D482925EEF77B00EBEB0B917248FF4E21B3B34",
   "reference_generated": "synthetic placeholder (TestDouble-like, for sandbox; on RTX 5060 replace via VoiceDesign model)",
   "reference_f0_hz": 105

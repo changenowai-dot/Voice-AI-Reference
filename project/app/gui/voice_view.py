@@ -23,6 +23,8 @@ def voice_rows(language: str, registry: VoiceRegistry) -> list[dict]:
             status = "EMPFOHLEN · Standard"
         elif e.recommended_for_language and e.native_status == "native":
             status = "NATIV · EMPFOHLEN"
+        if e.available is False and e.backend_mode == "clone":
+            status = "NICHT VERFÜGBAR – Referenz fehlt"
         rows.append({
             "voice_id": e.voice_id,
             "label": f"{e.display_name} ({e.description_lang})",
@@ -30,6 +32,7 @@ def voice_rows(language: str, registry: VoiceRegistry) -> list[dict]:
             "gender": e.gender,
             "default": e.default_for_language,
             "available": e.available,
+            "availability_note": e.availability_note,
         })
     return rows
 

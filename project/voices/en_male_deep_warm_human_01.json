@@ -47,6 +47,7 @@
     "backend": "clone",
     "arena_voice_id": "voice-17"
   },
+  "reference_text": "VOICEDESIGN_REF_TEXT_EN",
   "reference_sha256": "ARENA_VOICE-17",
   "reference_generated": "real speech via Arena voice-17 – fast_audition identical short text; not TestDouble sine"
 }

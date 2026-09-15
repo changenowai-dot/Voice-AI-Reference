@@ -49,6 +49,7 @@
     "visible_position": 5,
     "round": "de_fast_audition"
   },
+  "reference_text": "VOICEDESIGN_REF_TEXT_DE",
   "reference_sha256": "ARENA_VOICE-32",
   "reference_generated": "real speech via Arena voice-32 – de_fast_audition identical German short text; not TestDouble sine",
   "human_selected": true,

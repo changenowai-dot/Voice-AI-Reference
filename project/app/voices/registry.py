@@ -514,6 +514,47 @@ DEFAULT_PROFILES: dict[str, dict] = {
 }
 
 
+def resolve_reference_text(key: str | None, language: str) -> str:
+    """Resolve a reference-text key to the canonical literal text.
+
+    Accepts:
+      - None / "" / "auto"  -> derive from language (EN/DE default)
+      - "VOICEDESIGN_REF_TEXT_EN" | "VOICEDESIGN_REF_TEXT_DE" -> canonical text
+      - any other non-empty string -> literal override (recipe-specific).
+
+    Reads the constants directly from ``app/prosody/instruct.py`` so the
+    function works even before numpy/torch are importable (used by CLI
+    tooling like ``materialize_references.py --list-missing``).
+    """
+    import ast as _ast
+    # Lazy import of Path to avoid circular imports at module load time
+    from pathlib import Path as _P
+    _instruct = _P(__file__).resolve().parents[1] / "prosody" / "instruct.py"
+    _cache: dict[str, str] = getattr(resolve_reference_text, "_cache", {})
+    if not _cache:
+        tree = _ast.parse(_instruct.read_text(encoding="utf-8"))
+        for node in tree.body:
+            if isinstance(node, _ast.Assign):
+                for tgt in node.targets:
+                    if isinstance(tgt, _ast.Name) and tgt.id in (
+                            "VOICEDESIGN_REF_TEXT_EN",
+                            "VOICEDESIGN_REF_TEXT_DE"):
+                        try:
+                            _cache[tgt.id] = _ast.literal_eval(node.value)
+                        except Exception:
+                            pass
+        resolve_reference_text._cache = _cache  # type: ignore[attr-defined]
+    en = _cache.get("VOICEDESIGN_REF_TEXT_EN", "")
+    de = _cache.get("VOICEDESIGN_REF_TEXT_DE", "")
+    if not key or key == "auto":
+        return en if language == "English" else de
+    if key == "VOICEDESIGN_REF_TEXT_EN":
+        return en
+    if key == "VOICEDESIGN_REF_TEXT_DE":
+        return de
+    return str(key)
+
+
 @dataclass
 class VoiceProfileEntry:
     voice_id: str
@@ -534,6 +575,13 @@ class VoiceProfileEntry:
     native_language: str = ""
     native_status: str = "cross_language"
     category: str = "narrator"
+    # Reference text for clone conditioning (symbolic key or literal text).
+    # The canonical values are "VOICEDESIGN_REF_TEXT_EN" and
+    # "VOICEDESIGN_REF_TEXT_DE"; any other value is treated as a literal
+    # override. None means "derive from the voice's native language".
+    reference_text_key: str | None = None
+    # Resolved literal reference text (populated by registry at load-time).
+    reference_text: str | None = None
     # sprachspezifische Sicht (via for_language):
     language: str = ""
     description_lang: str = ""
@@ -588,6 +636,20 @@ class VoiceRegistry:
             #  - Explizites available=false im JSON überschreibt alles.
             avail = d.get("available")
             avail_note = str(d.get("availability_note", ""))
+            # Native/design language for reference-text resolution.
+            raw_settings = d.get("settings") or {}
+            voice_lang = str(raw_settings.get("language") or "").strip()
+            if voice_lang not in ("English", "German"):
+                if vid.startswith("en_"):
+                    voice_lang = "English"
+                elif vid.startswith("de_") or vid == "vd_e":
+                    voice_lang = "German"
+                else:
+                    voice_lang = "German" if "German" in str(
+                        d.get("native_language", "")) else "English"
+            ref_key = d.get("reference_text")
+            ref_text = (None if backend != "clone"
+                        else resolve_reference_text(ref_key, voice_lang))
             if avail is None:
                 if backend == "customvoice":
                     avail = True
@@ -626,6 +688,9 @@ class VoiceRegistry:
                 native_status=str(d.get("native_status",
                                         "cross_language")),
                 category=str(d.get("category", "narrator")),
+                reference_text_key=(ref_key if isinstance(ref_key, str)
+                                    else None),
+                reference_text=ref_text,
             ))
         return out
 

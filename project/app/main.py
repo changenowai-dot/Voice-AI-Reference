@@ -93,11 +93,13 @@ def _make_engine(engine_name: str, cfg: dict):
             assert_vd_e_usable(production)
             log.debug("[DIAG-B] assert_vd_e_usable() passed")
             log.debug("[DIAG-D] Creating VoiceCloneEngine (candidate_id=VD-E, allow_design=False)")
+            from app.prosody.instruct import VOICEDESIGN_REF_TEXT_DE
             eng = VoiceCloneEngine(
                 hw=hw,
                 candidate_id="VD-E",
                 description="produktion",
                 language="German",
+                ref_text=VOICEDESIGN_REF_TEXT_DE,
                 models_dir=models_dir,
                 attn_implementation=adv.get("attn_implementation") or None,
                 allow_design=False
@@ -154,6 +156,7 @@ def _make_engine(engine_name: str, cfg: dict):
             candidate_id=candidate_id,
             description=description,
             language=voice_language,
+            ref_text=entry.reference_text,
             seed=voice_seed,
             models_dir=models_dir,
             attn_implementation=adv.get("attn_implementation") or None,

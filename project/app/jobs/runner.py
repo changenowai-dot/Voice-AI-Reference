@@ -217,10 +217,12 @@ def build_engine(spec: JobSpec, production: dict):
                 adv_cfg = cfgmod.load_config().get("advanced", {})
             except Exception:                              # noqa: BLE001
                 pass
+            from ..prosody.instruct import VOICEDESIGN_REF_TEXT_DE
             return VoiceCloneEngine(
                 hw, candidate_id="VD-E",
                 description="produktion",
                 language="German",
+                ref_text=VOICEDESIGN_REF_TEXT_DE,
                 attn_implementation=adv_cfg.get("attn_implementation") or None,
                 allow_design=False), entry
 
@@ -302,6 +304,7 @@ def build_engine(spec: JobSpec, production: dict):
             hw, candidate_id=candidate_id,
             description=description,
             language=voice_language,
+            ref_text=entry.reference_text,
             seed=voice_seed,
             models_dir=None,
             attn_implementation=adv_cfg.get("attn_implementation") or None,

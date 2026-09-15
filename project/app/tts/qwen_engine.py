@@ -254,25 +254,26 @@ class VoiceCloneEngine(TTSEngine):
     def __init__(self, hw: HardwareInfo, candidate_id: str,
                  description: str, models_dir: Path | None = None,
                  attn_implementation: str | None = None,
-                 allow_design: bool = True,
+                 allow_design: bool = False,
                  reference_path: Path | None = None,
                  language: str = "German",
                  ref_text: str | None = None,
                  seed: int | None = None):
-        """allow_design=False (VD-E-Produktion, §12): die Referenzdatei
-        MUSS vorhanden sein – niemals neu designen/clonen.
+        """allow_design=False (PRODUCTION DEFAULT, §12): die
+        Referenzdatei MUSS vorhanden sein – niemals stumm neu designen.
+
+        Nur der explizite Materialisierungspfad (tools/materialize_references.py)
+        setzt allow_design=True via VOICEOVER_ALLOW_VOICEDESIGN_MATERIALIZE=1.
 
         reference_path: Optional explicit override for the reference WAV path.
         If None, uses default paths.VOICE_REFS_DIR / f"{candidate_id}.wav".
-        Used by test harness to pass runtime reference (VOICEOVER_RUNTIME_REF).
 
         language: "German" oder "English" — wählt den passenden
                   Standard-Referenztext für create_voice_clone_prompt.
-        ref_text: Optional abweichender Referenztext (für nicht-de/engl.
-                  Stimmen oder Rezept-spezifische Texte).
-        seed:     Optionaler Seed für die VoiceDesign-Referenzgenerierung
-                  (wird andernfalls auf den bestehenden Versuchs-Algorithmus
-                  zurückgegriffen).
+        ref_text: Optional canonical reference text. When provided it MUST
+                  match the actual spoken content of reference_path exactly.
+                  If None, resolved from language via VOICEDESIGN_REF_TEXT_*.
+        seed:     Optionaler Seed für die VoiceDesign-Referenzgenerierung.
         """
         log.debug("[DIAG-D.1] VoiceCloneEngine.__init__() entered")
         
