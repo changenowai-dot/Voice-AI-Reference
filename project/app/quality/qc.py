@@ -146,6 +146,22 @@ class SegmentQC:
         score = QualityScore()
         issues: list[str] = []
 
+        # Bereits jetzt alle Metriken aus dem Analyse-Dict extrahieren,
+        # damit sie in jedem Zweck (Dauer-/Integritäts-/Prosodie-Check)
+        # sicher verfügbar sind. Früher wurden einige davon erst ab
+        # Zeile ~220 deklariert – die too_short-Frühprüfung (Ratio<0.40)
+        # benutzte voiced_ratio bereits VOR der Zuweisung und erzeugte
+        # damit einen UnboundLocalError bei Retries mit schwachem
+        # Stimmanteil.
+        dur = float(m["duration_s"])
+        voiced_ratio = float(m.get("voiced_ratio", 0.0))
+        f0_med = float(m.get("f0_median_hz", 0.0) or 0.0)
+        cent_mean = float(m.get("spectral_centroid_mean", 0.0))
+        cent_std = float(m.get("spectral_centroid_std", 0.0))
+        zcr = float(m.get("zcr_per_s", 0.0))
+        sf = float(m["spectral_flatness"])
+        is_clipped = float(m["clip_ratio"]) > 0.0005
+
         # Phase 1: separater deutscher Score (Vergleichsmaßstab)
         if self.lang_key == "de":
             g = score_german(wav, sr, text, meta=german_meta,
@@ -158,7 +174,6 @@ class SegmentQC:
         # ---- Dauer-Plausibilität (Wortverlust/Wiederholung) ----------------
         chars = max(len(text), 1)
         expected_s = chars / self.chars_per_sec
-        dur = m["duration_s"]
         ratio = dur / expected_s if expected_s > 0 else 1.0
         if ratio < 0.40:
             # Extrem zu kurz: selbst bei sauberem Waveform ist der
@@ -219,18 +234,8 @@ class SegmentQC:
         #   - sehr schmalbandige Synthese     → tonal_artifact (BLOCK)
         #   - Flüstern/Rauschen ohne Stimme   → low_voiced_content (BLOCK)
         #   - normale stimmhafte Sprache      → keine Flag
-        voiced_ratio = m.get("voiced_ratio", 0.0)
-        cent_mean = m.get("spectral_centroid_mean", 0.0)
-        cent_std = m.get("spectral_centroid_std", 0.0)
-        zcr = m.get("zcr_per_s", 0.0)
-        sf = m["spectral_flatness"]
-
-        # Achtung: Starke Übersteuerung (clipping) erzeugt ebenfalls
-        # Rechteck-ähnliche, sehr tonale Spektren – da clipping bereits
-        # als katastrophal klassifiziert ist, blenden wir es hier aus,
-        # damit "tonal_artifact" nur echte Nichttöne (Sinuston/Brumm/
-        # Feedback-Pfeifen) meint.
-        is_clipped = m["clip_ratio"] > 0.0005
+        # (voiced_ratio/cent_mean/cent_std/zcr/sf/is_clipped sind
+        # bereits oben am Anfang von check() aus m extrahiert.)
         # (a) Fast-reiner Ton (niedrig-mittlere Frequenz): sehr flache
         #     Momentanfrequenz + schmaler Schwerpunkt + sehr geringes
         #     Spektralrauschen. Reiner Sinus/Zwei-Ton-Brumm hat
@@ -283,8 +288,8 @@ class SegmentQC:
                 issues.append("mechanical_rhythm")
 
         # ---- Prosodie (F0-Variation) ---------------------------------------
-        f0cv = m.get("f0_cv", 0.0)
-        if m.get("f0_median_hz", 0) > 0:
+        f0cv = float(m.get("f0_cv", 0.0))
+        if f0_med > 0:
             # Sehr sehr geringe F0-Variation KOMBINIERT mit hohem Stimm-
             # anteil und sehr tonalem Spektrum → praktisch ein
             # Sinus-Drohne (wird oben als tonal_artifact erkannt).
@@ -312,7 +317,7 @@ class SegmentQC:
             # Englisch: ohne German-Score gibt es keine no_voiced_speech-
             # Flag. Wenn gar keine F0 erkannt wird UND mehr als 0.5s lang
             # UND nicht bereits über silence erfasst → low_voiced_content.
-            if m["duration_s"] >= 0.5 and "silence" not in issues:
+            if dur >= 0.5 and "silence" not in issues:
                 issues.append("low_voiced_content")
         score.audio_integrity = _clamp(integ)
         score.prosody = _clamp(score.prosody - pause_pen * 0.6)
