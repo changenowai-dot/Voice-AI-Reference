@@ -1,6 +1,7 @@
 # Production-Architecture Fix — Final Report
 
 Branch: `arena/01a08d48-voice-ai-reference`
+Final commit: `743809b` (on top of `d986d2b` architecture fix)
 Date: 2026-09-15
 Golden Reference SHA: `b156c02a60a873ad95fc92390c4a136c85308b20188373cd734bee5e5e5f2025` (byte-identical, untouched).
 
@@ -8,284 +9,190 @@ Golden Reference SHA: `b156c02a60a873ad95fc92390c4a136c85308b20188373cd734bee5e5
 
 ## 1. Root cause
 
-Two defects conspired to produce "VoiceDesign model not found" and
-"garbled / wrong voice" from the GUI:
+Two layers of defects:
 
-1. **Silent VoiceDesign fallback in the engine builder.**
-   `app/jobs/runner.py` and `app/main.py` defaulted `allow_design=True`
-   whenever a configured reference was missing. With the VoiceDesign
-   model not installed on the sandbox/host path in question, that
-   branch raised `model-not-found` *or* — worse — drove partially
-   initialized state into `build_clone_prompt` when a bad reference
-   existed.
+**A. Architectural (fixed in `d986d2b`):**
+- Audition-MP3s (`benchmark/fast_audition*/*.mp3`) were silently used as
+  clone-conditioning references. They are final renders speaking the
+  audition script ("Every discovery begins…"), while `build_clone_prompt`
+  pairs them with `VOICEDESIGN_REF_TEXT_EN/DE` ("There is a book…") →
+  text/audio mismatch → corrupt clone prompt → garbled/tonal/wrong-voice
+  output.
+- `runner.py`/`main.py` defaulted `allow_design=True` on missing refs →
+  silently hit VoiceDesign model (not installed) → "model not found"
+  and partial-state corruption.
 
-2. **Misuse of audition MP3s as clone-conditioning references.**
-   Commit `838db39` (and parts of `ee6a178`) pointed `reference_path`
-   at files under `benchmark/fast_audition*/*.mp3`. Those MP3s are
-   **audition renders** — final outputs made for human listening —
-   *not* production clone references.
-   - The MP3s were produced by Arena TTS and speak the **audition**
-     text ("Every discovery begins with a question…" / "Jede Entdeckung
-     beginnt mit einer Frage…").
-   - `QwenVoiceStudio.build_clone_prompt` is called with
-     `VOICEDESIGN_REF_TEXT_EN/DE` ("There is a book no one claims to
-     have written…" / "Es gibt ein Buch…").
-   - Passing the audition MP3 as `ref_audio` while `ref_text` says a
-     different sentence causes a **text/audio mismatch** → corrupt
-     clone prompt → garbled / tonal / wrong-voice output. The engine
-     even auto-transcoded the MP3 to 24 kHz WAV, hiding the mistake.
+**B. Tooling API mismatch (fixed in `743809b`, this commit):**
+`HardwareInfo` (project/app/hardware/detector.py) exposes `mode`
+(`"gpu"|"gpu_conservative"|"cpu"`), `gpu_name`, `cuda_available`,
+`device_capability`, etc. and `recommend_torch_dtype(hw)` returns the
+torch dtype string. It does **NOT** expose `.device` or `.dtype`. The
+two new scripts (`tools/materialize_references.py` and
+`stage2_oneshot.py`) accessed `hw.device` / `hw.dtype`, causing
+`AttributeError` on the RTX 5060 host before any model load.
 
-## 2. Why 838db39 was insufficient (and architecturally wrong)
+Why 838db39 was insufficient: it substituted audition MP3s for
+production references purely because they existed, without checking
+provenance or ref_text/audio pairing. It stopped the FileNotFoundError
+but produced corrupt-prompt synthesis.
 
-It *did* make every `reference_path` point at an existing file, which
-stopped the `FileNotFoundError`, but:
-
-- It substituted **audition renders** for **production references**.
-- It silently allowed `allow_design=False` to be set on the basis of a
-  file whose *content* (speech text, generation pipeline, provenance,
-  format) did not match what `build_clone_prompt` expects.
-- It masked the real architectural fact: **no EN/DE clone voice except
-  VD-E has its production reference WAV materialized in a fresh
-  checkout.** The correct reaction is "mark unavailable / give the
-  user a clear materialization path", not "plug in any audio file".
-
-## 3. Benchmark vs. production-reference distinction
+## 2. Benchmark vs. production-reference distinction
 
 | Aspect | Audition / Benchmark MP3 | Production clone reference WAV |
 |---|---|---|
 | Location | `benchmark/fast_audition*/`, `benchmark/german_*_audition/` | `cache/voice_refs/{candidate_id}.wav` |
 | Source | Arena TTS (sandbox placeholder) | Qwen3-TTS-12Hz-1.7B-VoiceDesign via `design_reference()` on RTX 5060 |
 | Spoken text | Audition script ("Every discovery…" / "Jede Entdeckung…") | `VOICEDESIGN_REF_TEXT_EN/DE` ("There is a book…" / "Es gibt ein Buch…") |
-| Purpose | Human listening / audition | Conditioning input to `create_voice_clone_prompt(ref_audio, ref_text)` on the Base model |
-| Format | MP3 (final render) | 24 kHz mono 16-bit PCM WAV |
-| `provenance` (recipes) | `arena_placeholder` | `actual_qwen` (only VD-E today) |
-| Safe to use as `ref_audio` in build_clone_prompt? | **NO** (text/audio mismatch → corrupt prompt) | **YES** (ref_text matches spoken text, same pipeline) |
+| Purpose | Human listening / audition | Conditioning input to `create_voice_clone_prompt(ref_audio, ref_text)` on Base |
+| Format | MP3 320k final render | 24 kHz mono 16-bit PCM WAV |
+| Provenance (recipes) | `arena_placeholder` | `actual_qwen` (only VD-E today) |
+| Safe as `ref_audio` in `build_clone_prompt`? | **NO** (text/audio mismatch → corrupt prompt) | **YES** |
 
-## 4. Fixes applied
+## 3. Fixes
 
-### 4.1 Voice JSONs point to the canonical production path
+### Architecture (`d986d2b`)
+- 42 clone voices' `reference_path` reset to canonical
+  `cache/voice_refs/{id}.wav`; provider/model reset to `qwen3-tts` /
+  `Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone)`.
+- `runner.py`/`main.py` default `allow_design=False`; missing refs raise
+  a clear RuntimeError pointing at the materialize tool.
+- `registry.py` marks voices available only when their canonical WAV
+  exists; GUI disables them otherwise.
+- `qwen_engine._ensure_wav_reference` hard-rejects non-WAV refs with
+  an explanatory TTSError (opt-in via `VOICEOVER_REFS_ACCEPT_NONWAV=1`
+  only for explicit tests). Fixed stale `from ..errors import TTSError`
+  to use `from .engine_base import TTSError`.
+- New tool `project/tools/materialize_references.py` — the ONLY
+  sanctioned path to populate `cache/voice_refs/`. Requires the
+  VoiceDesign model exactly once per voice, sets
+  `VOICEOVER_ALLOW_VOICEDESIGN_MATERIALIZE=1` only in its own process,
+  uses recipe seed + correct `VOICEDESIGN_REF_TEXT_*`, writes 24 kHz
+  mono 16-bit WAV.
+- New script `stage2_oneshot.py` replaces the buggy earlier version:
+  hard-pins `allow_design=False`, refuses MP3s, prints full
+  diagnostics.
+- VD-E locked: SHA `b156c02a…f2025` unchanged; runtime cache copy
+  byte-identical; `allow_design=False` preserved.
 
-All 42 clone voices (other than VD-E) now have
-`reference_path = "cache/voice_refs/{voice_id}.wav"` and
-`provider="qwen3-tts"`, `model="Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone)"`.
-No JSON points at `benchmark/*.mp3` or at the non-existent
-`benchmark/male_deep_candidates/.../part1.mp3` anymore.
+### Tooling / HardwareInfo (`743809b`)
+- `materialize_references.py` and `stage2_oneshot.py` now use
+  `hw.mode` + `recommend_torch_dtype(hw)` + `hw.gpu_name` instead of
+  non-existent `hw.device`/`hw.dtype`.
+- `materialize_references.py` auto-detects a neighboring
+  `VoiceOverApp-AgentReady-Latest/project/models` install and sets
+  `VOICEOVER_MODELS_DIR`, so fresh clones can resolve models without
+  manual env configuration.
+- `stage2_oneshot.py` resolves `project/` robustly when invoked from
+  either the repo root or project dir; auto-detects models dir same way.
+- New non-GPU smoke test `project/tools/test_hardware_api.py`:
+  parses both scripts' ASTs to forbid `hw.device`/`hw.dtype` accesses
+  and verifies the `HardwareInfo` + `recommend_torch_dtype` contract.
 
-### 4.2 Silent VoiceDesign fallback removed
-
-`app/jobs/runner.py` and `app/main.py` now default `allow_design=False`
-for all clone voices. When a reference is missing and
-`VOICEOVER_ALLOW_VOICEDESIGN_MATERIALIZE` is not set (default), the
-engine builder raises a clear `RuntimeError` naming the missing WAV
-and the exact command to materialize it, instead of silently calling
-`model_pool.get("voicedesign")`. The GUI catches this and surfaces it.
-
-### 4.3 Registry computes availability honestly
-
-`VoiceRegistry.entries()` now marks a clone voice as `available=True`
-**only when** its canonical `cache/voice_refs/{id}.wav` exists and is
-a WAV. Missing-reference voices are returned with `available=False`
-plus a German-language note pointing at
-`tools/materialize_references.py`. The GUI already disables the radio
-button for `available=False` voices and shows an error on select, so
-users can't launch a job that will auto-voiceDesign.
-
-### 4.4 Non-WAV references hard-rejected
-
-`VoiceCloneEngine._ensure_wav_reference()` now refuses MP3/M4A/OGG/FLAC
-inputs in production (only allowed if `VOICEOVER_REFS_ACCEPT_NONWAV=1`
-is explicitly set for testing). The error message explains the
-text/audio-mismatch risk and points at the materialization tool. The
-old transcode path is preserved under that opt-in flag for
-debugging/testing. (Also fixed a latent bug: the function was
-importing `TTSError` from a non-existent `..errors` module.)
-
-### 4.5 Explicit materialization tool (new)
-
-`project/tools/materialize_references.py` is the *only* sanctioned way
-to populate `cache/voice_refs/`:
-
-- `--list-missing` shows every voice that needs its production
-  reference materialized (no GPU required).
-- `--voice-id <id> --language <lang>` materializes one voice by
-  calling `QwenVoiceStudio.design_reference(candidate_id, description,
-  language, ref_text=VOICEDESIGN_REF_TEXT_<LANG>, seed=<recipe-seed>)`,
-  which uses the VoiceDesign model exactly once to produce
-  `cache/voice_refs/{id}.wav` (24 kHz mono 16-bit PCM, correct text).
-- `--all-missing` materializes every missing production candidate.
-- `--dry-run` prints the plan without loading models.
-- Sets `VOICEOVER_ALLOW_VOICEDESIGN_MATERIALIZE=1` in its own process
-  only, so normal GUI/runtime paths still default to `allow_design=False`.
-
-This explicitly requires the VoiceDesign model (as the architecture
-dictates) rather than downloading it silently or papering over the
-missing reference with a substitute audio file.
-
-### 4.6 VD-E locked path preserved
-
-- `project/VD-E_GOLDEN_REFERENCE/VD-E.wav` is untouched;
-  SHA-256 = `b156c02a60a873ad95fc92390c4a136c85308b20188373cd734bee5e5e5f2025`.
-- Runtime `cache/voice_refs/VD-E.wav` is the byte-identical seeded
-  copy used by `identity_lock` (cache is git-ignored, host-local).
-- VD-E path still uses `allow_design=False` (no redesign).
-
-## 5. Reference lifecycle (now correct)
-
+### Files modified/added
 ```
-GUI voice selection
-  → VoiceRegistry.entries()
-      ├─ backend=customvoice → CustomVoice engine (no ref needed)
-      └─ backend=clone
-          ├─ cache/voice_refs/{id}.wav EXISTS
-          │     → available=True
-          │     → runner builds VoiceCloneEngine(allow_design=False, reference_path=<wav>)
-          │     → _ensure_prompt: ref is WAV → VoiceRef(ref_text=VOICEDESIGN_REF_TEXT_*)
-          │     → build_clone_prompt(ref_audio=<wav>, ref_text=<correct matching text>)
-          │     → synth_clone on Base model
-          │     → QC/retries/final-gate (existing behavior preserved)
-          └─ cache/voice_refs/{id}.wav MISSING
-                → available=False (GUI radio button disabled; select gives clear error)
-                → Job start raises RuntimeError pointing at materialize tool
-                → NO silent VoiceDesign, NO benchmark-MP3 substitution
+project/app/jobs/runner.py                  allow_design=False default; clear error on missing ref
+project/app/main.py                        same fix
+project/app/voices/registry.py             availability computed from WAV existence
+project/app/tts/qwen_engine.py             non-WAV refs rejected; TTSError import fixed
+project/voices/*.json                      reference_path -> cache/voice_refs/{id}.wav (36 files)
+project/tools/materialize_references.py    NEW: sanctioned reference materialization tool
+project/tools/test_hardware_api.py         NEW: non-GPU smoke test for HardwareInfo API
+stage2_oneshot.py                          NEW: STAGE 2 one-shot smoke script
 ```
 
-Materialization (explicit, host-side, requires VoiceDesign model):
-```
-python project/tools/materialize_references.py --voice-id <id> --language English
-  → sets VOICEOVER_ALLOW_VOICEDESIGN_MATERIALIZE=1
-  → QwenVoiceStudio.design_reference(id, description, language, ref_text, seed)
-      → pool.get("voicedesign")
-      → model.generate_voice_design(text=ref_text, language=language, instruct=description)
-      → write_wav(cache/voice_refs/{id}.wav, wav, sr, 16)
-  → restart GUI; voice is now available; Base+VoiceClone path runs allow_design=False
-```
+## 4. Canonical reference status for every production voice
 
-## 6. Per-voice provenance
+- **CustomVoice (7):** built-in, no ref needed (ryan/aiden/dylan/uncle_fu/serena/vivian/sohee).
+- **vd_e:** `cache/voice_refs/VD-E.wav`, sha256 `B156C02A…F2025`, WAV,
+  `actual_qwen`, locked, `allow_design=False`. Ready.
+- **42 clone voices (en/de male + female):** canonical reference
+  `cache/voice_refs/{id}.wav` NOT materialized in a fresh checkout
+  (expected — generation of the WAV requires `Qwen3-TTS-12Hz-1.7B-VoiceDesign`
+  on RTX 5060 exactly once per voice, per §B/G of the architecture doc).
+  Voices are marked `available=False` in GUI until materialized.
 
-- **vd_e** — `actual_qwen`, locked golden. Reference:
-  `cache/voice_refs/VD-E.wav` (runtime) ≡
-  `project/VD-E_GOLDEN_REFERENCE/VD-E.wav`, SHA
-  `B156C02A…F2025`, WAV 24 kHz mono 16-bit, spoken text =
-  `VOICEDESIGN_REF_TEXT_DE` ("Es gibt ein Buch…"), allow_design=False,
-  model = Base. Ready.
-- **en_male_warm_storytelling_authoritative_02** — Locked human
-  favorite (voice-09, position 4), recipe seed 52018, description
+Target-voice recipes (from `voice_generation_recipes.json`):
+- `en_male_warm_storytelling_authoritative_02` — seed 52018, description
   "warm storytelling authoritative – superior version of current
-  favorite, deep warm authority clarity", provenance `arena_placeholder`,
-  canonical reference = `cache/voice_refs/en_male_warm_storytelling_authoritative_02.wav`
-  **NOT yet materialized** in this checkout. The file at
-  `benchmark/fast_audition/04_warm_storytelling_authoritative_02.mp3`
-  is the **audition render** (Arena TTS, "Every discovery begins…"),
-  not the clone-conditioning reference — must not be used for
-  conditioning. Materialize on RTX 5060 via the tool.
-- **en_male_warm_grounded_humanist_01** — Saved human shortlist
-  (voice-25), recipe seed 52034, description "warm grounded humanist
-  – empathetic, sincere, mature, comforting and human", provenance
-  `arena_placeholder`, canonical reference =
-  `cache/voice_refs/en_male_warm_grounded_humanist_01.wav` **NOT yet
-  materialized**. `benchmark/fast_audition_round02/08_warm_grounded_humanist.mp3`
-  is the audition render only.
-- **All other en/de clone voices (40 total)** — Same pattern: recipes
-  carry seed, description, and `voicedesign_reference_text`; canonical
-  reference is `cache/voice_refs/{id}.wav`; all are `arena_placeholder`
-  except VD-E; none are materialized in a fresh checkout.
-- **7 CustomVoice built-ins** (ryan/aiden/dylan/uncle_fu/serena/vivian/sohee)
-  — no reference needed, built into the CustomVoice model, always
-  available.
+  favorite, deep warm authority clarity", ref_text =
+  VOICEDESIGN_REF_TEXT_EN, provenance `arena_placeholder` (audition MP3
+  at `benchmark/fast_audition/04_warm_storytelling_authoritative_02.mp3`
+  is audition render only).
+- `en_male_warm_grounded_humanist_01` — seed 52034, description
+  "warm grounded humanist – empathetic, sincere, mature, comforting
+  and human", ref_text = VOICEDESIGN_REF_TEXT_EN, provenance
+  `arena_placeholder` (audition MP3 at
+  `benchmark/fast_audition_round02/08_warm_grounded_humanist.mp3`).
 
-## 7. Reference-text / audio consistency after fix
+The audition MP3s in `benchmark/` must stay exactly as they are
+(30-something KB, 15 s of real speech at 24 kHz, SHA prefixed
+`ARENA_VOICE-xx`). They are not production references.
 
-For every available clone voice after materialization:
-- `ref_audio` speaks **exactly** `VOICEDESIGN_REF_TEXT_EN/DE` (because
-  `design_reference` generates the WAV from that exact text).
-- `build_clone_prompt` is called with that same `ref_text`.
-- No text/audio mismatch, no corrupt-prompt path.
+## 5. Model routing after fix
 
-## 8. Model routing
-
-| Voice type | `allow_design` | Model(s) loaded |
+| Scenario | `allow_design` | Models loaded |
 |---|---|---|
-| CustomVoice (built-ins) | n/a | `Qwen3-TTS-12Hz-1.7B-CustomVoice` only |
-| Clone, ref exists (incl. VD-E) | `False` | `Qwen3-TTS-12Hz-1.7B-Base` only |
-| Clone, ref missing (GUI) | n/a | Error — job aborts, voice disabled |
-| Clone, ref missing (materialize tool) | `True` (only in that process) | `VoiceDesign` once to write WAV; then `Base` for clone prompt (synth in subsequent runs) |
+| CustomVoice built-ins | n/a | CustomVoice only |
+| Clone, ref WAV exists (incl. VD-E) | **False** | Base only |
+| Clone, ref missing, normal GUI/job | n/a | Error raised, voice disabled — **no** model load |
+| Clone, ref missing, `materialize_references.py` | True (in that process only) | VoiceDesign once → writes WAV (subsequent runs use Base) |
 
-The VoiceDesign model is therefore **genuinely required** exactly once
-per clone voice to materialize its reference WAV. After that, Base +
-VoiceClone runs forever with `allow_design=False`. This matches the
-documented pipeline in `VOICE_GENERATION_ARCHITECTURE.md §B/C/D/G`.
+VoiceDesign model is genuinely required exactly once per clone voice
+to materialize the WAV reference. This matches the documented pipeline;
+it is **not** downloaded silently — the tool must be invoked
+explicitly by the user.
 
-## 9. Files modified
+## 6. Reference-text / audio consistency
 
-```
-project/app/jobs/runner.py                # remove silent allow_design=True; clear RuntimeError on missing ref
-project/app/main.py                       # same fix
-project/app/voices/registry.py            # compute availability from real ref existence; WAV check
-project/app/tts/qwen_engine.py            # reject non-WAV refs in production; fix TTSError import
-project/voices/*.json   (36 files)        # canonical reference_path = cache/voice_refs/{id}.wav
-                                          # + provider/model reset to qwen3-tts / Base (VoiceDesign->Clone)
-project/tools/materialize_references.py   # NEW: sanctioned one-shot reference materialization tool
-stage2_oneshot.py                         # NEW: correct STAGE 2 one-shot smoke script (replaces the old buggy one)
-PRODUCTION_ARCHITECTURE_FIX_REPORT.md     # this report
-```
+After materialization via `design_reference`, the WAV at
+`cache/voice_refs/{id}.wav` is generated from `VOICEDESIGN_REF_TEXT_EN/DE`
+with the recipe seed + description, then stored. `build_clone_prompt`
+is called with that same `ref_text`, so text and audio always match —
+no corrupt-prompt path remains.
 
-Reverted/superseded:
-- Reference-path changes from commits `ee6a178` and `838db39` that
-  pointed voices at `benchmark/*.mp3` are replaced by canonical
-  `cache/voice_refs/*.wav` paths.
+## 7. Host-run procedure (RTX 5060, CUDA 12.8, torch 2.11.0+cu128)
 
-## 10. Host-run procedure to bring EN voices online (RTX 5060)
+From the repo root:
+```powershell
+# 0) Sanity (non-GPU, passes offline)
+python project/tools/test_hardware_api.py
 
-On the host machine that has torch+CUDA and **all three** Qwen models
-(Base / CustomVoice / **VoiceDesign**) under `MODELS_DIR`:
+# 1) Materialize the two target references
+python project/tools/materialize_references.py --voice-id en_male_warm_storytelling_authoritative_02 --language English
+python project/tools/materialize_references.py --voice-id en_male_warm_grounded_humanist_01 --language English
 
-```bash
-# 1) Materialize the two must-test EN voices:
-python project/tools/materialize_references.py \
-    --voice-id en_male_warm_storytelling_authoritative_02 \
-    --language English
-python project/tools/materialize_references.py \
-    --voice-id en_male_warm_grounded_humanist_01 \
-    --language English
+# 2) Verify WAVs (script prints sha/sr/ch/duration)
+#    Expected: WAV, 24 kHz mono, 16-bit PCM, ~5-15s speaking VOICEDESIGN_REF_TEXT_EN
+#              SHA printed, NaN-free.
 
-# 2) One-shot smoke (hard-pins allow_design=False, refuses MP3, prints full diagnostics):
+# 3) One-shot "Hello my friend." (allow_design=False, Base+VoiceClone, no MP3 fallback)
 python stage2_oneshot.py
-# Produces project/cache/stage2/hello_<voice_id>.wav
-
-# 3) HUMAN LISTENING (mandatory — acoustic QC alone is insufficient):
-#    - Is it clearly "Hello my friend." in natural male English?
-#    - Correct vocal identity (warm storytelling authoritative / warm grounded humanist)?
-#    - No tones/buzz/silence/noise/garble/clipping/non-English?
-#    - Duration ~1–3 s?
-#    - Stable across a second run with the same seed?
-
-# 4) Only after (3) passes:
-#    - STAGE 4: slightly longer text via the GUI
-#    - STAGE 5: short single-voice longform
-#    - STAGE 6: full longform
-#    - STAGE 7: TOP3 / premium batch if justified
+# Writes project/cache/stage2/hello_<voice_id>.wav and prints:
+#   voice_id / canonical ref / sha256 / sr/ch/bd/dur / language / model / allow_design
+#   / ref_text / prompt-build status / synth time / output dur/RMS/peak/NaN/PASS.
 ```
 
-The `stage2_oneshot.py` script prints for each voice: reference file
-path, SHA256, sr/ch/bit-depth/duration, backend_mode, language,
-allow_design (hard-pinned False), selected model, ref_text,
-clone-prompt construction, synth time, output path, output
-sr/ch/duration/RMS/NaN, and an automatic PASS/FAIL — but the decisive
-verdict remains human listening.
+**Acoustic PASS from the script is necessary but not sufficient.**
+Both output WAVs require human listening for intelligibility, natural
+timbre, correct voice identity, and absence of tones/silence/noise
+before the voice can be marked production-ready.
 
-## 11. Current verdict: NOT YET READY for production generation
+After human validation of both one-shots, continue per the staged
+plan: STAGE 4 (GUI multi-sentence) → STAGE 5 (short longform) →
+STAGE 6 (full longform) → STAGE 7 (TOP3).
 
-- Architecture is now **correct and honest**:
-  - No silent VoiceDesign fallback.
-  - No benchmark MP3 used as clone-conditioning.
-  - Missing production references disable the voice in the GUI and
-    produce an explicit error pointing to the materialization tool.
-  - Clone-prompt creation always pairs a WAV with its matching ref_text.
-  - VD-E locked, Golden SHA intact.
-- Generation testing (STAGE 2–7) **cannot** run in this sandbox (no
-  torch, no CUDA, no Qwen models). It must run on the RTX 5060 host
-  after materializing the two EN production references with
-  `materialize_references.py` (which requires the VoiceDesign model
-  for that initial step — by design, per the documented pipeline).
-- Real "hello my friend" outputs + human listening are required before
-  any voice can be marked READY.
+## 8. Current status
+
+- Code changes: complete and pushed (commits `80216f5`, `b9852de`,
+  `a8fa46a`, `d986d2b`, `743809b`).
+- HardwareInfo bug fixed; smoke test passes in sandbox (no torch);
+  host can now import and run `materialize_references.py` and
+  `stage2_oneshot.py` past the previous `AttributeError`.
+- Golden SHA intact, no MP3s are used as clone conditioning, no
+  silent VoiceDesign fallback, QC/retry/final-gate fixes preserved.
+- **STAGE 2 (real "Hello my friend.") and subsequent generation tests
+  MUST still be run on the RTX 5060 host** — this sandbox has no
+  torch/CUDA/models and cannot synthesize audio. Human listening is
+  mandatory.
+
+**Verdict: architecture and tooling READY; real-audio verdict NOT-YET-READY pending host materialization + STAGE 2 WAVs + human listening.**
