@@ -299,3 +299,77 @@ Modified:
 - `project/tools/longform_benchmark.py`   — uses canonical bundle
 - `project/tools/production_validation.py` — resolves & prints bundle before test runs
 - `project/voices/en_male_warm_storytelling_authoritative_02.json` — normalized reference_text key
+
+---
+
+## Follow-up fix (commit on top of 9477f8f): sidecar repair path
+
+The materialize / bootstrap toolchain previously skipped any existing
+WAV with `EXISTS ... -- skipping` without checking whether the atomic
+.wav.json sidecar existed or was valid. On a host where the canonical
+WAV was materialized BEFORE 9477f8f (like voice-09 with sha256 prefix
+6199fbd50a15a06a...) this produced `REFERENCE_BUNDLE_MANIFEST_MISSING`
+even though the WAV was already the correct canonical reference.
+
+Changes in this follow-up:
+
+* `tools/materialize_references.py`
+  - `--list-missing` now reports four states per voice:
+        WAV_MISSING | WAV_EXISTS_MANIFEST_MISSING | VALID |
+        BUNDLE_INVALID | MANIFEST_UNREADABLE
+  - When WAV exists + manifest missing AND provenance can be proven
+    (recipe ref_text is the canonical VOICEDESIGN_REF_TEXT_EN/DE or
+    matches the recipe verbatim), the tool writes the .wav.json
+    sidecar ATOMICALLY and then re-runs `resolve_bundle()` to confirm;
+    it does NOT re-synthesize audio and does NOT import torch.
+  - When WAV exists + manifest exists and validates, prints
+        VALID - bundle intact; bundle_id=...
+    and returns.
+  - When manifest is invalid/unreadable, refuses to overwrite silently
+    (requires --force, which triggers VoiceDesign re-synthesis).
+  - Lazy AST-loads ENGLISH_VOICEDESIGN_DESCRIPTIONS so the sidecar-repair
+    path works on hosts without numpy/torch installed.
+  - New helper `_write_manifest_for_existing_wav()` used by both
+    materialize and design paths.
+
+* `tools/bootstrap_reference_bundles.py`
+  - Rewritten with the same three-outcome model: ALREADY_VALID,
+    WOULD_CREATE_MANIFEST / CREATED_MANIFEST, SKIPPED(reason).
+  - Uses canonical WAV path `VOICE_REFS_DIR/<id>.wav` (not the voice
+    JSON's `reference_path`, which could point at non-canonical
+    locations).
+  - After writing a sidecar (non-dry-run), re-runs `resolve_bundle()`
+    and verifies both hashes match before reporting success.
+  - Correctly reports non-VDE voices without a default recipe text as
+    REFERENCE_BUNDLE_PROVENANCE_UNPROVABLE.
+  - Existing invalid/unreadable manifests are NOT overwritten
+    (fail-closed).
+  - Output lines use explicit `WOULD_CREATE_MANIFEST` / `CREATED_MANIFEST`
+    / `ALREADY_VALID` / `SKIPPED` prefixes.
+
+* `tools/test_reference_bundle.py`
+  - Extended from 14 to 31 tests:
+      L - existing WAV without manifest: bootstrap creates sidecar and
+          resolve_bundle() then succeeds; manifest contains
+          voice_id, reference_audio, reference_text, language,
+          generation{seed,model,model_version,engine_version,
+          source_commit,created_at}.
+      M - materialize._write_manifest_for_existing_wav writes sidecar
+          and resolve_bundle() succeeds afterwards.
+      N - corrupt existing manifest (wrong audio hash) fails closed
+          with AUDIO_SHA256.
+
+On the user's RTX 5060 host the recovery command is now:
+
+    git pull --ff-only
+    python project/tools/bootstrap_reference_bundles.py --dry-run
+    python project/tools/bootstrap_reference_bundles.py
+    # expect CREATED_MANIFEST for en_male_warm_storytelling_authoritative_02
+    python project/tools/production_validation.py \
+        --voice-id en_male_warm_storytelling_authoritative_02 \
+        --language English --stages short
+
+The resulting .wav.json sidecar for the user's existing WAV
+(sha256 prefix 6199fbd50a15a06a...) will be produced with the canonical
+text SHA prefix f4ba8094adfb0c4e (matching VOICEDESIGN_REF_TEXT_EN), seed
+52018, language English, model Qwen3-TTS-12Hz-1.7B-VoiceDesign.
