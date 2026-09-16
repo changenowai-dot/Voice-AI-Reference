@@ -392,6 +392,7 @@ class Pipeline:
             chosen_sr = 24000
             chosen_score = 0.0
             chosen_attempt = None
+            score_obj_metrics: dict = {}   # populated below for both branches
 
             if best is None or best.waveform is None:
                 # OOM-Notfallpfad: Segment an Satzgrenze halbieren (Anf. 4)
@@ -436,6 +437,8 @@ class Pipeline:
                 chosen_attempt = 99
                 accepted_in_retry = True   # split-fallback = regenerated
                 final_gate_passed = True
+                # split-fallback path: no prior AttemptResult.metrics, so
+                # we fill score_obj_metrics below from the waveform itself.
             else:
                 # §4: kritisches/niedriges „best“ NICHT blind übernehmen –
                 # erneute, unabhängige QC-Prüfung vor Cache/Audio
@@ -471,28 +474,45 @@ class Pipeline:
 
             # Segment hat Final-Gate bestanden – Audio übernehmen.
             score_val = float(chosen_score)
-            # Compute loudness/RMS/F0 for continuity tracker from the
-            # chosen waveform (works for both regular and split-fallback).
+            # Base metrics dict from the best attempt (regular path) or
+            # empty for the split-fallback path (we fill below).
+            score_obj_metrics = dict(best.metrics) if (
+                best is not None and getattr(best, "metrics", None)
+            ) else {}
+            # Compute loudness/RMS/duration for continuity tracker from
+            # the chosen waveform (works for both regular and split-
+            # fallback paths and fills any missing keys on the regular
+            # path as a defensive measure).
             import numpy as _np
             _arr = (chosen_wave if isinstance(chosen_wave, _np.ndarray)
                     else chosen_wave.cpu().numpy())
             _arr = _arr.reshape(-1).astype("float32")
-            _metrics_for_cont = dict(score_obj_metrics) if best is not None else {}
-            if "rms" not in _metrics_for_cont:
-                _metrics_for_cont["rms"] = float(_np.sqrt(_np.mean(_arr.astype("float32")**2)))
-            if "duration_s" not in _metrics_for_cont:
-                _metrics_for_cont["duration_s"] = float(len(_arr) / max(1, chosen_sr))
+            if "rms" not in score_obj_metrics:
+                score_obj_metrics["rms"] = float(
+                    _np.sqrt(_np.mean(_arr.astype("float32") ** 2)))
+            if "duration_s" not in score_obj_metrics:
+                score_obj_metrics["duration_s"] = float(
+                    len(_arr) / max(1, chosen_sr))
+            # Also compute integrated LUFS if available and missing, so
+            # continuity tracking has a stable loudness signal even on
+            # the split-fallback path.
+            if "lufs" not in score_obj_metrics:
+                try:
+                    from ..audio.ebu_r128 import integrated_lufs as _il
+                    score_obj_metrics["lufs"] = float(_il(_arr, chosen_sr))
+                except Exception:
+                    pass
+            if "f0_median_hz" not in score_obj_metrics:
+                # f0 extraction is not trivial without parselmouth/dsp;
+                # leave None so continuity skips F0 for this segment
+                # rather than poisoning the running median.
+                score_obj_metrics["f0_median_hz"] = None
             if continuity is not None:
-                drift, dflags = continuity.score(_metrics_for_cont)
+                drift, dflags = continuity.score(score_obj_metrics)
                 if drift > 30.0:
                     plog(f"SEG {seg.index:04d} continuity drift={drift:.0f} "
                          f"flags={','.join(dflags)}")
-                # Feed forward: even if first segment has no history we
-                # seed the tracker; subsequent segments benefit.
-                continuity.observe(_metrics_for_cont)
-
-            score_obj_metrics = (best.metrics if best is not None and best.metrics
-                                 else _metrics_for_cont)
+                continuity.observe(score_obj_metrics)
             self.cache.put(key, chosen_wave, chosen_sr, {
                 "ok": True, "score": score_val,
                 "german_score": (best.german_score if best is not None else None),

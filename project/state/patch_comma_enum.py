@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 
 app = Path(r"C:\Users\johan\OneDrive\Desktop\fertige projekte\Apps\VoiceoverAPPnew\VoiceOverApp_2.0.0_GUI")
 g = app / "app" / "prosody" / "german.py"
