@@ -251,7 +251,6 @@ def build_engine(spec: JobSpec, production: dict):
                        or entry.description
                        or (f"{voice_language} narrator"))
         from .. import paths as _p
-        ref_path = None
         # HARD DEFAULT: allow_design=False. Niemals stumm VoiceDesign
         # anwerfen, nur weil eine Referenz fehlt. Das würde (a) das
         # nicht-installierte VoiceDesign-Modell anfordern und (b) eine
@@ -261,24 +260,48 @@ def build_engine(spec: JobSpec, production: dict):
         import os as _os
         allow_design = bool(_os.environ.get(
             "VOICEOVER_ALLOW_VOICEDESIGN_MATERIALIZE"))
+        candidate_id = entry.voice_id
+        canonical_wav = _p.VOICE_REFS_DIR / f"{candidate_id}.wav"
+        # ref_text_for_engine:
+        #   * None when the canonical WAV exists -> VoiceCloneEngine will
+        #     load the atomic reference bundle sidecar (WAV + .wav.json
+        #     manifest) and refuse to synthesize if it is missing/invalid.
+        #     We deliberately DO NOT pass entry.reference_text here because
+        #     the registry's fallback value ("VOICEDESIGN_REF_TEXT_EN"
+        #     = "There is a book…") is ONLY valid if the WAV was actually
+        #     generated from that exact text; if someone materialized the
+        #     voice with a different script the bundle manifest is the
+        #     single source of truth. Passing the fallback silently would
+        #     reintroduce the gibberish bug.
+        #   * recipe text when we are about to materialize (allow_design).
+        ref_text_for_engine = None
         if entry.reference_path:
             rp = _p.ROOT / entry.reference_path
-            if rp.exists():
-                ref_path = rp
-                allow_design = False    # vorhandene Referenz > Design
+            if rp.exists() and rp.resolve() == canonical_wav.resolve():
+                # Canonical reference present: rely on bundle manifest.
                 emit("stage", stage="voice_load", voice=entry.display_name,
                      detail=f"Produktions-Referenz vorhanden ({voice_language}): {rp.name}")
+                allow_design = False
+            elif rp.exists():
+                # Non-canonical reference path configured — should not
+                # happen in production, but refuse rather than guess.
+                raise RuntimeError(
+                    f"NICHT-KANONISCHE REFERENZ für Stimme "
+                    f"‚{entry.display_name}‘ ({entry.voice_id}):\n"
+                    f"  konfiguriert: {rp}\n"
+                    f"  erwartet:     {canonical_wav}\n"
+                    "Mehrdeutige Referenzdateien führen zu Text/Audio-"
+                    "Mismatch → Murks. Bitte die Referenz unter den "
+                    "kanonischen Pfad legen oder das Voice-JSON korrigieren.")
             else:
                 if not allow_design:
-                    # Keine stumme Auto-Generierung: klarer Fehler mit
-                    # Hinweis auf das Materialisierungs-Tool. Benutzer
-                    # sieht das dann im GUI-Fehlerdialog.
                     raise RuntimeError(
                         f"Produktions-Referenz fehlt für Stimme "
                         f"‚{entry.display_name}‘ ({entry.voice_id}): {rp}\n\n"
                         f"Die kanonische Referenz muss zuerst über die "
                         f"VoiceDesign->Clone-Pipeline erzeugt werden "
-                        f"(cache/voice_refs/{entry.voice_id}.wav).\n"
+                        f"(cache/voice_refs/{entry.voice_id}.wav + "
+                        f"dazugehöriges .wav.json Manifest).\n"
                         f"Auf dem Host mit GPU + Qwen3-TTS-12Hz-1.7B-"
                         f"VoiceDesign:\n"
                         f"    python project/tools/materialize_references.py "
@@ -288,6 +311,7 @@ def build_engine(spec: JobSpec, production: dict):
                      detail=f"Referenz fehlt – wird via VoiceDesign "
                             f"materialisiert ({voice_language})")
                 allow_design = True
+                ref_text_for_engine = entry.reference_text   # recipe text
         else:
             # Kein reference_path: kein clone-Betrieb möglich ohne Design.
             if not allow_design:
@@ -296,20 +320,19 @@ def build_engine(spec: JobSpec, production: dict):
                     f"Referenz konfiguriert und Auto-Design ist deaktiviert.")
             emit("stage", stage="voice_load", voice=entry.display_name,
                  detail=f"VoiceDesign-Modus ({voice_language}, seed={voice_seed})")
-        # candidate_id wird 1:1 als Dateiname unter cache/voice_refs/ verwendet;
-        # keine en_-/de_-Präfix-Filter mehr, damit de_male_*-Stimmen ebenfalls
-        # korrekt auf ihre Referenz-WAV zeigen.
-        candidate_id = entry.voice_id
+            ref_text_for_engine = entry.reference_text
+        # reference_path=None -> engine uses canonical location + bundle
+        # manifest (we do not bypass the resolver with an explicit Path).
         return VoiceCloneEngine(
             hw, candidate_id=candidate_id,
             description=description,
             language=voice_language,
-            ref_text=entry.reference_text,
+            ref_text=ref_text_for_engine,
             seed=voice_seed,
             models_dir=None,
             attn_implementation=adv_cfg.get("attn_implementation") or None,
             allow_design=allow_design,
-            reference_path=ref_path), entry
+            reference_path=None), entry
 
     # CustomVoice (§13): Verfügbarkeit PRÜFEN, kein Fallback
     if spec.engine == "test_double":

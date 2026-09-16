@@ -175,7 +175,6 @@ def run_one_preset(preset: str, voice_id: str, text: str, language: str,
     voice_lang = _resolve_voice_native_language(reg, entry)
     voice_seed = seed if seed is not None else (_resolve_voice_seed(reg, entry) or 52018)
     ref_path = _p.ROOT / entry.reference_path
-    rp = _p.ROOT / entry.reference_path
 
     out_dir = out_root / preset
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -223,13 +222,16 @@ def run_one_preset(preset: str, voice_id: str, text: str, language: str,
     print(f"\n=== PRESET {preset} ===")
     print(f"  segment target/min/max chars = {adv.get('segment_target_chars',420)}/"
           f"{adv.get('segment_min_chars',120)}/{adv.get('segment_max_chars',700)}")
+    # ref_text=None, reference_path=None -> canonical bundle resolution
+    # (WAV + .wav.json manifest). If the bundle is invalid we fail hard
+    # before running any preset rather than silently gibberishing.
     engine = VoiceCloneEngine(
         hw=hw, candidate_id=entry.voice_id,
         description=entry.description or "",
-        language=voice_lang, ref_text=entry.reference_text,
+        language=voice_lang, ref_text=None,
         seed=voice_seed, models_dir=None,
         attn_implementation=adv.get("attn_implementation"),
-        allow_design=False, reference_path=rp,
+        allow_design=False, reference_path=None,
     )
     try:
         t0 = time.perf_counter()

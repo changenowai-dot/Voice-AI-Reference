@@ -143,11 +143,15 @@ def main():
     print(f"[validate] voice={entry.voice_id} lang={voice_lang} "
           f"backend={entry.backend_mode} seed={voice_seed}")
 
-    rp = _p.ROOT / entry.reference_path
-    assert rp.exists() and rp.suffix.lower() == ".wav", \
-        f"ref must exist as WAV: {rp}"
-    assert entry.reference_text, f"no canonical ref_text for {entry.voice_id}"
-    print(f"[validate] ref={rp.name} sha={_sha256(rp)[:16]}…")
+    from app.tts.reference_bundle import resolve_bundle
+    bundle = resolve_bundle(entry.voice_id, language=voice_lang)
+    print("[validate] REFERENCE_BUNDLE_VALID")
+    print(f"[validate]   bundle_id       = {bundle.bundle_id()}")
+    print(f"[validate]   audio_path      = {bundle.audio_path.name}")
+    print(f"[validate]   audio_sha256    = {bundle.audio_sha256[:24]}…")
+    print(f"[validate]   text_sha256     = {bundle.reference_text_sha256[:24]}…")
+    print(f"[validate]   language        = {bundle.language}")
+    print(f"[validate]   seed            = {bundle.generation.get('seed')}")
 
     out_dir = _p.CACHE_DIR / "validation" / entry.voice_id
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -155,22 +159,22 @@ def main():
     texts = {"short": SHORT_EN if voice_lang == "English" else SHORT_EN,
              "medium": MEDIUM_EN if voice_lang == "English" else MEDIUM_EN,
              "long": LONG_EN if voice_lang == "English" else LONG_EN}
-    # NOTE: the DE texts above are placeholders; the canonical tested
-    # configuration today is English. Long German texts can be added later.
 
     eng = VoiceCloneEngine(
         hw, candidate_id=entry.voice_id,
         description=entry.description or "",
-        language=voice_lang,
-        ref_text=entry.reference_text,
-        seed=voice_seed,
+        language=bundle.language,
+        ref_text=None,        # use bundle resolution inside engine
+        seed=bundle.generation.get("seed") or voice_seed,
         models_dir=None,
         allow_design=False,
-        reference_path=rp,
+        reference_path=None,
     )
     summary = {"voice_id": entry.voice_id, "language": voice_lang,
-               "ref_text_source": "VoiceRegistry",
-               "ref_sha256": _sha256(rp),
+               "ref_text_source": "reference_bundle",
+               "bundle_id": bundle.bundle_id(),
+               "ref_sha256": bundle.audio_sha256,
+               "ref_text_sha256": bundle.reference_text_sha256,
                "allow_design": False, "speaker": entry.voice_id,
                "runs": {}}
     try:

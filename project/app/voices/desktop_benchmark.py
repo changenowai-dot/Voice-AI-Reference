@@ -155,24 +155,32 @@ def run_desktop_voice_benchmark(studio=None) -> dict:
                                                        voice_id=vid, candidate_id=vid)
                 else:
                     from ..hardware.detector import detect_hardware
+                    from ..jobs.runner import _resolve_voice_native_language
                     from ..prosody.instruct import ENGLISH_VOICEDESIGN_DESCRIPTIONS, VOICEDESIGN_DESCRIPTIONS
+                    from ..prosody.instruct import VOICEDESIGN_REF_TEXT_DE
                     from ..tts.qwen_engine import VoiceCloneEngine
+                    vlang = _resolve_voice_native_language(registry, entry)
                     if vid == "vd_e":
                         engine = VoiceCloneEngine(
                             detect_hardware(), candidate_id="VD-E",
-                            description="produktion", allow_design=False)
+                            description="produktion", language="German",
+                            ref_text=VOICEDESIGN_REF_TEXT_DE,
+                            allow_design=False)
                     else:
                         desc = (ENGLISH_VOICEDESIGN_DESCRIPTIONS.get(vid)
                                 or VOICEDESIGN_DESCRIPTIONS.get(vid) or {}).get("description") \
                                 or entry.description
-                        # Referenzpfad prüfen
-                        from .. import paths as _p
-                        rp = _p.ROOT / entry.reference_path if entry.reference_path else None
-                        allow = not (rp and rp.exists())
+                        import os as _os
+                        allow = bool(_os.environ.get(
+                            "VOICEOVER_ALLOW_VOICEDESIGN_MATERIALIZE"))
+                        # ref_text=None → load canonical bundle (the
+                        # atomic WAV+.wav.json provenance); never pass a
+                        # guessed default silently.
                         engine = VoiceCloneEngine(
                             detect_hardware(), candidate_id=vid,
-                            description=desc, allow_design=allow,
-                            reference_path=rp if rp and rp.exists() else None)
+                            description=desc, language=vlang,
+                            ref_text=None, allow_design=allow,
+                            reference_path=None)
                 engine.load()
                 de = _score_texts(engine, vid, [DE_TEST, DE_LONG],
                                   "German", out_base / vid / "de",

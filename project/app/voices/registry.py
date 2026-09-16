@@ -656,7 +656,22 @@ class VoiceRegistry:
                 elif backend == "clone" and ref_p:
                     rp = _p.ROOT / ref_p
                     if rp.exists() and rp.suffix.lower() == ".wav":
-                        avail = True
+                        # Validate the atomic reference bundle (WAV +
+                        # sidecar manifest + SHA match) before declaring
+                        # the voice available. An invalid bundle is as
+                        # good as a missing one and must surface a clear
+                        # reason in the GUI instead of silently producing
+                        # gibberish.
+                        try:
+                            from ..tts.reference_bundle import resolve_bundle
+                            _b = resolve_bundle(vid, language=voice_lang,
+                                                require_manifest=(vid != "vd_e"))
+                            avail = True
+                        except Exception as _be:                # noqa: BLE001
+                            avail = False
+                            avail_note = (
+                                "REFERENZ UNGÜLTIG – "
+                                f"{_be}")
                     else:
                         avail = False
                         if not avail_note:

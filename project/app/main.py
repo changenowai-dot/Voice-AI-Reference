@@ -116,16 +116,30 @@ def _make_engine(engine_name: str, cfg: dict):
                        or f"{voice_language} narrator")
         from app import paths as _p
         import os as _os
-        ref_path = None
         # HARD DEFAULT: allow_design=False – gleiche Semantik wie in
         # app/jobs/runner.py. Stummer VoiceDesign-Fallback ist verboten.
         allow_design = bool(_os.environ.get(
             "VOICEOVER_ALLOW_VOICEDESIGN_MATERIALIZE"))
+        candidate_id = entry.voice_id
+        canonical_wav = _p.VOICE_REFS_DIR / f"{candidate_id}.wav"
+        # ref_text_for_engine=None when canonical WAV exists → bundle
+        # manifest is the single source of truth (no silent fallback
+        # to registry default text — avoids the gibberish class of bug
+        # caused by audio/text drift).
+        ref_text_for_engine = None
         if entry.reference_path:
             rp = _p.ROOT / entry.reference_path
-            if rp.exists():
-                ref_path = rp
+            if rp.exists() and rp.resolve() == canonical_wav.resolve():
                 allow_design = False
+            elif rp.exists():
+                raise RuntimeError(
+                    f"NICHT-KANONISCHE REFERENZ für Stimme "
+                    f"‚{entry.display_name}‘ ({entry.voice_id}):\n"
+                    f"  konfiguriert: {rp}\n"
+                    f"  erwartet:     {canonical_wav}\n"
+                    "Mehrdeutige Referenzdateien → Murks. Bitte Referenz "
+                    "unter den kanonischen Pfad legen oder das Voice-JSON "
+                    "korrigieren.")
             else:
                 if not allow_design:
                     raise RuntimeError(
@@ -133,35 +147,36 @@ def _make_engine(engine_name: str, cfg: dict):
                         f"‚{entry.display_name}‘ ({entry.voice_id}): {rp}\n\n"
                         f"Die kanonische Referenz muss zuerst über die "
                         f"VoiceDesign->Clone-Pipeline erzeugt werden "
-                        f"(cache/voice_refs/{entry.voice_id}.wav).\n"
+                        f"(cache/voice_refs/{entry.voice_id}.wav + "
+                        f".wav.json Manifest).\n"
                         f"Auf dem Host mit GPU + Qwen3-TTS-12Hz-1.7B-"
                         f"VoiceDesign:\n"
                         f"    python project/tools/materialize_references.py "
-                        f"--voice-id {entry.voice_id} --language {voice_language}\n"
-                        f"Bis dahin ist die Stimme im GUI deaktiviert.")
-                log.info("Clone-Stimme %s: Referenz fehlt, VoiceDesign wird "
-                         "erzeugt (explizit freigegeben): %s",
+                        f"--voice-id {entry.voice_id} --language {voice_language}")
+                log.info("Clone-Stimme %s: Referenz fehlt, VoiceDesign "
+                         "wird erzeugt (explizit freigegeben): %s",
                          entry.voice_id, rp)
                 allow_design = True
+                ref_text_for_engine = entry.reference_text
         else:
             if not allow_design:
                 raise RuntimeError(
                     f"Clone-Stimme ‚{entry.display_name}‘ hat keine "
                     f"Referenz konfiguriert und Auto-Design ist deaktiviert.")
+            ref_text_for_engine = entry.reference_text
         log.debug("[DIAG-D] Creating VoiceCloneEngine (candidate_id=%s, language=%s, allow_design=%s)",
                   entry.voice_id, voice_language, allow_design)
-        candidate_id = entry.voice_id
         eng = VoiceCloneEngine(
             hw=hw,
             candidate_id=candidate_id,
             description=description,
             language=voice_language,
-            ref_text=entry.reference_text,
+            ref_text=ref_text_for_engine,
             seed=voice_seed,
             models_dir=models_dir,
             attn_implementation=adv.get("attn_implementation") or None,
             allow_design=allow_design,
-            reference_path=ref_path if ref_path and ref_path.exists() else None
+            reference_path=None   # use canonical resolution
         )
         log.debug("[DIAG-D] VoiceCloneEngine %s created", entry.voice_id)
         return eng, hw

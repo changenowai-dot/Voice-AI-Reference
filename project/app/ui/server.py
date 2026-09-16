@@ -79,8 +79,7 @@ class AppContext:
                             (gcfg.get("voicedesign") or {}).get(
                                 "candidate_id"):
                         from ..tts.qwen_engine import VoiceCloneEngine
-                        from ..voices.registry import (VoiceRegistry,
-                                                        resolve_reference_text)
+                        from ..voices.registry import VoiceRegistry
                         from ..jobs.runner import _resolve_voice_native_language
                         reg = VoiceRegistry()
                         vd = gcfg["voicedesign"]
@@ -90,15 +89,16 @@ class AppContext:
                                 if entry is not None else
                                 ("English" if cid.startswith("en_")
                                  else "German"))
-                        ref_text = (entry.reference_text
-                                    if entry is not None else
-                                    resolve_reference_text(None, lang))
+                        # ref_text=None → VoiceCloneEngine loads the
+                        # atomic reference-bundle sidecar and refuses
+                        # to run if the manifest is missing/hash-mismatch
+                        # (fail-closed, no silent fallback to default).
                         self._engine = VoiceCloneEngine(
                             hw=self.hw, candidate_id=cid,
                             description=vd.get("description",
                                                entry.description if entry else ""),
                             language=lang,
-                            ref_text=ref_text,
+                            ref_text=None,
                             allow_design=False,
                             attn_implementation=adv.get(
                                 "attn_implementation") or None)
