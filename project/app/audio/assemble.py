@@ -46,6 +46,28 @@ def _fade_edges(wav: np.ndarray, sr: int, ms: float = 6.0) -> np.ndarray:
     return out
 
 
+def _crossfade_pair(prev: np.ndarray, nxt: np.ndarray, sr: int,
+                    overlap_ms: float = 35.0) -> tuple[np.ndarray, int]:
+    """Cross-fade the tail of ``prev`` into the head of ``nxt`` to hide
+    boundary clicks between independently synthesized segments. Uses
+    equal-power ramps for a perceptually smooth join. Returns
+    ``(merged_wav, trim_samples_removed_from_next)`` so pause logic can
+    account for the overlap.
+    """
+    ol = max(1, int(sr * overlap_ms / 1000.0))
+    if len(prev) < ol or len(nxt) < ol:
+        ol = min(len(prev), len(nxt))
+        if ol < 8:
+            return np.concatenate([prev, nxt]).astype(np.float32), 0
+    ramp = np.linspace(0.0, 1.0, ol, dtype=np.float32)
+    eqp = np.sqrt(ramp)
+    tail = prev[-ol:] * (1.0 - eqp)
+    head = nxt[:ol] * eqp
+    overlap = (tail + head).astype(np.float32)
+    merged = np.concatenate([prev[:-ol], overlap, nxt[ol:]]).astype(np.float32)
+    return merged, ol
+
+
 def loudness_match(wav: np.ndarray, sr: int, target_lufs: float,
                    max_gain_db: float = 3.0) -> np.ndarray:
     """Gleicht Segment-Lautheit sanft an Ziel-LUFS an (Konsistenz, Anf. 17)."""
@@ -67,14 +89,31 @@ def _match_to_lufs(wav: np.ndarray, current_lufs: float, target_lufs: float,
     return wav.astype(np.float32)
 
 
+def _do_crossfade(processed: list[np.ndarray], sr_out: int,
+                  crossfade_ms: float) -> list[np.ndarray]:
+    """Apply short equal-power crossfades between adjacent segments to
+    suppress boundary clicks. Pauses are inserted AFTER crossfading so
+    long natural pauses are preserved."""
+    if crossfade_ms <= 0 or len(processed) <= 1:
+        return processed
+    out: list[np.ndarray] = [processed[0]]
+    for nxt in processed[1:]:
+        prev = out[-1]
+        merged, _ = _crossfade_pair(prev, nxt, sr_out, crossfade_ms)
+        out[-1] = merged
+    return out
+
+
 def assemble(segments_audio: list[tuple[np.ndarray, int, Segment]],
              project_median_lufs: float | None = None,
-             precomputed_lufs: list[float] | None = None) -> tuple[np.ndarray, int]:
+             precomputed_lufs: list[float] | None = None,
+             crossfade_ms: float = 25.0) -> tuple[np.ndarray, int]:
     """Fügt [(wav, sr, segment)] zum Gesamt audio zusammen.
 
     project_median_lufs: Ziel für die Voranpassung (Median der Segment-
     LUFS-Werte). None = keine Anpassung. precomputed_lufs vermeidet
-    doppelte Messung (Pipeline misst ohnehin).
+    doppelte Messung (Pipeline misst ohnehin). Ein kurzer Crossfade
+    zwischen Segmenten verhindert Klick-Artefakte an Segmentgrenzen.
     """
     if not segments_audio:
         raise ValueError("Keine Segmente zum Zusammenfügen")
@@ -93,6 +132,8 @@ def assemble(segments_audio: list[tuple[np.ndarray, int, Segment]],
                 lufs_i = integrated_lufs(wav, sr_out)
             wav = _match_to_lufs(wav, lufs_i, project_median_lufs)
         processed.append(_fade_edges(wav, sr_out))
+
+    processed = _do_crossfade(processed, sr_out, crossfade_ms)
 
     parts: list[np.ndarray] = []
     total = 0
@@ -152,7 +193,8 @@ def _speed_fallback(wav: np.ndarray, sr: int, speed: float) -> tuple[np.ndarray,
 # ===========================================================================
 def assemble_to_file(segments_audio, out_path, project_median_lufs=None,
                      precomputed_lufs=None, speed: float = 1.0,
-                     bit_depth: int = 24) -> tuple:
+                     bit_depth: int = 24,
+                     crossfade_ms: float = 25.0) -> tuple:
     """Schreibt [(wav, sr, segment)] progressiv in eine WAV-Datei.
 
     Rückgabe: (sr, total_seconds, pause_total_s)
@@ -180,6 +222,9 @@ def assemble_to_file(segments_audio, out_path, project_median_lufs=None,
                 lufs_i = integrated_lufs(wav, sr_out)
             wav = _match_to_lufs(wav, lufs_i, project_median_lufs)
         processed.append(_fade_edges(wav, sr_out))
+
+    # Crossfades VOR dem Schreiben, damit keine Klicks an Grenzen.
+    processed = _do_crossfade(processed, sr_out, crossfade_ms)
 
     # progressives Schreiben (16/24 Bit via soundfile-Blockwriter, sonst 16)
     total = 0

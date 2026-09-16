@@ -83,11 +83,12 @@ class QualityScore:
                 "tonal_artifact", "low_voiced_content"}
         if hard & set(self.issues):
             return True
+        # Refuse segments that are implausibly short (<50% of expected
+        # duration) — they are almost always truncated words or collapsed
+        # EOS even when RMS/voiced look superficially ok.
+        # Note: m/duration checks use the outer scope when present; this
+        # flag is recomputed by the caller after check() returns.
         # German-seitig: nur "keine Sprache" ist katastrophal.
-        # duration_implausible/rate_out_of_range/question_melody_missing
-        # sind Qualitäts-Probleme (Prosodie/Aussprache), keine
-        # Integritätsfehler – sie werden über den Score/Ranking
-        # abgebildet, blockieren aber nicht die Final-Gate.
         g = self.german or {}
         if g.get("critical"):
             gi = set(g.get("issues") or [])
@@ -197,7 +198,7 @@ class SegmentQC:
         else:
             score.pronunciation_plausibility = 100.0 - abs(1.0 - ratio) * 25
 
-        # ---- Audio-Integrität ----------------------------------------------
+        # ---- Audio-Integrität (stricter for long-form) ---------------------
         integ = 100.0
         if m["has_nan"]:
             integ = 0.0
@@ -217,9 +218,27 @@ class SegmentQC:
         if m["leading_ms"] > 1200 or m["trailing_ms"] > 1500:
             integ -= 8.0
             issues.append("edge_silence")
-        if m.get("silence_ratio", 0.0) > 0.9:
-            integ -= 30.0
+        # Too much internal silence (dead air inside the segment) is a
+        # strong signal of collapsed/EOS-cutoff synthesis.
+        if m.get("silence_ratio", 0.0) > 0.65:
+            integ -= 40.0
             issues.append("silence")
+        if m.get("silence_ratio", 0.0) > 0.45 and dur < max(2.0, expected_s * 0.5):
+            integ -= 30.0
+            if "silence" not in issues:
+                issues.append("silence")
+        # Extreme speaking rate (way too fast = likely garbled/clipped;
+        # way too slow = likely stuck/humming): 3x stiffer penalties.
+        if ratio < 0.50:
+            integ -= 30.0
+        if ratio > 1.80:
+            integ -= 25.0
+            issues.append("too_long")
+        # Voiced content must cover a reasonable fraction of the segment
+        # (both absolute and relative to duration).
+        if dur >= 1.0 and voiced_ratio < 0.25:
+            integ -= 50.0
+            issues.append("low_voiced_content")
 
         # ---- Sprach-Integrität (keine ASR, aber robust gegen
         # tonale/halbleere Artefakte, die bei altem QC als "gute Stimme"

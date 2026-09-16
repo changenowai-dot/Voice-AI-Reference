@@ -34,6 +34,7 @@ from ..prosody.instruct import detect_emotion
 from ..prosody.pauses import assign_pauses
 from ..prosody.presets import get_preset
 from ..quality import SegmentQC, generate_with_qc
+from ..quality.continuity import ContinuityState
 from ..quality.final_gate import final_qc_gate
 from ..quality.regeneration import AttemptResult
 from ..segmentation import SegmentationConfig, segment_text
@@ -152,9 +153,13 @@ class Pipeline:
 
         # 6) Segmentierung ------------------------------------------------------
         seg_cfg = SegmentationConfig(
-            target_chars=int(adv.get("segment_target_chars", 420)),
-            min_chars=int(adv.get("segment_min_chars", 120)),
-            max_chars=int(adv.get("segment_max_chars", 700)),
+            target_chars=int(adv.get("segment_target_chars", 900)),
+            min_chars=int(adv.get("segment_min_chars", 350)),
+            max_chars=int(adv.get("segment_max_chars", 1500)),
+            close_slack=float(adv.get("segment_close_slack", 0.45)),
+            hard_start_min_chars=int(adv.get("segment_hard_start_min_chars", 200)),
+            respect_paragraph_boundary=not bool(adv.get(
+                "segment_cross_paragraph", False)),
         )
         segments = segment_text(analysis.blocks, tts_text_provider, seg_cfg)
         if not segments:
@@ -231,17 +236,22 @@ class Pipeline:
         done_before = state.done_indices()
 
         # 8) TTS + QC + Regeneration + Cache ------------------------------------
+        n_seg = len(segments)
         qc = SegmentQC(language=language)
         max_attempts = int(adv.get("qc_max_attempts", 3))
         min_score = float(adv.get("qc_min_score", 78))
         qc_enabled = bool(adv.get("qc_enabled", True))
+        # Stricter final-gate threshold for long-form: a barely-passing
+        # segment accumulates into audible degradation across dozens of
+        # segments, so we demand a higher floor than a single-shot test.
+        final_gate_ratio = float(adv.get("final_gate_ratio", 0.88))
+        continuity = ContinuityState() if n_seg > 1 else None
 
         segment_audio: list = []
         reused = 0
         regenerated = 0
         failed_segments = 0
         scores: list[float] = []
-        n_seg = len(segments)
 
         for pos, seg in enumerate(segments):
             if (self.progress is not None
@@ -403,7 +413,7 @@ class Pipeline:
                 gate = final_qc_gate(wav, sr, seg.text, qc,
                                      context=f"split-fallback seg{seg.index}",
                                      german_meta=german_meta,
-                                     min_score=min_score * 0.75)
+                                     min_score=min_score * final_gate_ratio)
                 if not gate.passed:
                     failed_segments += 1
                     failure_reason = (f"Split-Fallback im Final-Gate blockiert: "
@@ -433,7 +443,7 @@ class Pipeline:
                                      seg.text, qc,
                                      context=f"segment {seg.index}",
                                      german_meta=german_meta,
-                                     min_score=min_score * 0.75)
+                                     min_score=min_score * final_gate_ratio)
                 if not gate.passed:
                     failed_segments += 1
                     failure_reason = f"Final-Gate blockiert: {gate.reason}"
@@ -461,7 +471,28 @@ class Pipeline:
 
             # Segment hat Final-Gate bestanden – Audio übernehmen.
             score_val = float(chosen_score)
-            score_obj_metrics = best.metrics if best is not None and best.metrics else {}
+            # Compute loudness/RMS/F0 for continuity tracker from the
+            # chosen waveform (works for both regular and split-fallback).
+            import numpy as _np
+            _arr = (chosen_wave if isinstance(chosen_wave, _np.ndarray)
+                    else chosen_wave.cpu().numpy())
+            _arr = _arr.reshape(-1).astype("float32")
+            _metrics_for_cont = dict(score_obj_metrics) if best is not None else {}
+            if "rms" not in _metrics_for_cont:
+                _metrics_for_cont["rms"] = float(_np.sqrt(_np.mean(_arr.astype("float32")**2)))
+            if "duration_s" not in _metrics_for_cont:
+                _metrics_for_cont["duration_s"] = float(len(_arr) / max(1, chosen_sr))
+            if continuity is not None:
+                drift, dflags = continuity.score(_metrics_for_cont)
+                if drift > 30.0:
+                    plog(f"SEG {seg.index:04d} continuity drift={drift:.0f} "
+                         f"flags={','.join(dflags)}")
+                # Feed forward: even if first segment has no history we
+                # seed the tracker; subsequent segments benefit.
+                continuity.observe(_metrics_for_cont)
+
+            score_obj_metrics = (best.metrics if best is not None and best.metrics
+                                 else _metrics_for_cont)
             self.cache.put(key, chosen_wave, chosen_sr, {
                 "ok": True, "score": score_val,
                 "german_score": (best.german_score if best is not None else None),
