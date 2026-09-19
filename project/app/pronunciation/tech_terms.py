@@ -64,9 +64,21 @@ TECH_TERMS_DE: dict[str, str] = {
     "Phänomene": "Fä-NO-me-ne",
     "Phänomenologie": "Fä-no-me-no-LO-gie",
     # --- Philosophie / Geisteswissenschaft ---------------------------------
-    "Philosophie": "Fi-lo-so-FIE",
-    "philosophisch": "fi-lo-SO-fisch",
-    "Philosoph": "Phi-LO-sof",
+    # Deutsche Respellings: PH wird als F ausgesprochen, betonte Silbe in
+    # GROSSBUCHSTABEN, Silbengrenzen durch Bindestrich. Die Formen sind
+    # nah an Duden-Aussprache gewählt (Phi-lo-SOF / fi-lo-zo-FIE), damit
+    # Qwen3-TTS nicht das englische /f aɪ/ ("fie") für „phie" erzeugt.
+    "Philosophie": "fi-lo-zo-FIE",
+    "Philosoph": "FI-lo-sof",
+    "Philosophen": "fi-lo-ZO-fen",
+    "Philosophin": "fi-lo-ZO-fin",
+    "Philosophinnen": "fi-lo-zo-FIN-nen",
+    "philosophisch": "fi-lo-ZO-fisch",
+    "Philosophisch": "Fi-lo-ZO-fisch",
+    "philosophischer": "fi-lo-ZO-fi-scher",
+    "philosophischem": "fi-lo-ZO-fi-schem",
+    "philosophischen": "fi-lo-ZO-fi-schen",
+    "philosophische": "fi-lo-ZO-fi-sche",
     "These": "TEE-se",
     "Thesen": "TEE-sen",
     "Antithese": "AN-ti-tee-se",
@@ -174,8 +186,12 @@ def apply_tech_germanization(text: str, language: str = "German",
     for term in sorted(mapping, key=len, reverse=True):
         if term in _KEEP:
             continue
+        # Case-insensitive boundary match; case of the respelling is
+        # handled by _factory (capitalize at sentence start, else leave
+        # as defined in the dictionary). This ensures lowercase forms
+        # like "philosophisch" mid-sentence are caught too.
         pattern = re.compile(r"(?<![\wÄÖÜäöüß-])" + re.escape(term) +
-                             r"(?![\wÄÖÜäöüß-])")
+                             r"(?![\wÄÖÜäöüß-])", re.IGNORECASE)
         if pattern.search(text):
             text = pattern.sub(_factory(mapping[term], text), text)
 

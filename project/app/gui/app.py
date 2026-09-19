@@ -311,18 +311,29 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
                         "VD-E (nicht veränderbar)")
         _render_section("▎ Custom Voices (eingebaute Qwen-Sprecher)",
                         groups["custom"])
-        _render_section("▎ Production Clone Voices (nach Materialisierung verfügbar)",
+        _render_section("▎ Production Clone Voices",
                         groups["clone"],
-                        "kanonische Referenz: cache/voice_refs/<id>.wav")
+                        "bestätigt oder im Archiv; deaktiviert, falls "
+                        "die kanonische Referenz fehlt "
+                        "(cache/voice_refs/<id>.wav)")
+        if groups.get("candidates"):
+            _render_section(
+                "▎ Weitere Stimmen (Kandidaten / zurückgewiesen)",
+                groups["candidates"],
+                "nicht in den aktiven Produktionsbestand übernommen – "
+                "nur zur Information, nicht auswählbar")
 
     def _add_voice_button(self, parent, row):
         text = row["label"]
-        if row["status"]:
+        if row.get("status"):
             text += f"   ·   {row['status']}"
         btn = ttk.Radiobutton(parent, text=text, value=row["voice_id"],
                               variable=self.voice_var)
         btn.pack(side=LEFT, padx=(0, 18))
-        if row.get("available") is False:
+        # Deaktivieren, wenn nicht auswählbar: fehlende Referenz,
+        # REJECTED/UNASSESSED-Tier oder explicit available=False.
+        selectable = bool(row.get("selectable", row.get("available", True)))
+        if not selectable:
             btn.state(["disabled"])
 
     def _update_outmode_state(self):
