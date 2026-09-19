@@ -22,11 +22,6 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-# -- UTF-8 fuer Umlaute --
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$OutputEncoding = [System.Text.Encoding]::UTF8
-chcp 65001 | Out-Null
-
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $Root
 

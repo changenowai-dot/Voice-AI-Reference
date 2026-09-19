@@ -1,0 +1,32 @@
+There is a question that has haunted historians for centuries: why do civilizations collapse?
+Not with a single explosion, but with a slow, quiet erosion of meaning, trust and memory.
+
+In the summer of 1908, a small anonymous book appeared in Chicago, attributed only to three initiates. It claimed to contain seven principles said to govern everything, from the movement of galaxies to the rhythm of a single breath. For more than a hundred years, it was dismissed as mysticism, unprovable and untouchable.
+Yet today, under the light of physics, neuroscience and systems theory, those seven seals begin to sound uncannily familiar.
+
++++++
+
+In 1914, Europe descended into a war no one had truly anticipated, and by 1939 the historian Arnold Toynbee noted that roughly 3.7 percent of diplomatic correspondence had already described the coming catastrophe. At CERN, near Geneva, researchers led by Dr. Elena Morozov and Prof. James Whitaker measured particles at 12.5 degrees Celsius, confirming what Nietzsche and Descartes had earlier suggested in very different language: that understanding is not merely accumulation, but transformation.
+Consider a simple figure, e.g., the number 1,984, or approx. 2,500 samples, or $3.42, or 42 km/h. What do such numbers mean when spoken aloud, clearly and credibly, over many minutes without monotony?
+The answer matters, because long-form narration fails not in the first ten seconds, but after twenty minutes, when a voice that was once pleasant becomes tiresome, mechanical, or strangely distant.
+
++++++
+
+But then, suddenly, came the insight that changed everything, though nobody had expected it, really nobody.
+Seven laws. Seven rules. A single underlying order.
+
++++++
+
+Dr. Whitaker paused.
+He looked at the data, at the 11,500-year-old pillars of Göbekli Tepe near Şanlıurfa, and at the equations describing entropy, quantum entanglement and the topology of thought.
+He understood, in that quiet moment, that we are not merely observers of reality. We are participants, co-authors of the stories we tell ourselves.
+This is not a thriller, not a trailer, not hype. It is a calm, intelligent, documentary account meant to remain trustworthy, warm and human for an hour, or even two.
+The voice must carry that weight, not by shouting, but by measured clarity, subtle musicality and absolute consistency.
+
+---
+
+Benchmark notes (identical A/B text, four sections via three +++++ marker lines – validates segmentation):
+- Sections: 4 exactly (tested by script_split – validates A/B: no passage lost, none duplicated, order preserved)
+- Markers: exactly 3 lines containing only "+++++" (isolated, verified by is_marker_line)
+- Assembly Modes tested: full | parts | parts_plus_full (FullScript via concat, no re-TTS)
+- Coverage: normal/short/long sentences, commas, varied length, technical terms (CERN, Göbekli Tepe, neuroscience, systems theory, quantum entanglement, entropy, topology), names (Nietzsche, Descartes, Toynbee, Morozov, Whitaker), numbers (3.7 percent, 12.5, 1908, 1914, 1939, 11,500, 1,984, 2,500, $3.42, 42 km/h), years (1908, 1914, 1939), abbreviations (e.g., approx., Dr., Prof.), difficult words (initiates, mysticism, transformation, catastrophe), emphases (calm, credible, sudden), transitions (But then, Yet today, Therefore).

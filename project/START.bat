@@ -1,6 +1,4 @@
 @echo off
-rem -- UTF-8 fuer Umlaute/Emojis --
-chcp 65001 >nul 2>&1
 rem ============================================================
 rem  VoiceOverApp 2.0 - NORMALER START
 rem  Doppelklick = echte Desktop-GUI (Tkinter). Kein Browser,

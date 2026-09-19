@@ -82,7 +82,7 @@ $Vpy = ".venv\Scripts\python.exe"
 $Pip = @("$Vpy", "-m", "pip")
 
 Log "pip aktualisieren ..."
-& $Pip -m pip install --upgrade pip --quiet 2>>$null
+& $Pip install --upgrade pip --quiet 2>>$null
 
 # ------------------------------------------------------- 3) PyTorch/CUDA --
 $needTorch = $true
@@ -118,7 +118,7 @@ Log "PyTorch aktiv: $t"
 
 # --------------------------------------------------- 4) Pakete (app) ----
 Log "Installiere Python-Pakete (qwen-tts, transformers 4.57.3, ...) ..." "Yellow"
-& $Pip -m pip install -r requirements.txt --quiet
+& $Pip install -r requirements.txt --quiet
 if ($LASTEXITCODE -ne 0) {
     Log "Paketinstallation fehlgeschlagen - Details:" "Red"
     & $Pip install -r requirements.txt

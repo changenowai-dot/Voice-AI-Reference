@@ -1,0 +1,28 @@
+VERSION=2.1.0
+DESKTOP_GUI=true
+CLI=true
+PDF_IMPORT=true
+VOICE_COUNT=8
+LANGUAGES=de,en
+NATIVE_LANGUAGE_PRIORITY=true
+GERMAN_VOICES=vd_e*,uncle_fu,dylan;serena,vivian,sohee
+ENGLISH_VOICES=ryan*,aiden,uncle_fu;serena,vivian,sohee
+VD_E_LOCKED=true
+VD_E_SHA256=B156C02A60A873AD95FC92390C4A136C85308B20188373CD734BEE5E5E5F2025
+VD_E_RECOMMENDED=true
+VD_E_DEFAULT=true
+SCRIPT_SPLITTING=optional;marker=+++++(alleinige Zeile);never_time_based
+OUTPUT_MODES=full|parts|parts_plus_full
+FULLSCRIPT_FROM_PARTS=true(no_re_tts)
+DESKTOP_ENTRY=desktop.py
+START_NORMAL=VoiceOverApp.bat
+START_DEV=START.ps1
+START_EXE=dist/VoiceOverApp/VoiceOverApp.exe (build_windows.ps1)
+CLI_EXAMPLE=.venv/Scripts/python.exe app/main.py --headless --files "input.txt"
+WEBSERVER=explicit-only (--webserver); kein Standard, kein Port-8750-Autostart
+BACKEND=VoiceOverAppBackend.exe --job (JSONL stdout) / python app/main.py --job
+CACHE_VERSION=q3p-v2-integrity
+PRODUCTION_SEED=52001
+PATHS=relative (App-Root = Ordner der EXE/BAT)
+FINAL_QC_GATE=true
+IDENTITY_LOCK=true
