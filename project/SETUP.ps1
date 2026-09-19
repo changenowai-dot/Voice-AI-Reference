@@ -1,24 +1,24 @@
 # ============================================================
-#  VoiceOverApp -- SETUP.ps1 (Einmal-Setup / Preflight)
+#  VoiceOverApp -- SETUP.ps1 (one-time setup / preflight)
 #
-#  Prueft und falls noetig installiert:
+#  Checks and (if necessary) installs:
 #    - Python 3.10-3.13
-#    - Virtuelle Umgebung .venv
-#    - PyTorch (CUDA 12.8, Blackwell/RTX 50xx) oder CPU-Fallback
-#    - Python-Pakete (requirements.txt, qwen-tts)
+#    - Virtual environment .venv
+#    - PyTorch (CUDA 12.8 Blackwell/RTX 50xx) or CPU fallback
+#    - Python packages (requirements.txt, qwen-tts)
 #    - FFmpeg
-#    - Qwen3-TTS-Modelle (1.7B Base / CustomVoice / VoiceDesign)
+#    - Qwen3-TTS models (1.7B Base / CustomVoice / VoiceDesign)
+#    - Voice reference WAVs (frozen-backup read-only import + verify)
 #
-#  Kein Port-Start, keine Transkodierung, nur Setup.
-#  Danach: START.bat / START.ps1 / desktop.py
-#  UTF-8, Leerzeichen in Pfaden, beliebiges cwd werden korrekt behandelt.
+#  ASCII-ONLY source. No Unicode literals. PowerShell 5.1 compatible.
+#  After this script: run START.bat / START.ps1 / desktop.py
 # ============================================================
 param(
   [switch]$CpuOnly,
   [switch]$SkipModels
 )
+
 $ErrorActionPreference = "Continue"
-# UTF-8 for console output (ASCII-only source, no Unicode symbols)
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 try { chcp 65001 | Out-Null } catch {}
@@ -28,10 +28,10 @@ Set-Location -LiteralPath $Root
 Write-Host "== VoiceOverApp SETUP -- Preflight ==" -ForegroundColor Cyan
 Write-Host "Root: $Root" -ForegroundColor Gray
 
-# --- 1) Python ---
+# --- 1) Python discovery ---
 function Find-Python {
   if (Test-Path -LiteralPath ".venv\Scripts\python.exe") { return ".venv\Scripts\python.exe" }
-  $cands = @("py -3.12","py -3.11","python3.12","python")
+  $cands = @("py -3.12", "py -3.11", "python3.12", "python3", "python")
   foreach ($c in $cands) {
     try {
       $parts = $c.Split(" ")
@@ -43,82 +43,113 @@ function Find-Python {
       } else {
         $out = & $exe -c "import sys; print(sys.executable)" 2>$null
       }
-      if ($out -and -not $out.Contains("WindowsApps")) { return $c }
+      if ($out -and -not ($out -like "*WindowsApps*")) { return $c }
     } catch {}
   }
   return $null
 }
 $py = Find-Python
-if (-not $py) { Write-Host "Kein Python 3.10-3.13 gefunden -- install.ps1 wird es via winget holen." -ForegroundColor Yellow }
+if (-not $py) {
+  Write-Host "No Python 3.10-3.13 found -- install.ps1 will fetch it via winget." -ForegroundColor Yellow
+}
 
-# Delegate to install.ps1 (handles venv/deps/CUDA/models, logs to logs/install.log)
+# --- 2) Delegate to install.ps1 (venv, deps, CUDA, models; logs to logs/install.log) ---
 $install = Join-Path $Root "install.ps1"
-if (-not (Test-Path -LiteralPath $install)) { Write-Host "install.ps1 fehlt!" -ForegroundColor Red; exit 1 }
-Write-Host "Starte install.ps1 (prueft Python, .venv, deps, CUDA, Modelle)... " -ForegroundColor Cyan
+if (-not (Test-Path -LiteralPath $install)) {
+  Write-Host "install.ps1 is missing!" -ForegroundColor Red
+  exit 1
+}
+Write-Host "Running install.ps1 (Python, .venv, deps, CUDA, models)..." -ForegroundColor Cyan
 $iparams = @()
-if ($CpuOnly) { $iparams += "-CpuOnly" }
-if ($SkipModels) { $iparams += "-SkipModels" }
+if ($CpuOnly)   { $iparams += "-CpuOnly" }
+if ($SkipModels){ $iparams += "-SkipModels" }
 & powershell -NoProfile -ExecutionPolicy Bypass -File $install @iparams
 $code = $LASTEXITCODE
-if ($code -ne 0) { Write-Host "install.ps1 endete mit Code $code -- siehe logs/install.log" -ForegroundColor Red; exit $code }
+if ($code -ne 0) {
+  Write-Host "install.ps1 exited with code $code -- see logs/install.log" -ForegroundColor Red
+  exit $code
+}
 
-# --- 2) Quick checks post-install ---
+# --- 3) Post-install quick checks ---
 $Vpy = Join-Path $Root ".venv\Scripts\python.exe"
 if (Test-Path -LiteralPath $Vpy) {
   Write-Host "Python .venv OK: $Vpy" -ForegroundColor Green
   try {
-    $code1 = 'import sys; print(sys.version.split()[0])'
-    $ver = & $Vpy -c $code1 2>$null
-    Write-Host "  Python $ver" -ForegroundColor Gray
+    $ver = & $Vpy -c "import sys; print(sys.version.split()[0])" 2>$null
+    if ($ver) { Write-Host "  Python $ver" -ForegroundColor Gray }
   } catch {}
   try {
-    $code2 = 'import torch; print(torch.__version__ + " cuda=" + str(torch.cuda.is_available()))'
-    $torch = & $Vpy -c $code2 2>$null
+    $torch = & $Vpy -c "import torch; print(torch.__version__ + ' cuda=' + str(torch.cuda.is_available()))" 2>$null
     if ($torch) { Write-Host "  PyTorch: $torch" -ForegroundColor Gray }
   } catch {}
-} else { Write-Host ".venv fehlt -- Setup unvollstaendig." -ForegroundColor Red }
+} else {
+  Write-Host ".venv is missing -- setup incomplete." -ForegroundColor Red
+}
 
 # CUDA check (optional)
 try {
   nvidia-smi 2>$null | Out-Null
-  if ($LASTEXITCODE -eq 0) { Write-Host "CUDA: nvidia-smi gefunden (GPU vorhanden)" -ForegroundColor Green }
-  else { Write-Host "CUDA: kein nvidia-smi (CPU-Fallback OK)" -ForegroundColor Yellow }
-} catch { Write-Host "CUDA: kein nvidia-smi (CPU-Fallback OK)" -ForegroundColor Yellow }
+  if ($LASTEXITCODE -eq 0) {
+    Write-Host "CUDA: nvidia-smi found (GPU present)" -ForegroundColor Green
+  } else {
+    Write-Host "CUDA: no nvidia-smi (CPU fallback OK)" -ForegroundColor Yellow
+  }
+} catch {
+  Write-Host "CUDA: no nvidia-smi (CPU fallback OK)" -ForegroundColor Yellow
+}
 
-# Models check (expected paths, not in Git)
+# Models check (expected paths; models are NOT in Git, downloaded by install.ps1)
 $modelBase = Join-Path $Root "models\Qwen3-TTS-12Hz-1.7B-Base"
 $modelCV   = Join-Path $Root "models\Qwen3-TTS-12Hz-1.7B-CustomVoice"
 $modelVD   = Join-Path $Root "models\Qwen3-TTS-12Hz-1.7B-VoiceDesign"
-Write-Host "Modelle (erwartet, nicht im Git -- Download via install.ps1):" -ForegroundColor Cyan
-foreach ($m in @($modelBase,$modelCV,$modelVD)) {
-  if (Test-Path -LiteralPath $m) { Write-Host "  OK  $m" -ForegroundColor Green }
-  else { Write-Host "  fehlt (wird bei erstem Start nachgeladen oder manuell): $m" -ForegroundColor Yellow }
-}
-Write-Host "HuggingFace-Cache Alternative: MODELS_DIR/hf/hub/... (vgl. project/app/tts/model_pool.py)" -ForegroundColor Gray
-Write-Host ""
-Write-Host "SETUP abgeschlossen. Starte jetzt:" -ForegroundColor Green
-Write-Host "  .\START.bat        (oder .\START.ps1)" -ForegroundColor White
-Write-Host "  python .\desktop.py" -ForegroundColor White
-Write-Host "Fuer Reproduktion einzelner Stimmen: python .\tools\reproduce_voice.py --help" -ForegroundColor Gray
-
-# --- 3) Voice-Referenzen: frozen-backup Import (read-only) + Verify ----
-Write-Host ""
-Write-Host "== Voice-Referenzen (cache\\voice_refs) ==" -ForegroundColor Cyan
-$ImportScript = Join-Path $Root "tools\\import_voice_refs_from_frozen_backup.ps1"
-if (Test-Path -LiteralPath $ImportScript) {
-  Write-Host "Versuche automatischen Import aus lokalem Frozen Backup (read-only)..." -ForegroundColor Gray
-  & powershell -NoProfile -ExecutionPolicy Bypass -File $ImportScript -WhatIf:$false 2>&1 | ForEach-Object { Write-Host "  $_" }
-  $impCode = $LASTEXITCODE
-  if ($impCode -eq 2) {
-    Write-Host "  (Frozen Backup nicht gefunden – ok, kann spaeter manuell ausgefuehrt werden.)" -ForegroundColor Yellow
-  } elseif ($impCode -eq 3) {
-    Write-Host "  (Frozen Backup ohne voice_refs-Verzeichnis – uebersprungen.)" -ForegroundColor Yellow
+Write-Host "Models (expected, not in Git -- downloaded via install.ps1):" -ForegroundColor Cyan
+foreach ($m in @($modelBase, $modelCV, $modelVD)) {
+  if (Test-Path -LiteralPath $m) {
+    Write-Host "  OK   $m" -ForegroundColor Green
+  } else {
+    Write-Host "  miss (loaded on first start or by manual run): $m" -ForegroundColor Yellow
   }
 }
-$Verify = Join-Path $Root "tools\\verify_voice_refs.py"
-if (Test-Path -LiteralPath $Verify) {
-  $Vpy = Join-Path $Root ".venv\\Scripts\\python.exe"
-  if (-not (Test-Path $Vpy)) { $Vpy = "python" }
-  Write-Host "Pruefe Voice-Referenzen..." -ForegroundColor Gray
-  & $Vpy $Verify 2>&1 | ForEach-Object { Write-Host "  $_" }
+Write-Host "HuggingFace cache alternative: MODELS_DIR/hf/hub/... (see project/app/tts/model_pool.py)" -ForegroundColor Gray
+
+# --- 4) Voice references: frozen-backup read-only import + verify ---
+Write-Host ""
+Write-Host "== Voice references (cache\voice_refs) ==" -ForegroundColor Cyan
+$ImportScript = Join-Path $Root "tools\import_voice_refs_from_frozen_backup.ps1"
+if (Test-Path -LiteralPath $ImportScript) {
+  Write-Host "Trying read-only import from local Frozen Backup..." -ForegroundColor Gray
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $ImportScript 2>&1 | ForEach-Object { Write-Host "  $_" }
+  $impCode = $LASTEXITCODE
+  if ($impCode -eq 0) {
+    Write-Host "  Frozen-backup import: OK." -ForegroundColor Green
+  } elseif ($impCode -eq 2) {
+    Write-Host "  Frozen backup path not found. That is OK on a new machine;" -ForegroundColor Yellow
+    Write-Host "  run import_voice_refs_from_frozen_backup.ps1 manually after placing" -ForegroundColor Yellow
+    Write-Host "  the backup, or use materialize_references.py on the GPU host." -ForegroundColor Yellow
+  } elseif ($impCode -eq 3) {
+    Write-Host "  Frozen backup found but no cache\voice_refs directory inside; skipped." -ForegroundColor Yellow
+  } elseif ($impCode -eq 1) {
+    Write-Host "  Frozen-backup import finished with missing files (see messages above)." -ForegroundColor Yellow
+    Write-Host "  Missing wavs can be materialized via: python tools\materialize_references.py --all-missing" -ForegroundColor Yellow
+  } else {
+    Write-Host "  Frozen-backup import exited with code $impCode (non-fatal)." -ForegroundColor Yellow
+  }
+} else {
+  Write-Host "  import_voice_refs_from_frozen_backup.ps1 not found; skipping." -ForegroundColor Yellow
 }
+
+$Verify = Join-Path $Root "tools\verify_voice_refs.py"
+if (Test-Path -LiteralPath $Verify) {
+  $Vpy2 = Join-Path $Root ".venv\Scripts\python.exe"
+  if (-not (Test-Path -LiteralPath $Vpy2)) { $Vpy2 = "python" }
+  Write-Host "Verifying voice references..." -ForegroundColor Gray
+  & $Vpy2 $Verify 2>&1 | ForEach-Object { Write-Host "  $_" }
+} else {
+  Write-Host "  verify_voice_refs.py not found; skipping." -ForegroundColor Yellow
+}
+
+Write-Host ""
+Write-Host "SETUP complete. Now run:" -ForegroundColor Green
+Write-Host "  .\START.bat        (or .\START.ps1)" -ForegroundColor White
+Write-Host "  python .\desktop.py" -ForegroundColor White
+Write-Host "To reproduce individual voices: python .\tools\reproduce_voice.py --help" -ForegroundColor Gray

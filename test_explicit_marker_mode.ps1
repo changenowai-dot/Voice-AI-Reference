@@ -135,7 +135,7 @@ $TestInputPath = Join-Path $InputDir "ExplicitMarkerTest.txt"
 $TestContent = @"
 Es gab einen Ort in der antiken Welt, der als der Nabel des Universums galt.
 +++++
-Die Pythia, die Hohepriesterin, saß auf einem Dreifuß über einem Erdspalt.
+Die Pythia, die Hohepriesterin, sass auf einem Dreifuss ueber einem Erdspalt.
 +++++
 Die wahre Macht von Delphi lag nicht in der Wahrsagerei. Sie lag in der Reflexion.
 "@
@@ -212,7 +212,7 @@ $GoldenRefValid = $false
 $GoldenRefPath = $null
 $GoldenRefSource = ""
 
-# Priorität 1: VOICEOVER_RUNTIME_REF (explizite Umgebungsvariable)
+# Prioritaet 1: VOICEOVER_RUNTIME_REF (explizite Umgebungsvariable)
 if ($env:VOICEOVER_RUNTIME_REF) {
     if (Test-Path $env:VOICEOVER_RUNTIME_REF) {
         $GoldenRefPath = $env:VOICEOVER_RUNTIME_REF
@@ -240,7 +240,7 @@ if ($env:VOICEOVER_RUNTIME_REF) {
     }
 }
 
-# Priorität 2: Projekt-lokaler Cache
+# Prioritaet 2: Projekt-lokaler Cache
 if (-not $GoldenRefValid) {
     $ProjectLocalRef = Join-Path $ProjectRoot "cache\voice_refs\VD-E.wav"
     if (Test-Path $ProjectLocalRef) {

@@ -1,5 +1,5 @@
 # ============================================================
-#  VoiceOverApp 2.0 - Windows-Packaging (§7/§8/§9)
+#  VoiceOverApp 2.0 - Windows-Packaging (Sec.7/Sec.8/Sec.9)
 #
 #  Baut eine echte Windows-Desktop-Anwendung:
 #     dist\VoiceOverApp\VoiceOverApp.exe         (GUI, Doppelklick)
@@ -51,14 +51,14 @@ if (-not $SkipCopy) {
     }
 }
 
-Write-Host "== VD-E Identity-Lock Voraussetzung pruefen (§11) ==" -ForegroundColor Cyan
+Write-Host "== VD-E Identity-Lock Voraussetzung pruefen (Sec.11) ==" -ForegroundColor Cyan
 $prod = Get-Content .\config\production.json | ConvertFrom-Json
 $ref = Join-Path $Target "cache\voice_refs\VD-E.wav"
 if (Test-Path $ref) {
     $hash = (Get-FileHash $ref -Algorithm SHA256).Hash
     Write-Host ("VD-E SHA256 im Paket: " + $hash)
     if ($hash -ne $prod.reference_sha256) {
-        Write-Host "WARNUNG: Hash weicht ab - App wird VD-E sperren (§24)." -ForegroundColor Yellow
+        Write-Host "WARNUNG: Hash weicht ab - App wird VD-E sperren (Sec.24)." -ForegroundColor Yellow
     } else {
         Write-Host "VD-E Hash OK (Identity-Lock besteht im Paket)." -ForegroundColor Green
     }

@@ -10,7 +10,7 @@
 # USAGE (PowerShell in repository root):
 #
 #   # Default batch: the 9 remaining shortlist voices (EN voice-22..27 then
-#   # DE voice-30/32/33/34) — this phase. Already-done voices (voice-09/12)
+#   # DE voice-30/32/33/34) -- this phase. Already-done voices (voice-09/12)
 #   # are skipped and their outputs are NOT touched.
 #   powershell -ExecutionPolicy Bypass -File project\tools\reproduce_batch.ps1
 #
