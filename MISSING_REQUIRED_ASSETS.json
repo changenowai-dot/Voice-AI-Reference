@@ -1,0 +1,200 @@
+[
+  {
+    "filename": "de_female_clear_natural_01.wav",
+    "expected_path": "project/cache/voice_refs/de_female_clear_natural_01.wav",
+    "voice_id": "de_female_clear_natural_01",
+    "language": "German",
+    "purpose": "clone reference WAV for production voice (new_candidate_german_recovery)",
+    "last_known_source": "Frozen backup C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\TEST Apps\\VoiceOverApp_STAND_A_PHASE2_20260919_061843\\project\\cache\\voice_refs\\ (materialized via VoiceDesign, never committed to git)",
+    "alternate_source": "Can be regenerated on GPU host via python project\\tools\\materialize_references.py --voice-id <id>, using Qwen3-TTS-1.7B-VoiceDesign model (settings.seed/variant in voice JSON)",
+    "runtime_required": true,
+    "one_click_import": "project\\tools\\import_voice_refs_from_frozen_backup.ps1 copies all available refs from Frozen Backup in one shot; missing ones are reported."
+  },
+  {
+    "filename": "de_female_deep_calm_intelligent_01.wav",
+    "expected_path": "project/cache/voice_refs/de_female_deep_calm_intelligent_01.wav",
+    "voice_id": "de_female_deep_calm_intelligent_01",
+    "language": "German",
+    "purpose": "clone reference WAV for production voice (good_archived)",
+    "last_known_source": "Frozen backup C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\TEST Apps\\VoiceOverApp_STAND_A_PHASE2_20260919_061843\\project\\cache\\voice_refs\\ (materialized via VoiceDesign, never committed to git)",
+    "alternate_source": "Can be regenerated on GPU host via python project\\tools\\materialize_references.py --voice-id <id>, using Qwen3-TTS-1.7B-VoiceDesign model (settings.seed/variant in voice JSON)",
+    "runtime_required": true,
+    "one_click_import": "project\\tools\\import_voice_refs_from_frozen_backup.ps1 copies all available refs from Frozen Backup in one shot; missing ones are reported."
+  },
+  {
+    "filename": "de_female_deep_warm_documentary_01.wav",
+    "expected_path": "project/cache/voice_refs/de_female_deep_warm_documentary_01.wav",
+    "voice_id": "de_female_deep_warm_documentary_01",
+    "language": "German",
+    "purpose": "clone reference WAV for production voice (saved_human_shortlist)",
+    "last_known_source": "Frozen backup C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\TEST Apps\\VoiceOverApp_STAND_A_PHASE2_20260919_061843\\project\\cache\\voice_refs\\ (materialized via VoiceDesign, never committed to git)",
+    "alternate_source": "Can be regenerated on GPU host via python project\\tools\\materialize_references.py --voice-id <id>, using Qwen3-TTS-1.7B-VoiceDesign model (settings.seed/variant in voice JSON)",
+    "runtime_required": true,
+    "one_click_import": "project\\tools\\import_voice_refs_from_frozen_backup.ps1 copies all available refs from Frozen Backup in one shot; missing ones are reported."
+  },
+  {
+    "filename": "de_female_warm_empathetic_01.wav",
+    "expected_path": "project/cache/voice_refs/de_female_warm_empathetic_01.wav",
+    "voice_id": "de_female_warm_empathetic_01",
+    "language": "German",
+    "purpose": "clone reference WAV for production voice (new_candidate_german_recovery)",
+    "last_known_source": "Frozen backup C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\TEST Apps\\VoiceOverApp_STAND_A_PHASE2_20260919_061843\\project\\cache\\voice_refs\\ (materialized via VoiceDesign, never committed to git)",
+    "alternate_source": "Can be regenerated on GPU host via python project\\tools\\materialize_references.py --voice-id <id>, using Qwen3-TTS-1.7B-VoiceDesign model (settings.seed/variant in voice JSON)",
+    "runtime_required": true,
+    "one_click_import": "project\\tools\\import_voice_refs_from_frozen_backup.ps1 copies all available refs from Frozen Backup in one shot; missing ones are reported."
+  },
+  {
+    "filename": "de_male_cinematic_restrained_01.wav",
+    "expected_path": "project/cache/voice_refs/de_male_cinematic_restrained_01.wav",
+    "voice_id": "de_male_cinematic_restrained_01",
+    "language": "German",
+    "purpose": "clone reference WAV for production voice (new_candidate_german_recovery)",
+    "last_known_source": "Frozen backup C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\TEST Apps\\VoiceOverApp_STAND_A_PHASE2_20260919_061843\\project\\cache\\voice_refs\\ (materialized via VoiceDesign, never committed to git)",
+    "alternate_source": "Can be regenerated on GPU host via python project\\tools\\materialize_references.py --voice-id <id>, using Qwen3-TTS-1.7B-VoiceDesign model (settings.seed/variant in voice JSON)",
+    "runtime_required": true,
+    "one_click_import": "project\\tools\\import_voice_refs_from_frozen_backup.ps1 copies all available refs from Frozen Backup in one shot; missing ones are reported."
+  },
+  {
+    "filename": "de_male_deep_gravitas_02.wav",
+    "expected_path": "project/cache/voice_refs/de_male_deep_gravitas_02.wav",
+    "voice_id": "de_male_deep_gravitas_02",
+    "language": "German",
+    "purpose": "clone reference WAV for production voice (new_candidate_german_recovery)",
+    "last_known_source": "Frozen backup C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\TEST Apps\\VoiceOverApp_STAND_A_PHASE2_20260919_061843\\project\\cache\\voice_refs\\ (materialized via VoiceDesign, never committed to git)",
+    "alternate_source": "Can be regenerated on GPU host via python project\\tools\\materialize_references.py --voice-id <id>, using Qwen3-TTS-1.7B-VoiceDesign model (settings.seed/variant in voice JSON)",
+    "runtime_required": true,
+    "one_click_import": "project\\tools\\import_voice_refs_from_frozen_backup.ps1 copies all available refs from Frozen Backup in one shot; missing ones are reported."
+  },
+  {
+    "filename": "de_male_deep_natural_conversational_01.wav",
+    "expected_path": "project/cache/voice_refs/de_male_deep_natural_conversational_01.wav",
+    "voice_id": "de_male_deep_natural_conversational_01",
+    "language": "German",
+    "purpose": "clone reference WAV for production voice (saved_human_shortlist)",
+    "last_known_source": "Frozen backup C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\TEST Apps\\VoiceOverApp_STAND_A_PHASE2_20260919_061843\\project\\cache\\voice_refs\\ (materialized via VoiceDesign, never committed to git)",
+    "alternate_source": "Can be regenerated on GPU host via python project\\tools\\materialize_references.py --voice-id <id>, using Qwen3-TTS-1.7B-VoiceDesign model (settings.seed/variant in voice JSON)",
+    "runtime_required": true,
+    "one_click_import": "project\\tools\\import_voice_refs_from_frozen_backup.ps1 copies all available refs from Frozen Backup in one shot; missing ones are reported."
+  },
+  {
+    "filename": "de_male_intellectual_precise_01.wav",
+    "expected_path": "project/cache/voice_refs/de_male_intellectual_precise_01.wav",
+    "voice_id": "de_male_intellectual_precise_01",
+    "language": "German",
+    "purpose": "clone reference WAV for production voice (new_candidate_german_recovery)",
+    "last_known_source": "Frozen backup C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\TEST Apps\\VoiceOverApp_STAND_A_PHASE2_20260919_061843\\project\\cache\\voice_refs\\ (materialized via VoiceDesign, never committed to git)",
+    "alternate_source": "Can be regenerated on GPU host via python project\\tools\\materialize_references.py --voice-id <id>, using Qwen3-TTS-1.7B-VoiceDesign model (settings.seed/variant in voice JSON)",
+    "runtime_required": true,
+    "one_click_import": "project\\tools\\import_voice_refs_from_frozen_backup.ps1 copies all available refs from Frozen Backup in one shot; missing ones are reported."
+  },
+  {
+    "filename": "de_male_natural_storyteller_01.wav",
+    "expected_path": "project/cache/voice_refs/de_male_natural_storyteller_01.wav",
+    "voice_id": "de_male_natural_storyteller_01",
+    "language": "German",
+    "purpose": "clone reference WAV for production voice (new_candidate_german_recovery)",
+    "last_known_source": "Frozen backup C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\TEST Apps\\VoiceOverApp_STAND_A_PHASE2_20260919_061843\\project\\cache\\voice_refs\\ (materialized via VoiceDesign, never committed to git)",
+    "alternate_source": "Can be regenerated on GPU host via python project\\tools\\materialize_references.py --voice-id <id>, using Qwen3-TTS-1.7B-VoiceDesign model (settings.seed/variant in voice JSON)",
+    "runtime_required": true,
+    "one_click_import": "project\\tools\\import_voice_refs_from_frozen_backup.ps1 copies all available refs from Frozen Backup in one shot; missing ones are reported."
+  },
+  {
+    "filename": "de_male_warm_calm_authoritative_02.wav",
+    "expected_path": "project/cache/voice_refs/de_male_warm_calm_authoritative_02.wav",
+    "voice_id": "de_male_warm_calm_authoritative_02",
+    "language": "German",
+    "purpose": "clone reference WAV for production voice (new_candidate_german_recovery)",
+    "last_known_source": "Frozen backup C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\TEST Apps\\VoiceOverApp_STAND_A_PHASE2_20260919_061843\\project\\cache\\voice_refs\\ (materialized via VoiceDesign, never committed to git)",
+    "alternate_source": "Can be regenerated on GPU host via python project\\tools\\materialize_references.py --voice-id <id>, using Qwen3-TTS-1.7B-VoiceDesign model (settings.seed/variant in voice JSON)",
+    "runtime_required": true,
+    "one_click_import": "project\\tools\\import_voice_refs_from_frozen_backup.ps1 copies all available refs from Frozen Backup in one shot; missing ones are reported."
+  },
+  {
+    "filename": "de_male_warm_storytelling_authoritative_01.wav",
+    "expected_path": "project/cache/voice_refs/de_male_warm_storytelling_authoritative_01.wav",
+    "voice_id": "de_male_warm_storytelling_authoritative_01",
+    "language": "German",
+    "purpose": "clone reference WAV for production voice (saved_human_shortlist)",
+    "last_known_source": "Frozen backup C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\TEST Apps\\VoiceOverApp_STAND_A_PHASE2_20260919_061843\\project\\cache\\voice_refs\\ (materialized via VoiceDesign, never committed to git)",
+    "alternate_source": "Can be regenerated on GPU host via python project\\tools\\materialize_references.py --voice-id <id>, using Qwen3-TTS-1.7B-VoiceDesign model (settings.seed/variant in voice JSON)",
+    "runtime_required": true,
+    "one_click_import": "project\\tools\\import_voice_refs_from_frozen_backup.ps1 copies all available refs from Frozen Backup in one shot; missing ones are reported."
+  },
+  {
+    "filename": "en_male_deep_authoritative_scholar_01.wav",
+    "expected_path": "project/cache/voice_refs/en_male_deep_authoritative_scholar_01.wav",
+    "voice_id": "en_male_deep_authoritative_scholar_01",
+    "language": "English",
+    "purpose": "clone reference WAV for production voice (saved_human_shortlist)",
+    "last_known_source": "Frozen backup C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\TEST Apps\\VoiceOverApp_STAND_A_PHASE2_20260919_061843\\project\\cache\\voice_refs\\ (materialized via VoiceDesign, never committed to git)",
+    "alternate_source": "Can be regenerated on GPU host via python project\\tools\\materialize_references.py --voice-id <id>, using Qwen3-TTS-1.7B-VoiceDesign model (settings.seed/variant in voice JSON)",
+    "runtime_required": true,
+    "one_click_import": "project\\tools\\import_voice_refs_from_frozen_backup.ps1 copies all available refs from Frozen Backup in one shot; missing ones are reported."
+  },
+  {
+    "filename": "en_male_deep_clear_insightful_01.wav",
+    "expected_path": "project/cache/voice_refs/en_male_deep_clear_insightful_01.wav",
+    "voice_id": "en_male_deep_clear_insightful_01",
+    "language": "English",
+    "purpose": "clone reference WAV for production voice (saved_human_shortlist)",
+    "last_known_source": "Frozen backup C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\TEST Apps\\VoiceOverApp_STAND_A_PHASE2_20260919_061843\\project\\cache\\voice_refs\\ (materialized via VoiceDesign, never committed to git)",
+    "alternate_source": "Can be regenerated on GPU host via python project\\tools\\materialize_references.py --voice-id <id>, using Qwen3-TTS-1.7B-VoiceDesign model (settings.seed/variant in voice JSON)",
+    "runtime_required": true,
+    "one_click_import": "project\\tools\\import_voice_refs_from_frozen_backup.ps1 copies all available refs from Frozen Backup in one shot; missing ones are reported."
+  },
+  {
+    "filename": "en_male_extremely_natural_deep_conversational_01.wav",
+    "expected_path": "project/cache/voice_refs/en_male_extremely_natural_deep_conversational_01.wav",
+    "voice_id": "en_male_extremely_natural_deep_conversational_01",
+    "language": "English",
+    "purpose": "clone reference WAV for production voice (saved_human_shortlist)",
+    "last_known_source": "Frozen backup C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\TEST Apps\\VoiceOverApp_STAND_A_PHASE2_20260919_061843\\project\\cache\\voice_refs\\ (materialized via VoiceDesign, never committed to git)",
+    "alternate_source": "Can be regenerated on GPU host via python project\\tools\\materialize_references.py --voice-id <id>, using Qwen3-TTS-1.7B-VoiceDesign model (settings.seed/variant in voice JSON)",
+    "runtime_required": true,
+    "one_click_import": "project\\tools\\import_voice_refs_from_frozen_backup.ps1 copies all available refs from Frozen Backup in one shot; missing ones are reported."
+  },
+  {
+    "filename": "en_male_mature_documentary_natural_01.wav",
+    "expected_path": "project/cache/voice_refs/en_male_mature_documentary_natural_01.wav",
+    "voice_id": "en_male_mature_documentary_natural_01",
+    "language": "English",
+    "purpose": "clone reference WAV for production voice (saved_human_shortlist)",
+    "last_known_source": "Frozen backup C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\TEST Apps\\VoiceOverApp_STAND_A_PHASE2_20260919_061843\\project\\cache\\voice_refs\\ (materialized via VoiceDesign, never committed to git)",
+    "alternate_source": "Can be regenerated on GPU host via python project\\tools\\materialize_references.py --voice-id <id>, using Qwen3-TTS-1.7B-VoiceDesign model (settings.seed/variant in voice JSON)",
+    "runtime_required": true,
+    "one_click_import": "project\\tools\\import_voice_refs_from_frozen_backup.ps1 copies all available refs from Frozen Backup in one shot; missing ones are reported."
+  },
+  {
+    "filename": "en_male_velvet_baritone_01.wav",
+    "expected_path": "project/cache/voice_refs/en_male_velvet_baritone_01.wav",
+    "voice_id": "en_male_velvet_baritone_01",
+    "language": "English",
+    "purpose": "clone reference WAV for production voice (locked_human_favorite)",
+    "last_known_source": "Frozen backup C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\TEST Apps\\VoiceOverApp_STAND_A_PHASE2_20260919_061843\\project\\cache\\voice_refs\\ (materialized via VoiceDesign, never committed to git)",
+    "alternate_source": "Can be regenerated on GPU host via python project\\tools\\materialize_references.py --voice-id <id>, using Qwen3-TTS-1.7B-VoiceDesign model (settings.seed/variant in voice JSON)",
+    "runtime_required": true,
+    "one_click_import": "project\\tools\\import_voice_refs_from_frozen_backup.ps1 copies all available refs from Frozen Backup in one shot; missing ones are reported."
+  },
+  {
+    "filename": "en_male_warm_grounded_humanist_01.wav",
+    "expected_path": "project/cache/voice_refs/en_male_warm_grounded_humanist_01.wav",
+    "voice_id": "en_male_warm_grounded_humanist_01",
+    "language": "English",
+    "purpose": "clone reference WAV for production voice (saved_human_shortlist)",
+    "last_known_source": "Frozen backup C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\TEST Apps\\VoiceOverApp_STAND_A_PHASE2_20260919_061843\\project\\cache\\voice_refs\\ (materialized via VoiceDesign, never committed to git)",
+    "alternate_source": "Can be regenerated on GPU host via python project\\tools\\materialize_references.py --voice-id <id>, using Qwen3-TTS-1.7B-VoiceDesign model (settings.seed/variant in voice JSON)",
+    "runtime_required": true,
+    "one_click_import": "project\\tools\\import_voice_refs_from_frozen_backup.ps1 copies all available refs from Frozen Backup in one shot; missing ones are reported."
+  },
+  {
+    "filename": "en_male_warm_storytelling_authoritative_02.wav",
+    "expected_path": "project/cache/voice_refs/en_male_warm_storytelling_authoritative_02.wav",
+    "voice_id": "en_male_warm_storytelling_authoritative_02",
+    "language": "English",
+    "purpose": "clone reference WAV for production voice (locked_human_favorite)",
+    "last_known_source": "Frozen backup C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\TEST Apps\\VoiceOverApp_STAND_A_PHASE2_20260919_061843\\project\\cache\\voice_refs\\ (materialized via VoiceDesign, never committed to git)",
+    "alternate_source": "Can be regenerated on GPU host via python project\\tools\\materialize_references.py --voice-id <id>, using Qwen3-TTS-1.7B-VoiceDesign model (settings.seed/variant in voice JSON)",
+    "runtime_required": true,
+    "one_click_import": "project\\tools\\import_voice_refs_from_frozen_backup.ps1 copies all available refs from Frozen Backup in one shot; missing ones are reported."
+  }
+]

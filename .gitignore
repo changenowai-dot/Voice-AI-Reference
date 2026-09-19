@@ -102,3 +102,9 @@ project/tools/*.exe
 project/reproduction/longform/**/*.wav
 project/reproduction/longform/**/*.mp3
 project/reproduction/longform/**/input_*.txt
+# Runtime materialized voice refs are host-local build products; only VD-E.wav and .gitkeep are tracked.
+project/cache/voice_refs/*.wav
+!project/cache/voice_refs/VD-E.wav
+!project/cache/voice_refs/.gitkeep
+project/cache/voice_refs/*.wav.json
+project/cache/voice_refs/_converted/

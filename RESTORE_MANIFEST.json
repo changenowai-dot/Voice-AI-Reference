@@ -1,73 +1,78 @@
 {
-  "restore_status": "PASS",
+  "restore_status": "INCOMPLETE_AWAITING_HOST_VOICE_REF_IMPORT",
+  "note": "Code, Skripte, Tests, Profile, Golden Reference, Konfigurations- und Modell-Versorgung sind vollständig. Die 18 production-clone Voice-Referenz-WAVs (cache/voice_refs/<id>.wav) existieren nicht in Git, nicht in GitHub Releases/Assets und nicht in der Sandbox; sie müssen EINMALIG vom Nutzer auf dem RTX-5060-Host entweder (a) via import_voice_refs_from_frozen_backup.ps1 aus dem lokalen Frozen Backup kopiert oder (b) via materialize_references.py auf dem GPU-Host neu erzeugt werden. Danach ist der Teil-A-Download vollständig und selbstständig. Voice Draft ist ausgeschlossen.",
+  "voice_draft": "EXCLUDED",
   "branch": "reconstruction/part-a-complete",
-  "base_ref": "origin/arena/01a08d48-voice-ai-reference@0b4d8b5",
   "date_utc": "2026-09-19",
+  "base_ref": "origin/arena/01a08d48-voice-ai-reference@0b4d8b5",
   "union_sources": [
     "origin/arena/01a08d48-voice-ai-reference (primary base)",
-    "fix/headless-engine-hw-parameter@ffb30b9 (additive runners, headless hw fix, RTX-5060 hardening)",
-    "feature/explicit-plus-marker-split-mode@5931bd0 (content equivalent to fix/headless tip)",
+    "fix/headless-engine-hw-parameter@ffb30b9 (RTX-5060 hw fix, PS5.1 quoting, +++++ marker, identity lock, multi-root discovery)",
+    "feature/explicit-plus-marker-split-mode@5931bd0 (same tip)",
     "arena/01a06e55-voice-ai-reference@761d258 (app.cache, delphi pron tests)",
-    "arena/01a082be-voice-ai-reference@8340c5a (PS5.1 quoting, superseded by base)",
-    "agent-ready@e3503c6 (controlled short launcher, superseded by base)",
-    "main@6c6548f (project root, VD-E golden ref)",
+    "arena/01a082be-voice-ai-reference@8340c5a (superseded)",
+    "agent-ready@e3503c6 (superseded)",
+    "main@6c6548f (VD-E golden reference)",
     "tag PHASE4_AUDIO_SAFEPOINT_20260906@d9810c3"
   ],
   "external_sources_checked": {
-    "workspace_archives": "none found (find /home/user for .zip/.7z/.rar/.tar -o -iname *voiceover*)",
-    "github_releases": "none (gh release list empty)",
-    "git_lfs": "not configured (no .gitattributes, no filter=lfs entries)",
-    "git_submodules": "none"
+    "workspace_archives": "none",
+    "github_releases": "none",
+    "git_lfs": "not configured",
+    "git_submodules": "none",
+    "frozen_backup_user_path": "C:\\Users\\johan\\OneDrive\\Desktop\\fertige projekte\\TEST Apps\\VoiceOverApp_STAND_A_PHASE2_20260919_061843 (not reachable from sandbox; read-only import script provided)"
   },
-  "files_consolidated_tracked": 453,
+  "install_entrypoints": {
+    "setup": "SETUP.ps1 (root wrapper) -> project/SETUP.ps1 (Python/venv/pip/torch/models + voice-ref import + verify)",
+    "start": "START.ps1 / START.bat (launches desktop GUI)",
+    "voice_ref_import": "project\\tools\\import_voice_refs_from_frozen_backup.ps1 (read-only, SHA-checked, Golden-Reference protected)",
+    "voice_ref_materialize": "python project\\tools\\materialize_references.py --all-missing (VoiceDesign on GPU host)",
+    "voice_ref_verify": "python project\\tools\\verify_voice_refs.py --strict"
+  },
   "vd_e_golden_reference": {
     "path": "project/VD-E_GOLDEN_REFERENCE/VD-E.wav",
+    "runtime_path": "project/cache/voice_refs/VD-E.wav",
     "sha256": "b156c02a60a873ad95fc92390c4a136c85308b20188373cd734bee5e5e5f2025",
-    "git_object_id": "36122e052a1a82f022ca8749157fee3ee5cfab4f",
-    "identical_across_all_refs": true
+    "protected": true,
+    "status": "PASS"
   },
-  "known_non_repo_assets": {
-    "model_weights": {
-      "present_in_git": false,
-      "provisioning": "install.ps1 / SETUP.ps1 pull Qwen3-TTS-1.7B from HuggingFace into models/; multi-root discovery (R:) supported by headless fix",
-      "required_for_runtime": true
-    },
-    "materialized_voice_ref_wavs": {
-      "present_in_git": false,
-      "provisioning": "project/tools/materialize_references.py and bootstrap_reference_bundles.py; host-local cache/csv source",
-      "required_for_runtime": true
-    }
+  "models": {
+    "present_in_git": false,
+    "expected": [
+      "project/models/Qwen3-TTS-12Hz-1.7B-Base",
+      "project/models/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+      "project/models/Qwen3-TTS-12Hz-1.7B-VoiceDesign"
+    ],
+    "provisioning": "project/install.ps1 downloads via huggingface_hub; multi-root discovery (VOICEOVER_MODELS_DIR / R:\\) supported; offline after first successful download.",
+    "status": "PROVISIONED_BY_SETUP"
   },
-  "offline_tests_in_sandbox": {
-    "python_syntax": "PASS (157 modules, 0 errors)",
-    "pause_strategy_tests": "PASS",
-    "german_pronunciation_tests": "PASS",
-    "gui_voice_group_tests": "PASS",
-    "reference_bundle_tests": "PASS (31/31)",
+  "voice_profiles_total": 50,
+  "voice_profiles_clone": 43,
+  "voice_profiles_customvoice": 7,
+  "voice_reference_wavs_present_in_git": 1,
+  "voice_reference_wavs_required_production_total": 19,
+  "voice_reference_wavs_required_production_present": 1,
+  "voice_reference_wavs_required_production_missing": 18,
+  "voice_reference_wavs_nonproduction_missing": 24,
+  "voice_reference_manifest_present": 0,
+  "missing_required_assets": "siehe MISSING_REQUIRED_ASSETS.json (18 production-clone wavs + sidecar manifests)",
+  "sandbox_tests": {
+    "python_syntax": "PASS (0 errors across all .py)",
+    "pause_strategies": "PASS",
+    "german_pronunciation": "PASS",
+    "gui_voice_groups": "PASS",
+    "reference_bundle": "PASS (31/31)",
     "hardware_api_contract": "PASS",
-    "longform_unbound_regression": "PASS",
-    "split_marker_parts": "PASS",
-    "voice_registry": "50 voices loaded",
-    "gpu_audio_render": "NOT_RUN (no CUDA / no model weights in sandbox)"
+    "voice_registry_loads": 50,
+    "gpu_audio_render": "NOT_RUN (no CUDA / no models / no voice refs in sandbox; requires RTX-5060 host)"
   },
   "final_zip": {
-    "filename": "VoiceOverApp_PART_A_COMPLETE_RECONSTRUCTED_20260919.zip",
-    "path": "dist/VoiceOverApp_PART_A_COMPLETE_RECONSTRUCTED_20260919.zip",
-    "sha256": "eca24c8b4ac2031f24bb890ce41d7fc6a789c6bb9d60e073d7d6f5f84c158d2f",
-    "size_bytes": 31024800,
-    "fresh_package_test": {
-      "extracted_to_empty_dir": "/tmp/voiceover_fresh",
-      "files_extracted": 456,
-      "python_syntax": "PASS (0 errors)",
-      "voice_registry_loads": "PASS (50 voices)",
-      "pause_strategies": "PASS",
-      "german_pronunciation": "PASS",
-      "gui_voice_groups": "PASS",
-      "reference_bundle": "PASS (31/31)",
-      "hardware_api_contract": "PASS",
-      "gpu_audio_render": "NOT_RUN (no CUDA / no model weights in sandbox – must be validated on RTX-5060 host per PART_A_COMPLETE_RESTORE_REPORT.md protocol)"
-    },
-    "sha256_authoritative_sidecar": "dist/SHA256SUMS.txt",
-    "note": "Authoritative ZIP SHA is recorded in dist/SHA256SUMS.txt alongside the zip (avoids chicken-and-egg when updating the manifest inside the archive)."
-  }
+    "filename": "VoiceOverApp_PART_A_COMPLETE_READY_20260919_115337.zip",
+    "path": "dist/VoiceOverApp_PART_A_COMPLETE_READY_20260919_115337.zip",
+    "sha256": "24f71b274ed534b8c20fe3b038b46a06c8052587f66e1a8ff193d4eb5936b1bb",
+    "size_bytes": 28967695,
+    "sha256_sidecar": "dist/SHA256SUMS.txt"
+  },
+  "final_commit": "477aa350cc26de1bcdbd5677b02716d8042b2082",
+  "fresh_package_test_sandbox": "PASS (461 files, 157 py, 0 syntax errors; 50 voices load; pause/pronunciation/gui-groups/reference-bundle/hardware-api all PASS; VD-E golden ref SHA verified)"
 }

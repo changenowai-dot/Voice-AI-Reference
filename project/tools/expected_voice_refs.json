@@ -1,0 +1,495 @@
+[
+  {
+    "voice_id": "aiden",
+    "backend_mode": "customvoice",
+    "native_language": "English",
+    "status": null,
+    "display_name": "Aiden",
+    "customvoice": true,
+    "ref_path": null
+  },
+  {
+    "voice_id": "de_female_clear_natural_01",
+    "backend_mode": "clone",
+    "native_language": "German",
+    "status": "new_candidate_german_recovery",
+    "display_name": "DE Female Clear Natural 01",
+    "ref_path": "cache/voice_refs/de_female_clear_natural_01.wav",
+    "reference_sha256": "ARENA_VOICE-41",
+    "reference_text": "VOICEDESIGN_REF_TEXT_DE"
+  },
+  {
+    "voice_id": "de_female_deep_calm_intelligent_01",
+    "backend_mode": "clone",
+    "native_language": "German",
+    "status": "good_archived",
+    "display_name": "DE Female Deep Calm Intelligent",
+    "ref_path": "cache/voice_refs/de_female_deep_calm_intelligent_01.wav",
+    "reference_sha256": "ARENA_VOICE-34",
+    "reference_text": "VOICEDESIGN_REF_TEXT_DE"
+  },
+  {
+    "voice_id": "de_female_deep_warm_documentary_01",
+    "backend_mode": "clone",
+    "native_language": "German",
+    "status": "saved_human_shortlist",
+    "display_name": "DE Female Deep Warm Documentary",
+    "ref_path": "cache/voice_refs/de_female_deep_warm_documentary_01.wav",
+    "reference_sha256": "ARENA_VOICE-33",
+    "reference_text": "VOICEDESIGN_REF_TEXT_DE"
+  },
+  {
+    "voice_id": "de_female_warm_empathetic_01",
+    "backend_mode": "clone",
+    "native_language": "German",
+    "status": "new_candidate_german_recovery",
+    "display_name": "DE Female Warm Empathetic 01",
+    "ref_path": "cache/voice_refs/de_female_warm_empathetic_01.wav",
+    "reference_sha256": "ARENA_VOICE-40",
+    "reference_text": "VOICEDESIGN_REF_TEXT_DE"
+  },
+  {
+    "voice_id": "de_male_cinematic_restrained_01",
+    "backend_mode": "clone",
+    "native_language": "German",
+    "status": "new_candidate_german_recovery",
+    "display_name": "DE Male Cinematic Restrained 01",
+    "ref_path": "cache/voice_refs/de_male_cinematic_restrained_01.wav",
+    "reference_sha256": "ARENA_VOICE-39",
+    "reference_text": "VOICEDESIGN_REF_TEXT_DE"
+  },
+  {
+    "voice_id": "de_male_dark_documentary_01",
+    "backend_mode": "clone",
+    "native_language": "German",
+    "status": "rejected_human",
+    "display_name": "DE Male Dark Documentary",
+    "ref_path": "cache/voice_refs/de_male_dark_documentary_01.wav",
+    "reference_sha256": "ARENA_VOICE-29",
+    "reference_text": "VOICEDESIGN_REF_TEXT_DE"
+  },
+  {
+    "voice_id": "de_male_deep_academic_01",
+    "backend_mode": "clone",
+    "native_language": "German",
+    "status": "rejected_human",
+    "display_name": "DE Male Deep Academic",
+    "ref_path": "cache/voice_refs/de_male_deep_academic_01.wav",
+    "reference_sha256": "ARENA_VOICE-31",
+    "reference_text": "VOICEDESIGN_REF_TEXT_DE"
+  },
+  {
+    "voice_id": "de_male_deep_gravitas_02",
+    "backend_mode": "clone",
+    "native_language": "German",
+    "status": "new_candidate_german_recovery",
+    "display_name": "DE Male Deep Gravitas 02",
+    "ref_path": "cache/voice_refs/de_male_deep_gravitas_02.wav",
+    "reference_sha256": "ARENA_VOICE-35",
+    "reference_text": "VOICEDESIGN_REF_TEXT_DE"
+  },
+  {
+    "voice_id": "de_male_deep_natural_conversational_01",
+    "backend_mode": "clone",
+    "native_language": "German",
+    "status": "saved_human_shortlist",
+    "display_name": "DE Male Deep Natural Conversational",
+    "ref_path": "cache/voice_refs/de_male_deep_natural_conversational_01.wav",
+    "reference_sha256": "ARENA_VOICE-32",
+    "reference_text": "VOICEDESIGN_REF_TEXT_DE"
+  },
+  {
+    "voice_id": "de_male_intellectual_precise_01",
+    "backend_mode": "clone",
+    "native_language": "German",
+    "status": "new_candidate_german_recovery",
+    "display_name": "DE Male Intellectual Precise 01",
+    "ref_path": "cache/voice_refs/de_male_intellectual_precise_01.wav",
+    "reference_sha256": "ARENA_VOICE-37",
+    "reference_text": "VOICEDESIGN_REF_TEXT_DE"
+  },
+  {
+    "voice_id": "de_male_natural_storyteller_01",
+    "backend_mode": "clone",
+    "native_language": "German",
+    "status": "new_candidate_german_recovery",
+    "display_name": "DE Male Natural Storyteller 01",
+    "ref_path": "cache/voice_refs/de_male_natural_storyteller_01.wav",
+    "reference_sha256": "ARENA_VOICE-38",
+    "reference_text": "VOICEDESIGN_REF_TEXT_DE"
+  },
+  {
+    "voice_id": "de_male_ultra_calm_deep_01",
+    "backend_mode": "clone",
+    "native_language": "German",
+    "status": "rejected_human",
+    "display_name": "DE Male Ultra Calm Deep",
+    "ref_path": "cache/voice_refs/de_male_ultra_calm_deep_01.wav",
+    "reference_sha256": "ARENA_VOICE-28",
+    "reference_text": "VOICEDESIGN_REF_TEXT_DE"
+  },
+  {
+    "voice_id": "de_male_warm_calm_authoritative_02",
+    "backend_mode": "clone",
+    "native_language": "German",
+    "status": "new_candidate_german_recovery",
+    "display_name": "DE Male Warm Calm Authoritative 02",
+    "ref_path": "cache/voice_refs/de_male_warm_calm_authoritative_02.wav",
+    "reference_sha256": "ARENA_VOICE-36",
+    "reference_text": "VOICEDESIGN_REF_TEXT_DE"
+  },
+  {
+    "voice_id": "de_male_warm_storytelling_authoritative_01",
+    "backend_mode": "clone",
+    "native_language": "German",
+    "status": "saved_human_shortlist",
+    "display_name": "DE Male Warm Storytelling Authority",
+    "ref_path": "cache/voice_refs/de_male_warm_storytelling_authoritative_01.wav",
+    "reference_sha256": "ARENA_VOICE-30",
+    "reference_text": "VOICEDESIGN_REF_TEXT_DE"
+  },
+  {
+    "voice_id": "dylan",
+    "backend_mode": "customvoice",
+    "native_language": "Chinese (Beijing)",
+    "status": null,
+    "display_name": "Dylan",
+    "customvoice": true,
+    "ref_path": null
+  },
+  {
+    "voice_id": "en_female_calm_01",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "test_voice",
+    "display_name": "EN Female Calm 01",
+    "ref_path": "cache/voice_refs/en_female_calm_01.wav",
+    "reference_sha256": "927FE003818AA625DD70A73A4D11E0A2422BE04E86052EC1B542205DFA23BBE0",
+    "reference_text": "VOICEDESIGN_REF_TEXT_EN"
+  },
+  {
+    "voice_id": "en_female_calm_02",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "test_voice",
+    "display_name": "EN Female Calm 02",
+    "ref_path": "cache/voice_refs/en_female_calm_02.wav",
+    "reference_sha256": "88F4E5DD1BAA412764059273FA232F4AB1A2057D918C1F135093ABC181BF8366",
+    "reference_text": "VOICEDESIGN_REF_TEXT_EN"
+  },
+  {
+    "voice_id": "en_male_calm_deep_01",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "test_voice",
+    "display_name": "EN Male Calm Deep 01",
+    "ref_path": "cache/voice_refs/en_male_calm_deep_01.wav",
+    "reference_sha256": "PLACEHOLDER_EN_MALE_CALM_DEEP_01",
+    "reference_text": null
+  },
+  {
+    "voice_id": "en_male_cinematic_documentary_01",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "test_voice_premium_10",
+    "display_name": "EN Male Cinematic Documentary 01",
+    "ref_path": "cache/voice_refs/en_male_cinematic_documentary_01.wav",
+    "reference_sha256": "ARENA_VOICE-15",
+    "reference_text": "VOICEDESIGN_REF_TEXT_EN"
+  },
+  {
+    "voice_id": "en_male_commanding_restrained_01",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "test_voice_premium_10",
+    "display_name": "EN Male Commanding Restrained 01",
+    "ref_path": "cache/voice_refs/en_male_commanding_restrained_01.wav",
+    "reference_sha256": "ARENA_VOICE-14",
+    "reference_text": "VOICEDESIGN_REF_TEXT_EN"
+  },
+  {
+    "voice_id": "en_male_dark_documentary_01",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "test_voice_premium_10",
+    "display_name": "EN Male Dark Documentary 01",
+    "ref_path": "cache/voice_refs/en_male_dark_documentary_01.wav",
+    "reference_sha256": "ARENA_VOICE-07",
+    "reference_text": "VOICEDESIGN_REF_TEXT_EN"
+  },
+  {
+    "voice_id": "en_male_dark_intellectual_investigative_01",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "rejected_human",
+    "display_name": "EN Male Dark Intellectual Investigative",
+    "ref_path": "cache/voice_refs/en_male_dark_intellectual_investigative_01.wav",
+    "reference_sha256": "ARENA_VOICE-20",
+    "reference_text": "VOICEDESIGN_REF_TEXT_EN"
+  },
+  {
+    "voice_id": "en_male_deep_01",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "test_voice",
+    "display_name": "EN Male Deep 01",
+    "ref_path": "cache/voice_refs/en_male_deep_01.wav",
+    "reference_sha256": "08BA9D2A4BBFB89ECF62A92B28BFED78E84507C1A7750A890785D675A0D2F30E",
+    "reference_text": null
+  },
+  {
+    "voice_id": "en_male_deep_02",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "test_voice",
+    "display_name": "EN Male Deep 02",
+    "ref_path": "cache/voice_refs/en_male_deep_02.wav",
+    "reference_sha256": "5E86E61E58C0CCEDAF94BECB47D482925EEF77B00EBEB0B917248FF4E21B3B34",
+    "reference_text": "VOICEDESIGN_REF_TEXT_EN"
+  },
+  {
+    "voice_id": "en_male_deep_academic_01",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "test_voice_premium_10",
+    "display_name": "EN Male Deep Academic 01",
+    "ref_path": "cache/voice_refs/en_male_deep_academic_01.wav",
+    "reference_sha256": "ARENA_VOICE-10",
+    "reference_text": "VOICEDESIGN_REF_TEXT_EN"
+  },
+  {
+    "voice_id": "en_male_deep_authoritative_scholar_01",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "saved_human_shortlist",
+    "display_name": "EN Male Deep Authoritative Scholar",
+    "ref_path": "cache/voice_refs/en_male_deep_authoritative_scholar_01.wav",
+    "reference_sha256": "ARENA_VOICE-22",
+    "reference_text": "VOICEDESIGN_REF_TEXT_EN"
+  },
+  {
+    "voice_id": "en_male_deep_cinematic_restrained_01",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "rejected_human",
+    "display_name": "EN Male Deep Cinematic Restrained",
+    "ref_path": "cache/voice_refs/en_male_deep_cinematic_restrained_01.wav",
+    "reference_sha256": "ARENA_VOICE-26",
+    "reference_text": "VOICEDESIGN_REF_TEXT_EN"
+  },
+  {
+    "voice_id": "en_male_deep_clear_insightful_01",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "saved_human_shortlist",
+    "display_name": "EN Male Deep Clear Insightful",
+    "ref_path": "cache/voice_refs/en_male_deep_clear_insightful_01.wav",
+    "reference_sha256": "ARENA_VOICE-24",
+    "reference_text": "VOICEDESIGN_REF_TEXT_EN"
+  },
+  {
+    "voice_id": "en_male_deep_conversational_01",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "test_voice_premium_10",
+    "display_name": "EN Male Deep Conversational 01",
+    "ref_path": "cache/voice_refs/en_male_deep_conversational_01.wav",
+    "reference_sha256": "ARENA_VOICE-13",
+    "reference_text": "VOICEDESIGN_REF_TEXT_EN"
+  },
+  {
+    "voice_id": "en_male_deep_warm_conversational_02",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "rejected_human",
+    "display_name": "EN Male Deep Warm Conversational Storyteller",
+    "ref_path": "cache/voice_refs/en_male_deep_warm_conversational_02.wav",
+    "reference_sha256": "ARENA_VOICE-19",
+    "reference_text": "VOICEDESIGN_REF_TEXT_EN"
+  },
+  {
+    "voice_id": "en_male_deep_warm_human_01",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "test_voice_premium_10",
+    "display_name": "EN Male Deep Warm Human",
+    "ref_path": "cache/voice_refs/en_male_deep_warm_human_01.wav",
+    "reference_sha256": "ARENA_VOICE-17",
+    "reference_text": "VOICEDESIGN_REF_TEXT_EN"
+  },
+  {
+    "voice_id": "en_male_extremely_natural_deep_conversational_01",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "saved_human_shortlist",
+    "display_name": "EN Male Extremely Natural Deep Conversationalist",
+    "ref_path": "cache/voice_refs/en_male_extremely_natural_deep_conversational_01.wav",
+    "reference_sha256": "ARENA_VOICE-27",
+    "reference_text": "VOICEDESIGN_REF_TEXT_EN"
+  },
+  {
+    "voice_id": "en_male_investigative_mystery_01",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "test_voice_premium_10",
+    "display_name": "EN Male Investigative Mystery 01",
+    "ref_path": "cache/voice_refs/en_male_investigative_mystery_01.wav",
+    "reference_sha256": "ARENA_VOICE-11",
+    "reference_text": "VOICEDESIGN_REF_TEXT_EN"
+  },
+  {
+    "voice_id": "en_male_mature_documentary_natural_01",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "saved_human_shortlist",
+    "display_name": "EN Male Mature Documentary Natural",
+    "ref_path": "cache/voice_refs/en_male_mature_documentary_natural_01.wav",
+    "reference_sha256": "ARENA_VOICE-23",
+    "reference_text": "VOICEDESIGN_REF_TEXT_EN"
+  },
+  {
+    "voice_id": "en_male_rich_velvet_baritone_02",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "rejected_human",
+    "display_name": "EN Male Rich Velvet Baritone Smooth",
+    "ref_path": "cache/voice_refs/en_male_rich_velvet_baritone_02.wav",
+    "reference_sha256": "ARENA_VOICE-21",
+    "reference_text": "VOICEDESIGN_REF_TEXT_EN"
+  },
+  {
+    "voice_id": "en_male_ultra_calm_deep_01",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "test_voice_premium_10",
+    "display_name": "EN Male Ultra Calm Deep 01",
+    "ref_path": "cache/voice_refs/en_male_ultra_calm_deep_01.wav",
+    "reference_sha256": "ARENA_VOICE-06",
+    "reference_text": "VOICEDESIGN_REF_TEXT_EN"
+  },
+  {
+    "voice_id": "en_male_ultra_deep_calm_02",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "test_voice_premium_10",
+    "display_name": "EN Male Ultra Deep Calm",
+    "ref_path": "cache/voice_refs/en_male_ultra_deep_calm_02.wav",
+    "reference_sha256": "ARENA_VOICE-16",
+    "reference_text": "VOICEDESIGN_REF_TEXT_EN"
+  },
+  {
+    "voice_id": "en_male_ultra_deep_calm_resonant_01",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "rejected_human",
+    "display_name": "EN Male Ultra Deep Calm Resonant",
+    "ref_path": "cache/voice_refs/en_male_ultra_deep_calm_resonant_01.wav",
+    "reference_sha256": "ARENA_VOICE-18",
+    "reference_text": "VOICEDESIGN_REF_TEXT_EN"
+  },
+  {
+    "voice_id": "en_male_velvet_baritone_01",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "locked_human_favorite",
+    "display_name": "EN Male Velvet Baritone 01",
+    "ref_path": "cache/voice_refs/en_male_velvet_baritone_01.wav",
+    "reference_sha256": "ARENA_VOICE-12",
+    "reference_text": "VOICEDESIGN_REF_TEXT_EN"
+  },
+  {
+    "voice_id": "en_male_warm_grounded_humanist_01",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "saved_human_shortlist",
+    "display_name": "EN Male Warm Grounded Humanist",
+    "ref_path": "cache/voice_refs/en_male_warm_grounded_humanist_01.wav",
+    "reference_sha256": "ARENA_VOICE-25",
+    "reference_text": "VOICEDESIGN_REF_TEXT_EN"
+  },
+  {
+    "voice_id": "en_male_warm_storyteller_01",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "test_voice_premium_10",
+    "display_name": "EN Male Warm Storyteller 01",
+    "ref_path": "cache/voice_refs/en_male_warm_storyteller_01.wav",
+    "reference_sha256": "ARENA_VOICE-08",
+    "reference_text": "VOICEDESIGN_REF_TEXT_EN"
+  },
+  {
+    "voice_id": "en_male_warm_storytelling_authoritative_01",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "test_voice",
+    "display_name": "EN Male Warm Storytelling Authoritative 01",
+    "ref_path": "cache/voice_refs/en_male_warm_storytelling_authoritative_01.wav",
+    "reference_sha256": "PLACEHOLDER_EN_MALE_WARM_STORY_01",
+    "reference_text": null
+  },
+  {
+    "voice_id": "en_male_warm_storytelling_authoritative_02",
+    "backend_mode": "clone",
+    "native_language": "English",
+    "status": "locked_human_favorite",
+    "display_name": "EN Male Warm Storytelling Authoritative 02",
+    "ref_path": "cache/voice_refs/en_male_warm_storytelling_authoritative_02.wav",
+    "reference_sha256": null,
+    "reference_text": "VOICEDESIGN_REF_TEXT_EN"
+  },
+  {
+    "voice_id": "ryan",
+    "backend_mode": "customvoice",
+    "native_language": "English",
+    "status": null,
+    "display_name": "Ryan",
+    "customvoice": true,
+    "ref_path": null
+  },
+  {
+    "voice_id": "serena",
+    "backend_mode": "customvoice",
+    "native_language": "Chinese",
+    "status": null,
+    "display_name": "Serena",
+    "customvoice": true,
+    "ref_path": null
+  },
+  {
+    "voice_id": "sohee",
+    "backend_mode": "customvoice",
+    "native_language": "Korean",
+    "status": null,
+    "display_name": "Sohee",
+    "customvoice": true,
+    "ref_path": null
+  },
+  {
+    "voice_id": "uncle_fu",
+    "backend_mode": "customvoice",
+    "native_language": "Chinese",
+    "status": null,
+    "display_name": "Uncle_Fu",
+    "customvoice": true,
+    "ref_path": null
+  },
+  {
+    "voice_id": "vd_e",
+    "backend_mode": "clone",
+    "native_language": "German (Produktion)",
+    "status": null,
+    "display_name": "VD-E",
+    "ref_path": "cache/voice_refs/VD-E.wav",
+    "reference_sha256": null,
+    "reference_text": "VOICEDESIGN_REF_TEXT_DE"
+  },
+  {
+    "voice_id": "vivian",
+    "backend_mode": "customvoice",
+    "native_language": "Chinese",
+    "status": null,
+    "display_name": "Vivian",
+    "customvoice": true,
+    "ref_path": null
+  }
+]

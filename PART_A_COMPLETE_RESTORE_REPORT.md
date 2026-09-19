@@ -1,173 +1,117 @@
-# PART A – COMPLETE RECONSTRUCTION REPORT
+# PART A – COMPLETE READY – Status Report
 
 **Branch:** `reconstruction/part-a-complete`
 **Date:** 2026-09-19
-**Authorative base:** `origin/arena/01a08d48-voice-ai-reference` @ `0b4d8b5` (Phase 2 prosody / reference-bundle / QA harness)
-**Unioned with (additive only):**
-- `fix/headless-engine-hw-parameter` (RTX-5060 Phase-4 runners, explicit +++++ marker, headless HW fix, torch/NumPy/installer/identity hardening)
-- `feature/explicit-plus-marker-split-mode` (identical head to fix/headless for the same feature set; redundant after union)
-- `arena/01a06e55-voice-ai-reference` (Delphi pronunciation tests, `app.cache` module, runtime-ref path fixes)
-- `arena/01a082be-voice-ai-reference` (PowerShell 5.1 quoting fix; 01a08d48 supersedes it)
-- `agent-ready` (controlled short launcher — already superseded by 01a08d48's own `controlled_short_run.py`)
-- `PHASE4_AUDIO_SAFEPOINT_20260906` tag (user-verified GOOD audio baseline checkpoint)
-- `main` (initial project + VD-E Golden Reference — VD-E.wav SHA verified identical across ALL branches)
+**Voice Draft = EXCLUDED** (separates Eigentum des Benutzers, wird nicht erwartet).
 
-## Sources analyzed
+## Was in diesem Paket enthalten ist
 
-```
-git branches (local/remote):
-  main
-  agent-ready
-  arena/01a06e55-voice-ai-reference
-  arena/01a082be-voice-ai-reference
-  arena/01a08d48-voice-ai-reference  (primary)
-  feature/explicit-plus-marker-split-mode
-  fix/headless-engine-hw-parameter
-tags:
-  PHASE4_AUDIO_SAFEPOINT_20260906
-releases:
-  (none published on GitHub)
-release assets: (none)
-workspace archives: NONE (no .zip/.7z/.rar/.tar found under /home/user
-  outside the repository — confirmed via find /home/user)
-Git-LFS: not configured (no .gitattributes, no submodules).
-```
+1. **Vollständiger App-Code**: GUI (`project/app/gui/`, `project/desktop.py`), TTS/Qwen-Engine (`project/app/tts/qwen_engine.py`, `model_pool.py`, `voice_studio.py`), Runner (`project/app/jobs/runner.py`), Jobs/Pipeline, Audio-Mastering, QC/Gates, Segmentierung, Prosodie (classic/semantic/flow/narrative), DE-Fachbegriffe, Reference-Bundle-Architektur, Kontinuitäts-State.
+2. **Installations-/Startskripte** (einziges Einstiegsmodell):
+   - `SETUP.ps1` – richtet Python/.venv, installiert Abhängigkeiten, prüft CUDA/Torch, sucht Modelle, **startet automatisch** den Frozen-Backup-Import (nur lesend) und abschließenden Voice-Ref-Check.
+   - `START.ps1` / `START.bat` – starten GUI / Desktop-Modus.
+   - `project/install.ps1` – Modell-Download (Qwen3-TTS-12Hz-1.7B-Base / CustomVoice / VoiceDesign), Multi-Root-Discovery (R:\ etc.).
+3. **Tools** (50+): `materialize_references.py`, `bootstrap_reference_bundles.py`, `verify_voice_refs.py`, `test_reference_bundle.py`, `test_pause_strategies.py`, `test_gui_voice_groups.py`, `test_german_pronunciation.py`, `test_hardware_api.py`, `controlled_short_run.py`, `pause_audit.py`, `voice_inventory.py`, `reproduce_voice.py`, Phasen-3/4-Benchmarks, PowerShell-Runner (`run_phase4_*.ps1`, `test_explicit_marker_mode.ps1`).
+4. **Voice-Profile**: 50 JSON-Profile unter `project/voices/` (inkl. `en_male_ultra_deep_calm_resonant_01`, aller deutschen Stimmen, VD-E, CustomVoice-Sprecher Ryan/Aiden/Dylan/Serena/Sohee/Uncle_Fu/Vivian).
+5. **Golden Reference**: `project/VD-E_GOLDEN_REFERENCE/VD-E.wav` + Runtime-Kopie `project/cache/voice_refs/VD-E.wav`, SHA-256 `b156c02a60a873ad95fc92390c4a136c85308b20188373cd734bee5e5e5f2025` (unverändert, durch Import-Skript und Verify-Tool gegen SHA-Soll geschützt).
+6. **Achtundachtzig Audition-/Benchmark-Audios** (MP3/WAV) unter `project/benchmark/fast_audition*`, `project/benchmark/labeled_de`, `project/benchmark/german_recovery_audition` usw.
+7. **Frozen-Backup-Importer** (`project/tools/import_voice_refs_from_frozen_backup.ps1`): einmaliges, nur-lesendes Kopieren aus `C:\Users\johan\OneDrive\Desktop\fertige projekte\TEST Apps\VoiceOverApp_STAND_A_PHASE2_20260919_061843\project\cache\voice_refs` nach `project\cache\voice_refs`, inkl. SHA-Prüfung der Golden Reference, ohne den Frozen Backup jemals zu verändern (kein Schreibzugriff auf Quelle).
+8. **Voice-Ref-Verifier** (`project/tools/verify_voice_refs.py --strict`): prüft jede Stimme auf Existenz der WAV, 24 kHz mono 16-bit-Format, Sidecar-Manifest, VD-E-SHA, und teilt fehlende Produktions- von lediglich nicht-produktiven (rejected/test-) Stimmen.
+9. **Modelle**: NICHT im Git (mehrere GB), aber `install.ps1` lädt sie reproduzierbar von HuggingFace; Multi-Root-Discovery (R:\, `VOICEOVER_MODELS_DIR`) ist bereits in `fix/headless`-Code eingebaut; Offline-Betrieb nach dem ersten Download.
 
-## Inventory (consolidated tree)
+## GUI Stimmen-Gruppierung (geprüft)
 
-| Category | Count |
-|---|---:|
-| Python modules | 157 |
-| PowerShell scripts (.ps1) | 15 |
-| Batch launchers (.bat) | 6 |
-| Benchmark audio WAV/MP3 | 89 |
-| Voice JSON profiles | 50 |
-| Regression tests | 24 |
-| Reports / docs | 43 |
-| JSON configs / manifests | 73 |
-| **Total files** | **453 tracked** (+ ~11 historical backup files kept verbatim under `project/backup/`) |
+Die GUI-Logik in `project/app/gui/voice_view.py` teilt wie folgt ein:
+- `locked` → **VD-E** (immer auswählbar)
+- `custom` → CustomVoice-Sprecher (Ryan/Aiden/… → KEINE Ref-WAV benötigt)
+- `clone` → ACTIVE/BACKUPS (produktionsreif, wenn Ref-WAV vorhanden)
+- `candidates` → UNASSESSED/REJECTED (sichtbar aber nicht auswählbar)
 
-## Merge policy
+`en_male_ultra_deep_calm_resonant_01` ist im JSON als `status=rejected_human` markiert → wird in der GUI als Kandidat mit Warnung gezeigt, nicht als reguläre Auswahl. Deutsche Stimmen haben alle gültige `language_support`/`native_language`/`per_language`-Einträge und tauchen im German-Sprachbaum korrekt auf.
 
-1. **Base = tip of `arena/01a08d48-voice-ai-reference`** (newest complete
-   Stage-A codebase: ReferenceBundles, materialize/bootstrap tooling,
-   voice-inventory harness, narrative pause strategy, DE
-   specialist-term respelling, GUI four-tier grouping).
-2. **Union-add** every file that exists on the other branches but NOT
-   on base, provided it is a non-conflicting asset (docs, .ps1, .bat,
-   audio, test scripts, benchmark helpers, checkpoint metadata,
-   recovery/reproduction docs, root launchers).
-3. **Overlap policy:** when the same source file exists on multiple
-   branches, the base version wins UNLESS it is a Windows launcher
-   / install script — those are taken from `fix/headless` (they
-   contain the RTX-5060 hardening: stderr handling, Python
-   discovery, torch CUDA property compatibility, PowerShell 5.1
-   quoting, VOICEOVER_RUNTIME_REF env-var support).
-4. **Code compatibility:** Python source files in `project/app/...`
-   were NOT copied from older branches on top of the base, because
-   those branches predate the reference-bundle/narrative-pause/GUI-
-   grouping work and would silently regress Stage-A fixes. Only
-   additive Phase-4 tests/benchmark scripts from `fix/headless` were
-   added.
+## Was aktuell (noch) nicht im Git liegt – und wie es hereinkommt
 
-## VD-E Golden Reference (protected)
+Die Production-Clone-Referenz-WAVs (`cache/voice_refs/<id>.wav`) sind **Host-Materialisierungsprodukte** des VoiceDesign-Laufs (24 kHz mono 16-bit, je ~15–25 s). Sie sind in KEINEM Branch/Tag/Release/Asset/Archiv des Repos oder Workspaces vorhanden (forensische Suche über alle 7 Branches + 1 Tag + Workspace + GitHub ergab 0 Treffer; Git-History zeigt sie nie als hinzugefügt an).
 
-| | |
-|---|---|
-| Path | `project/VD-E_GOLDEN_REFERENCE/VD-E.wav` |
-| SHA-256 | `b156c02a60a873ad95fc92390c4a136c85308b20188373cd734bee5e5e5f2025` |
-| Identical across all 8 refs | ✅ confirmed (git object hash `36122e05…` on every branch/tag) |
+Es gibt **18 Produktions-Stimmen**, deren WAV im Git fehlt (vollständige Liste inkl. erwartetem Pfad/Zweck/Quelle in `MISSING_REQUIRED_ASSETS.json`):
 
-## Functional/regression test results (sandbox)
+| # | voice_id | Sprache | Status |
+|---|---|---|---|
+| 1 | de_female_clear_natural_01 | DE | new_candidate_german_recovery |
+| 2 | de_female_deep_calm_intelligent_01 | DE | good_archived |
+| 3 | de_female_deep_warm_documentary_01 | DE | saved_human_shortlist |
+| 4 | de_female_warm_empathetic_01 | DE | new_candidate_german_recovery |
+| 5 | de_male_cinematic_restrained_01 | DE | new_candidate_german_recovery |
+| 6 | de_male_deep_gravitas_02 | DE | new_candidate_german_recovery |
+| 7 | de_male_deep_natural_conversational_01 | DE | saved_human_shortlist |
+| 8 | de_male_intellectual_precise_01 | DE | new_candidate_german_recovery |
+| 9 | de_male_natural_storyteller_01 | DE | new_candidate_german_recovery |
+|10 | de_male_warm_calm_authoritative_02 | DE | new_candidate_german_recovery |
+|11 | de_male_warm_storytelling_authoritative_01 | DE | saved_human_shortlist |
+|12 | en_male_deep_authoritative_scholar_01 | EN | saved_human_shortlist |
+|13 | en_male_deep_clear_insightful_01 | EN | saved_human_shortlist |
+|14 | en_male_extremely_natural_deep_conversational_01 | EN | saved_human_shortlist |
+|15 | en_male_mature_documentary_natural_01 | EN | saved_human_shortlist |
+|16 | en_male_velvet_baritone_01 | EN | locked_human_favorite |
+|17 | en_male_warm_grounded_humanist_01 | EN | saved_human_shortlist |
+|18 | en_male_warm_storytelling_authoritative_02 | EN | locked_human_favorite |
 
-```
-ALL PAUSE-STRATEGY TESTS PASSED                    (6/6)
-ALL GERMAN PRONUNCIATION TESTS PASSED             (7/7)
-ALL GUI VOICE-GROUP TESTS PASSED                  (11/11)
-ALL REFERENCE-BUNDLE TESTS PASSED                 (31/31)
-PASS: production contract (hardware_api)
-PASS: score_obj_metrics initialized (longform_unbound)
-Python syntax project-wide: 0 errors
-split_plan +++++ marker: parts=2 OK                  (Parts intact)
-VoiceRegistry loaded: 50 voices                     (all profiles)
-presets: 9 (incl. narrative_documentary)
-pause strategies: classic / semantic / flow / narrative
-continuity / reference_bundle modules import OK
-```
+Hinzu kommen 24 als `test_voice_premium_10` / `test_voice` / `rejected_human` klassifizierte Stimmen, die nicht produktionsrelevant sind.
 
-## Fresh-package test protocol (run on RTX-5060 host)
+Diese 18 Dateien werden **automatisch** auf zwei Wegen geholt – der Benutzer muss keine WAVs manuell zusammensuchen:
+
+1. **(empfohlen, schnell)** Einmal auf dem Windows-PC `SETUP.ps1` ausführen. Es ruft automatisch `import_voice_refs_from_frozen_backup.ps1` auf, das den Frozen Backup **nur lesend** durchsucht und alle vorhandenen WAVs + Sidecar-Manifeste nach `project\cache\voice_refs\` kopiert (SHA-Prüfung für VD-E, Zählung, Fehlermeldung bei Abweichung).
+2. **(Fallback, falls Frozen Backup nicht mehr erreichbar)** Auf dem RTX-5060-Host im Projektverzeichnis:
+   ```powershell
+   .\SETUP.ps1
+   python project\tools\materialize_references.py --all-missing
+   ```
+   Das erzeugt jede fehlende Referenz per VoiceDesign auf Basis des in `settings.seed`/`settings.variant` festgehaltenen Rezepts und schreibt gleichzeitig das atomare `.wav.json`-Sidecar-Manifest.
+
+Sobald dieser Schritt einmal durchgelaufen ist, ist der Teil-A-Download in sich geschlossen; `verify_voice_refs.py --strict` exits 0, `START.ps1` kann die GUI mit allen Produktionsstimmen öffnen.
+
+## Echter RTX-5060-Test (muss auf dem Host laufen)
+
+Die Sandbox hat keine CUDA-fähige GPU und keine Modellgewichte; Audio-Rendering kann hier nicht stattfinden. Das abschließende PASStesten erfordert auf dem Windows/RTX-5060-Host nach dem Import:
 
 ```powershell
-# 1. Download the zip, extract into a NEW empty folder (no old copies)
-# 2. From that folder:
+# 1. Entpacke VoiceOverApp_PART_A_COMPLETE_READY_<date>.zip in NEUEN leeren Ordner
+# 2. Darin:
 Set-ExecutionPolicy -Scope Process Bypass
-.\SETUP.ps1                       # install / verify torch + models
-.\START.ps1                       # launch GUI
-# Headless smoke:
-python project\tools\validate_voices.py --voices
+.\SETUP.ps1                                  # Python + Deps + Modelle + Auto-Import
+python project\tools\verify_voice_refs.py --strict
+.\START.ps1                                  # GUI
+python project\tools\controlled_short_run.py --voice en_male_warm_storytelling_authoritative_02 --language English --preset narrative_documentary
+python project\tools\controlled_short_run.py --voice vd_e --language German --preset narrative_documentary
+python project\tools\controlled_short_run.py --voice de_male_warm_storytelling_authoritative_01 --language German --preset narrative_documentary
 python project\tools\test_reference_bundle.py
 python project\tools\test_pause_strategies.py
-python project\tools\test_german_pronunciation.py
 python project\tools\test_gui_voice_groups.py
-# Short production run (no GUI):
-python project\tools\controlled_short_run.py `
-    --voice en_male_warm_storytelling_authoritative_02 `
-    --language English --preset narrative_documentary
-# Parts regression:
-python project\tools\reproduce_voice.py `
-    --voice en_male_ultra_deep_calm_resonant_01 `
-    --language English --preset narrative_documentary `
-    --input project\benchmark\prosody\phase2_parts_test.txt `
-    --output out\parts_test --parts
 ```
 
-## Known limitations (cannot be completed from the sandbox)
+Solange dieser Host-Test nicht durchgeführt wurde, ist PART A **INCOMPLETE** (Code-seitig fertig, letzte Host-Validierung ausständig).
 
-1. **Model weights (Qwen3-TTS-12Hz-1.7B, CustomVoice, VoiceDesign
-   candidate)**: NOT stored in Git (multi-GB binaries). They are
-   fetched by `install.ps1`/`models/`-Auto-Discovery and must be
-   downloaded/cached on the host. The reconstruction does NOT
-   invent or fake them; install scripts and multi-root model
-   discovery (from `fix/headless`) are included, so the host can
-   locate an existing model directory or re-download.
-2. **Materialized voice-reference WAVs** (the 43 clone voices in
-   `cache/voice_refs/<id>.wav` + sidecar manifests) are host-local
-   build artifacts, not repository data. The tools
-   `materialize_references.py` and `bootstrap_reference_bundles.py`
-   are included so the host can regenerate them; Voice-09's
-   canonical WAV already exists on the user's host and will not be
-   re-synthesized.
-3. **Actual TTS audio output cannot be validated in the sandbox**
-   (no CUDA / no models). Audio-quality confirmation requires the
-   Fresh-Package step on the RTX-5060 host (protocol above).
-4. **Zip creation**: the final ZIP is produced at delivery time in
-   this workspace (command below).
+## Status
 
-## Headline result (pre-ZIP)
+### Vorläufiger Sandbox-Stand (vor Host-Audio-Test)
 
-- `RESTORE = PASS (archive-ready; host audio-validation pending)`
-- `SOURCES_ANALYZED = 7 branches + 1 tag + workspace scan (no archives found)`
-- `HISTORICAL_STANDS_FOUND = 8`
-- `FILES_CONSOLIDATED = 453 tracked (+ 11 intentional historical backups)`
-- `MISSING_REQUIRED_FILES = none that exist in any reachable git
-  object`; missing-but-needed assets are the large model weights and
-  host-local voice-reference WAVs, both obtainable via the
-  install/ materialize tooling that IS present.
-- `GOLDEN_REFERENCE = PASS (b156c02a… verified identical across all refs)`
-- `FUNCTIONAL_TESTS = see above (syntax + import + all offline unit
-  tests pass)`
-- `FRESH_PACKAGE_TEST = pending on host (no GPU in sandbox)`
-
-## Build final ZIP from this branch
-
-```bash
-git checkout reconstruction/part-a-complete
-mkdir -p dist
-cd /home/user/Voice-AI-Reference
-zip -rq dist/VoiceOverApp_PART_A_COMPLETE_RECONSTRUCTED_$(date +%Y%m%d_%H%M%S).zip \
-    . -x '.git/*' '_consolidated_work/*' '_stage/*' '_build_consolidated.py'
-sha256sum dist/VoiceOverApp_PART_A_COMPLETE_RECONSTRUCTED_*.zip
+```
+PART_A_STATUS               = INCOMPLETE  (awaiting host voice-ref import + RTX-5060 audio test)
+VOICE_DRAFT                 = EXCLUDED
+REQUIRED_ASSETS_COMPLETE    = FAIL        (18 production-clone ref WAVs not in git, reachable via frozen-backup import OR materialize)
+VOICE_PROFILES              = 50/50
+VOICE_REFERENCE_WAVS        = 1/19  (VD-E OK, 18 production + 24 non-production wavs to be imported/materialized)
+VOICE_REFERENCE_MANIFESTS   = 0/19  (produced by bootstrap_reference_bundles.py / materialize_references.py on host)
+GUI_RUNTIME_VOICES          = 50/50 (registry loads all; selectability gated by voice-ref availability at runtime)
+GOLDEN_REFERENCE            = PASS  (sha b156c02a… verified)
+MODELS                      = PROVISIONED_BY_SETUP (not in git; install.ps1 downloads reproducibly)
+RTX5060_TTS                 = NOT_RUN (requires host)
+FRESH_PACKAGE_TEST          = PASS (syntax + offline unit tests + registry + presets + grouping + ref-bundle resolution in sandbox from extracted zip)
+FINAL_COMMIT                = <set at package time>
+FINAL_PACKAGE               = dist/VoiceOverApp_PART_A_COMPLETE_READY_<date>.zip
+FINAL_PACKAGE_SHA256        = <dist/SHA256SUMS.txt, written at package time>
+MISSING_REQUIRED_ASSETS     = siehe MISSING_REQUIRED_ASSETS.json (18 production-clone WAVs + sidecars)
+USER_MANUAL_COPY_REQUIRED   = NO   (one-click Import via import_voice_refs_from_frozen_backup.ps1 ODER materialize; keine Handkopier-Einzelaktionen nötig)
 ```
 
-(The final SHA of the produced ZIP is reported after the zip command;
-it will be written into `RESTORE_MANIFEST.json` at package time.)
+Nach einmaligem Frozen-Backup-Import (oder `materialize_references.py --all-missing`) und erfolgreichem RTX-5060-Audio-Test wird `verify_voice_refs.py --strict` 0 zurückgeben, und der Status wechselt auf COMPLETE. Das Paket ist dafür vollständig vorbereitet (einziger Einstieg `SETUP.ps1` → `START.ps1`, keine versteckten Nachkopierschritte).

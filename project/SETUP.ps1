@@ -100,3 +100,25 @@ Write-Host "SETUP abgeschlossen. Starte jetzt:" -ForegroundColor Green
 Write-Host "  .\START.bat        (oder .\START.ps1)" -ForegroundColor White
 Write-Host "  python .\desktop.py" -ForegroundColor White
 Write-Host "Fuer Reproduktion einzelner Stimmen: python .\tools\reproduce_voice.py --help" -ForegroundColor Gray
+
+# --- 3) Voice-Referenzen: frozen-backup Import (read-only) + Verify ----
+Write-Host ""
+Write-Host "== Voice-Referenzen (cache\\voice_refs) ==" -ForegroundColor Cyan
+$ImportScript = Join-Path $Root "tools\\import_voice_refs_from_frozen_backup.ps1"
+if (Test-Path -LiteralPath $ImportScript) {
+  Write-Host "Versuche automatischen Import aus lokalem Frozen Backup (read-only)..." -ForegroundColor Gray
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $ImportScript -WhatIf:$false 2>&1 | ForEach-Object { Write-Host "  $_" }
+  $impCode = $LASTEXITCODE
+  if ($impCode -eq 2) {
+    Write-Host "  (Frozen Backup nicht gefunden – ok, kann spaeter manuell ausgefuehrt werden.)" -ForegroundColor Yellow
+  } elseif ($impCode -eq 3) {
+    Write-Host "  (Frozen Backup ohne voice_refs-Verzeichnis – uebersprungen.)" -ForegroundColor Yellow
+  }
+}
+$Verify = Join-Path $Root "tools\\verify_voice_refs.py"
+if (Test-Path -LiteralPath $Verify) {
+  $Vpy = Join-Path $Root ".venv\\Scripts\\python.exe"
+  if (-not (Test-Path $Vpy)) { $Vpy = "python" }
+  Write-Host "Pruefe Voice-Referenzen..." -ForegroundColor Gray
+  & $Vpy $Verify 2>&1 | ForEach-Object { Write-Host "  $_" }
+}
