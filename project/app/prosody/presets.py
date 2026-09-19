@@ -9,42 +9,100 @@ from __future__ import annotations
 from .. import paths
 from ..utils import read_json
 
+_EN_DOC_BASE = (
+    "Speak as a deep, calm, highly credible English documentary narrator: "
+    "warm, serious, intelligent, slightly cinematic, never melodramatic."
+)
+_EN_NARR_BASE = (
+    "Speak as a deep, calm, highly credible English documentary narrator: "
+    "warm, serious, intelligent, slightly cinematic, never melodramatic. "
+    "Breathe naturally between sentences and sections; let ideas land; "
+    "keep an unhurried, steady storytelling rhythm without slowing down."
+)
+_DE_DOC_BASE = (
+    "Sprich als tiefer, ruhiger, hochglaubwuerdiger Dokumentarsprecher: "
+    "warm, serioes, intelligent, leicht kinematisch, niemals melodramatisch."
+)
+_DE_NARR_BASE = (
+    "Sprich als tiefer, ruhiger, hochglaubwuerdiger Dokumentarsprecher: "
+    "warm, serioes, intelligent, leicht kinematisch, niemals melodramatisch. "
+    "Atme natuerlich zwischen Saetzen und Abschnitten; lass Gedanken landen; "
+    "halte einen ruhigen Erzaehlrhythmus, ohne langsamer zu werden."
+)
+
 PRESETS = {
-    "deep_documentary": {
-        "label": "Deep Documentary",
-        "base_style": ("Speak as a deep, calm, highly credible documentary "
-                       "narrator: warm, serious, intelligent, slightly "
-                       "cinematic, never melodramatic."),
+    # --- English production profiles ---
+    "en_documentary": {
+        "label": "English Documentary",
+        "language": "English",
+        "base_style": _EN_DOC_BASE,
         "pause_style": "auto",
         "pause_strategy": "classic",
         "emotion": "AUTO",
         "intensity": "AUTO",
         "speed": 1.0,
-        "description": "Psychologie, Philosophie, Geschichte, Deep Dives "
-                       "(Standard, Referenzverhalten)."
+        "description": "Neutral English documentary baseline (semantic)."
     },
-    # NARRATIVE (2026-09-19 Prosodie/Pausen-Optimierung)
-    # Gleiche Stimmidentität wie deep_documentary, aber: explizite
-    # pause_strategy="narrative" + leicht entspannter Stil. Aktiviert
-    # hörbare Satz-/Absatz-/Part-Pausen und kleine Denkpausen nach
-    # Komma/Semikolon/Doppelpunkt/Gedankenstrich, ohne das Sprechtempo
-    # zu drosseln. Optimiert für tiefe, ruhige Erzählstimmen wie
-    # en_male_ultra_deep_calm_resonant_01 und en_male_warm_storytelling_authoritative_02.
-    "narrative_documentary": {
-        "label": "Narrative Documentary (calmer pauses)",
-        "base_style": ("Speak as a deep, calm, highly credible documentary "
-                       "narrator: warm, serious, intelligent, slightly "
-                       "cinematic, never melodramatic. Breathe naturally "
-                       "between sentences and sections; let ideas land; "
-                       "keep an unhurried, steady storytelling rhythm "
-                       "without slowing down."),
+    "en_narrative": {
+        "label": "English Narrative Documentary",
+        "language": "English",
+        "base_style": _EN_NARR_BASE,
         "pause_style": "relaxed",
         "pause_strategy": "narrative",
         "emotion": "AUTO",
         "intensity": "AUTO",
         "speed": 1.0,
-        "description": "Ruhigere Langform-Erzählung mit hörbaren Atem-/"
-                       "Denkpausen (für tiefe männliche Erzählstimmen)."
+        "description": "Calm long-form English narration with audible "
+                       "breath/thought pauses at commas, transitions and "
+                       "paragraph boundaries."
+    },
+    # --- German production profiles ---
+    "de_documentary": {
+        "label": "Deutsch Dokumentation",
+        "language": "German",
+        "base_style": _DE_DOC_BASE,
+        "pause_style": "auto",
+        "pause_strategy": "semantic",
+        "emotion": "AUTO",
+        "intensity": "AUTO",
+        "speed": 1.0,
+        "description": "Neutrale deutsche Dokumentar-Stimme (semantische Pausen)."
+    },
+    "de_narrative": {
+        "label": "Deutsch Erzaehl-Dokumentation",
+        "language": "German",
+        "base_style": _DE_NARR_BASE,
+        "pause_style": "relaxed",
+        "pause_strategy": "narrative",
+        "emotion": "AUTO",
+        "intensity": "AUTO",
+        "speed": 1.0,
+        "description": "Ruhige deutsche Langform-Erzaehlung mit hoerbaren "
+                       "Atem-/Denkpausen nach Komma/Semikolon/Doppelpunkt/"
+                       "Gedankenstrich, deutlichen Absatzgrenzen."
+    },
+    # --- Legacy aliases (backwards compatibility) ---
+    "deep_documentary": {
+        "label": "Deep Documentary (legacy, EN)",
+        "language": "English",
+        "base_style": _EN_DOC_BASE,
+        "pause_style": "auto",
+        "pause_strategy": "classic",
+        "emotion": "AUTO",
+        "intensity": "AUTO",
+        "speed": 1.0,
+        "description": "Legacy alias for en_documentary."
+    },
+    "narrative_documentary": {
+        "label": "Narrative Documentary (legacy, EN)",
+        "language": "English",
+        "base_style": _EN_NARR_BASE,
+        "pause_style": "relaxed",
+        "pause_strategy": "narrative",
+        "emotion": "AUTO",
+        "intensity": "AUTO",
+        "speed": 1.0,
+        "description": "Legacy alias for en_narrative."
     },
     "psychological": {
         "label": "Psychological",

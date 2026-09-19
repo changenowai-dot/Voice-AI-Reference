@@ -20,9 +20,25 @@ from __future__ import annotations
 
 import re
 
-from .german import (german_instruct_hints, dominant_role, hint_allowed,
-                     profile_sentence, rotate_anchor)
+from .german import (german_instruct_hints, dominant_role as _dominant_role_de,
+                     hint_allowed, profile_sentence as _profile_sentence_de,
+                     rotate_anchor, detect_short_sentence_run)
+from .english import (english_instruct_hints,
+                      dominant_role as _dominant_role_en,
+                      profile_sentence as _profile_sentence_en)
 from .variation import EMOTION_SET_DE, detect_subtle_emotion
+
+
+def _dominant_role(text: str, language: str):
+    if language.lower().startswith("en"):
+        return _dominant_role_en(text)
+    return _dominant_role_de(text)
+
+
+def _profile_sentence(text: str, language: str):
+    if language.lower().startswith("en"):
+        return _profile_sentence_en(text)
+    return _profile_sentence_de(text)
 
 EMOTIONS = ("AUTO", "neutral", "calm", "warm", "serious", "somber",
             "mysterious", "tense", "hopeful")
@@ -375,20 +391,34 @@ def build_instruct(base_style: str, text: str, language: str, *,
                 parts.append(line)
                 hints.append(line)
 
-    # Rollen-Hinweise mit Budget (Phase 2 §7)
-    if is_german:
-        role = dominant_role(text)
-        if hint_allowed(seg_index, role, last_high_idx):
+    # Rollen-Hinweise mit Budget (Phase 2 §7) – language-abhängig
+    role = _dominant_role(text, language)
+    heading_hints_added = False
+    if hint_allowed(seg_index, role, last_high_idx):
+        if is_german:
             role_hints = german_instruct_hints(
                 role, language, is_heading=heading,
                 long_sentence=long_sentence,
                 in_short_run=(short_run_pos is not None),
                 run_position=short_run_pos)
-            parts.extend(role_hints)
-            hints.extend(role_hints)
-    elif heading:
-        parts.append("This line introduces a new section: announce it "
-                     "calmly, then pause.")
+        else:
+            role_hints = english_instruct_hints(
+                role, language, is_heading=heading,
+                long_sentence=long_sentence,
+                in_short_run=(short_run_pos is not None),
+                run_position=short_run_pos)
+        parts.extend(role_hints)
+        hints.extend(role_hints)
+        if heading and role_hints:
+            heading_hints_added = True
+    if heading and not heading_hints_added:
+        # Fallback, falls keine language-spezifischen Hinweise da waren
+        if is_german:
+            parts.append("Diese Zeile leitet einen neuen Abschnitt ein: "
+                         "ruhig ansagen, dann Pause.")
+        else:
+            parts.append("This line introduces a new section: announce it "
+                         "calmly, then pause.")
 
     # Phase 3 (§19.7): semantische Betonung – sanft, budgetiert
     if emphasis_words and is_german and hint_allowed(

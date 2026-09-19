@@ -19,7 +19,8 @@ import time
 import traceback
 import webbrowser
 from pathlib import Path
-from tkinter import BOTH, BOTTOM, END, LEFT, RIGHT, TOP, W, X, Y, filedialog, messagebox, ttk
+from tkinter import (ALL, BOTH, BOTTOM, END, HORIZONTAL, LEFT, RIGHT, TOP, VERTICAL,
+                     W, X, Y, Canvas, filedialog, messagebox, ttk)
 import tkinter as tk
 
 from .. import paths
@@ -108,9 +109,44 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
         self.identity_badge = ttk.Label(head, text="", style="Sub.TLabel")
         self.identity_badge.pack(side=RIGHT, pady=(6, 0))
 
-        container = ttk.Frame(self)
-        container.pack(fill=BOTH, expand=True, padx=16, pady=8)
-        # Scroll-Fähigkeit wäre overkill; feste Spalte
+        # Scrollable main area. Header stays pinned above; the cards
+        # (file/text/language/voice/options/start/progress/output) sit
+        # inside an inner Frame on a Canvas. Vertical scrollbar +
+        # mouse-wheel work on Windows; scrollregion auto-updates when
+        # the inner Frame changes size (incl. language/voice rebuilds).
+        outer = ttk.Frame(self)
+        outer.pack(fill=BOTH, expand=True, padx=0, pady=0)
+        self._vscroll = ttk.Scrollbar(outer, orient=VERTICAL)
+        self._vscroll.pack(side=RIGHT, fill=Y)
+        self._canvas = Canvas(outer, bg=BG, highlightthickness=0,
+                              yscrollcommand=self._vscroll.set,
+                              bd=0)
+        self._canvas.pack(side=LEFT, fill=BOTH, expand=True, padx=(16, 0), pady=8)
+        self._vscroll.config(command=self._canvas.yview)
+        container = ttk.Frame(self._canvas, style="Card.TFrame")
+        self._canvas_window = self._canvas.create_window((0, 0), window=container, anchor="nw")
+
+        def _on_container_configure(_e=None):
+            self._canvas.configure(scrollregion=self._canvas.bbox("all"))
+        def _on_canvas_configure(e):
+            # Make inner frame match canvas width (horizontal scroll avoided)
+            desired = max(e.width, 1)
+            self._canvas.itemconfigure(self._canvas_window, width=desired)
+        container.bind("<Configure>", _on_container_configure)
+        self._canvas.bind("<Configure>", _on_canvas_configure)
+        # Mouse wheel (Windows: <MouseWheel> delta=120 per notch; Linux: 4/5)
+        def _on_wheel(e):
+            if os.name == "nt":
+                delta = -1 if e.delta > 0 else 1
+                self._canvas.yview_scroll(delta, "units")
+            else:
+                if e.num == 4: self._canvas.yview_scroll(-1, "units")
+                elif e.num == 5: self._canvas.yview_scroll(1, "units")
+        self._canvas.bind_all("<MouseWheel>", _on_wheel, add="+")
+        self._canvas.bind("<Button-4>", _on_wheel, add="+")
+        self._canvas.bind("<Button-5>", _on_wheel, add="+")
+        # Expose so rebuilders can scroll to top after voice list refresh
+        self._scroll_container = container
 
         # DATEI
         file_card = ttk.Labelframe(container, text=" Datei ")
@@ -322,6 +358,12 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
                 groups["candidates"],
                 "nicht in den aktiven Produktionsbestand übernommen – "
                 "nur zur Information, nicht auswählbar")
+        # refresh scroll region after voice list change
+        self.update_idletasks()
+        try:
+            self._canvas.configure(scrollregion=self._canvas.bbox("all"))
+        except Exception:
+            pass
 
     def _add_voice_button(self, parent, row):
         text = row["label"]
@@ -599,52 +641,78 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
         def apply():
             self._set_running_ui(False)
             elapsed = time.perf_counter() - self.job_start
-            if result.ok:
-                s = result.summary
+            s = result.summary or {}
+            # Determine effective status: runner marks ok only on full
+            # success; backend mirrors that via summary.ok.
+            failed_n = int(s.get("failed") or 0)
+            parts_planned = int(s.get("parts_planned") or 1)
+            parts_ok = int(s.get("parts_succeeded") or 0)
+            has_full = bool(s.get("fullscript_built") or s.get("fullscript_wav"))
+            is_incomplete = (not result.ok) and parts_ok > 0 and failed_n >= 0
+            # Enable buttons for files that ACTUALLY exist.
+            wav = s.get("wav") or ""
+            mp3 = s.get("mp3") or ""
+            if wav and not Path(wav).exists(): wav = ""
+            if mp3 and not Path(mp3).exists(): mp3 = ""
+            self.last_wav = wav
+            self.last_mp3 = mp3
+            self.last_summary = s
+            if not self.last_report:
+                self.last_report = _find_report(self.outdir_var.get())
+            self.btn_wav.config(state="normal" if self.last_wav else "disabled")
+            self.btn_mp3.config(state="normal" if self.last_mp3 else "disabled")
+            self.btn_report.config(state="normal" if self.last_report else "disabled")
+
+            parts_line = ""
+            if s.get("parts_planned", 1) != 1 or s.get("output_mode") in ("parts","parts_plus_full"):
+                parts_line = (f"\nParts: {parts_ok}/{parts_planned}  "
+                              f"Fehlende Segmente: {int(s.get('failed_segments') or 0)}  "
+                              f"Fehlgeschlagene Parts: {len(s.get('failed_parts') or [])}")
+                if has_full: parts_line += "  FullScript: OK"
+                else: parts_line += "  FullScript: NICHT erzeugt"
+
+            if result.ok and failed_n == 0:
                 self.progress["value"] = 100
                 self.stage_label.config(text="Fertig.")
                 self.seg_label.config(
                     text=f"Voice: {s.get('voice')} · Sprache: "
                          f"{s.get('language')} · Segmente: "
                          f"{s.get('segments')} · Regenerationen: "
-                         f"{s.get('regenerations')} · Fehler: "
-                         f"{s.get('failed')} · QC: {s.get('qc')} · Dauer: "
+                         f"{s.get('regenerations')} · Fehler: 0 · QC: "
+                         f"{s.get('qc')} · Dauer: "
                          f"{format_duration(s.get('duration_s') or elapsed)}")
-                self.last_summary = s
-                # Nur Dateien aktiv schalten, die TATSÄCHLICH erzeugt wurden
-                # (nicht alte Alt-Dateien aus vorigen Läufen).
-                wav = s.get("wav") or ""
-                mp3 = s.get("mp3") or ""
-                # Absicherung gegen Alt-Dateien: existiert der Pfad wirklich?
-                if wav and not Path(wav).exists():
-                    wav = ""
-                if mp3 and not Path(mp3).exists():
-                    mp3 = ""
-                self.last_wav = wav
-                self.last_mp3 = mp3
-                self.btn_wav.config(state="normal" if self.last_wav
-                                    else "disabled")
-                self.btn_mp3.config(state="normal" if self.last_mp3
-                                    else "disabled")
-                if result.summary:
-                    # done-Event enthält Report-Pfad
-                    pass
-                if not self.last_report:
-                    self.last_report = _find_report(self.outdir_var.get())
-                self.btn_report.config(state="normal" if self.last_report
-                                       else "disabled")
                 messagebox.showinfo(
                     "Fertig",
                     f"Status: Erfolgreich\nVoice: {s.get('voice')}\n"
-                    f"Segmente: {s.get('segments')}\n"
-                    f"QC: {s.get('qc')}\nFehler: {s.get('failed')}")
+                    f"Segmente: {s.get('segments')}\nQC: {s.get('qc')}"
+                    f"{parts_line}")
+            elif is_incomplete:
+                # Some audio produced but job not fully successful
+                self.progress["value"] = 60
+                self.stage_label.config(text="UNVOLLSTAENDIG.")
+                self.seg_label.config(
+                    text=f"Voice: {s.get('voice')} · Sprache: "
+                         f"{s.get('language')} · Fehler: {failed_n} · QC: "
+                         f"{s.get('qc')} · Dauer: "
+                         f"{format_duration(s.get('duration_s') or elapsed)}"
+                         f"{parts_line}")
+                messagebox.showwarning(
+                    "Auftrag unvollstaendig",
+                    f"Status: {s.get('status','INCOMPLETE')}\n"
+                    f"Voice: {s.get('voice')}\n"
+                    f"Fehlgeschlagene Segmente/Parts: {failed_n}\n"
+                    f"Teil-Ausgaben koennen bereits vorhanden sein, "
+                    f"es wurde aber KEINE vollstaendige Gesamtdatei "
+                    f"freigegeben.\n{parts_line}\n\n"
+                    f"Details:\n{(result.error or '')}")
             else:
                 self.progress["value"] = 0
                 self.stage_label.config(text="Fehler.")
                 detail = (result.detail or "")[:1500]
                 messagebox.showerror(
                     "Auftrag fehlgeschlagen",
-                    f"{result.error}\n\nTechnische Details:\n{detail}")
+                    f"{result.error}\n{parts_line}\n\n"
+                    f"Technische Details:\n{detail}")
         self._post_wrapper(apply)
 
     # -------------------------------------------------------------- Öffnen

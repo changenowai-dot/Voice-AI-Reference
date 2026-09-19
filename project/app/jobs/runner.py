@@ -545,40 +545,63 @@ def run_job(spec: JobSpec) -> int:
             return 2
 
         # v2 (§10 MODE C): FullScript aus PART-Materialien (kein Re-TTS).
-        # MP3 nur erzeugen wenn das Ausgabeformat MP3 einschließt.
+        # FAIL-CLOSED: FullScript NUR wenn (a) alle Parts erfolgreich
+        # erzeugt wurden (keine failed_segments, WAV existiert) und
+        # (b) genau len(sections) Parts vorliegen. Ein einzelner Fehlschlag
+        # führt zu Status FAILED ohne FullScript.
         full_wav = full_mp3 = None
         output_fmt = cfg.get("output_format", "wav_mp3")
+        parts_total = len(sections)
+        parts_ok = len(part_reports)
+        parts_failed_segs = sum(int(r.get("failed_segments") or 0)
+                                for r in part_reports)
+        fullscript_allowed = (parts_ok == parts_total
+                              and parts_failed_segs == 0
+                              and not failed_parts
+                              and all(r.get("wav") and Path(r["wav"]).exists()
+                                      for r in part_reports))
         if plan_use_split and mode == "parts_plus_full":
-            emit("stage", stage="concat",
-                 detail="FullScript wird aus den Parts zusammengefügt")
-            from ..audio.concat import concat_wavs, encode_mp3
-            from ..audio.master import _should_produce_mp3
-            part_wavs = [Path(r["wav"]) for r in part_reports if r.get("wav")]
-            full_wav = out_dir / f"{base_name}_{FULLSCRIPT_SUFFIX}.wav"
-            cres = concat_wavs(part_wavs, full_wav,
-                               bit_depth=int(adv.get("wav_bit_depth", 24)))
-            if not cres.get("ok"):
+            if not fullscript_allowed:
                 emit("error",
-                     message="FullScript-Zusammenfügen fehlgeschlagen: "
-                             f"{cres.get('error', '')}",
-                     stage="concat")
-                return 2
-            full_mp3 = full_wav.with_suffix(".mp3")
-            mp3_ok = True
-            if _should_produce_mp3(output_fmt):
-                mp3_ok = encode_mp3(full_wav, full_mp3,
-                                    bitrate=str(adv.get("mp3_bitrate", "320k")))
+                     message=("FullScript wird NICHT erzeugt: "
+                              f"{parts_ok}/{parts_total} Parts ok, "
+                              f"{parts_failed_segs} fehlgeschlagene Segmente, "
+                              f"{len(failed_parts)} fehlgeschlagene Parts."),
+                     stage="concat",
+                     detail="Setze Ausgabemodus auf 'Nur Parts' und beende mit Status FAILED.")
+                mode = "parts"        # GUI zeigt dann keine FullScript-Datei
             else:
-                # WAV only: sicherstellen, dass kein altes MP3 übrig bleibt
-                if full_mp3.exists():
-                    try: full_mp3.unlink()
-                    except OSError: pass
-                full_mp3 = None
-            if not mp3_ok:
-                full_mp3 = None
-            emit("stage", stage="concat_done",
-                 detail=f"FullScript: {cres.get('seconds')} s "
-                        f"({cres.get('method')})")
+                emit("stage", stage="concat",
+                     detail="FullScript wird aus den Parts zusammengefuegt")
+                from ..audio.concat import concat_wavs, encode_mp3
+                from ..audio.master import _should_produce_mp3
+                part_wavs = [Path(r["wav"]) for r in part_reports if r.get("wav")]
+                full_wav = out_dir / f"{base_name}_{FULLSCRIPT_SUFFIX}.wav"
+                cres = concat_wavs(part_wavs, full_wav,
+                                   bit_depth=int(adv.get("wav_bit_depth", 24)))
+                if not cres.get("ok"):
+                    emit("error",
+                         message="FullScript-Zusammenfuegen fehlgeschlagen: "
+                                 f"{cres.get('error', '')}",
+                         stage="concat")
+                    full_wav = None
+                    mode = "parts"
+                else:
+                    full_mp3 = full_wav.with_suffix(".mp3")
+                    mp3_ok = True
+                    if _should_produce_mp3(output_fmt):
+                        mp3_ok = encode_mp3(full_wav, full_mp3,
+                                            bitrate=str(adv.get("mp3_bitrate", "320k")))
+                    else:
+                        if full_mp3.exists():
+                            try: full_mp3.unlink()
+                            except OSError: pass
+                        full_mp3 = None
+                    if not mp3_ok:
+                        full_mp3 = None
+                    emit("stage", stage="concat_done",
+                         detail=f"FullScript: {cres.get('seconds')} s "
+                                f"({cres.get('method')})")
 
         # 5) Ergebnis / Report (§21/§22)
         elapsed = time.perf_counter() - t0
@@ -586,24 +609,49 @@ def run_job(spec: JobSpec) -> int:
         seg_total = sum(int(r.get("segments") or 0) for r in part_reports)
         regen_total = sum(int(r.get("regenerated") or 0)
                           for r in part_reports)
-        failed_total = sum(int(r.get("failed_segments") or 0)
-                           for r in part_reports) + len(failed_parts)
         qc_values = [r.get("avg_score") for r in part_reports
                      if r.get("avg_score") is not None]
+        failed_total = parts_failed_segs + len(failed_parts) + \
+                       (0 if fullscript_allowed or mode != "parts_plus_full"
+                        else (parts_total - parts_ok))
+        overall_ok = (failed_total == 0
+                      and (not plan_use_split
+                           or mode == "parts" and parts_ok > 0 and parts_failed_segs == 0
+                           or mode == "parts_plus_full" and full_wav is not None))
+        # Klarer Status-String
+        if overall_ok and failed_total == 0:
+            status_str = "Erfolgreich"
+        elif parts_ok == 0:
+            status_str = "FAILED (keine Audioausgabe)"
+        else:
+            status_str = "INCOMPLETE"
         import numpy as _np
-        # last.get("wav"/"mp3") sind jetzt None, wenn nicht erzeugt
-        last_wav = last.get("wav")
-        last_mp3 = last.get("mp3")
+        last_wav = None
+        last_mp3 = None
+        if plan_use_split:
+            if mode == "parts_plus_full" and full_wav:
+                last_wav = str(full_wav); last_mp3 = str(full_mp3) if full_mp3 else None
+            elif part_reports:
+                # Parts-only: auf den letzten erzeugten Part zeigen
+                for r in reversed(part_reports):
+                    if r.get("wav"):
+                        last_wav = r.get("wav"); last_mp3 = r.get("mp3"); break
+        else:
+            last_wav = last.get("wav")
+            last_mp3 = last.get("mp3")
         summary = {
-            "status": "Erfolgreich" if not failed_parts else
-                      "Teilweise fehlerhaft",
+            "status": status_str,
+            "ok": overall_ok and failed_total == 0,
             "voice": ("VD-E" if spec.voice_id == "vd_e"
                       else entry.display_name),
             "language": tts_language,
             "segments": seg_total,
             "regenerations": regen_total,
             "failed": failed_total,
+            "failed_segments": parts_failed_segs,
             "failed_parts": failed_parts,
+            "parts_planned": parts_total if plan_use_split else 1,
+            "parts_succeeded": parts_ok if plan_use_split else 1,
             "qc": round(float(_np.mean(qc_values)), 1) if qc_values else None,
             "duration_s": round(elapsed, 1),
             "wav": last_wav,
@@ -615,18 +663,21 @@ def run_job(spec: JobSpec) -> int:
             "parts": ([{
                 "wav": r.get("wav"), "mp3": r.get("mp3"),
                 "segments": r.get("segments"),
+                "failed_segments": r.get("failed_segments"),
+                "ok": bool(r.get("ok") and r.get("wav")),
             } for r in part_reports] if plan_use_split else None),
             "fullscript_wav": str(full_wav) if full_wav else None,
             "fullscript_mp3": str(full_mp3) if full_mp3 else None,
+            "fullscript_built": bool(full_wav),
             "output_mode": mode,
         }
-        emit("done", summary=summary, wav=summary["wav"],
-             mp3=summary["mp3"],
+        emit("done", summary=summary,
+             wav=summary["wav"], mp3=summary["mp3"],
              parts=summary["parts"],
              fullscript=str(full_wav) if full_wav else None,
              report=_latest_report_md(out_dir))
-        _verify_vd_e_hash_post_run(production)        # §33
-        return 0 if not failed_parts else 1
+        _verify_vd_e_hash_post_run(production)
+        return 0 if (overall_ok and failed_total == 0) else 1
     except Exception as e:                            # noqa: BLE001
         log.exception("Job fehlgeschlagen")
         import traceback

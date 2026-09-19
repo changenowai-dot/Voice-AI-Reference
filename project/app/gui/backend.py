@@ -124,9 +124,16 @@ class BackendLauncher:
                 result.detail = str(evt.get("detail", ""))
                 self._on_event(evt)
             elif kind == "done":
-                result.ok = True
-                result.summary = evt.get("summary", {}) or {}
-                result.returncode = 0
+                summ = evt.get("summary", {}) or {}
+                # The runner sets summary.ok = True only when every
+                # segment + every part succeeded AND (if parts+full)
+                # FullScript was actually assembled. Respect that.
+                result.ok = bool(summ.get("ok", True))
+                if not result.ok:
+                    result.error = (summ.get("status") or "INCOMPLETE")
+                    result.detail = json.dumps(summ, ensure_ascii=False)[:2000]
+                result.summary = summ
+                result.returncode = 0 if result.ok else 1
                 self._on_event(evt)
             else:
                 self._on_event(evt)

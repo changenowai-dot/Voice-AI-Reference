@@ -202,7 +202,7 @@ class Pipeline:
                  self.cfg.get("preset", "deep_documentary"), pause_style,
                  pause_strategy, speed, len(segments))
         assign_pauses(segments, style=pause_style, speed=speed,
-                      strategy=pause_strategy)
+                      strategy=pause_strategy, language=language)
 
         # Sampling-Parameter (Anforderung 49)
         sampling = params_for_set("balanced", {
@@ -644,14 +644,20 @@ class Pipeline:
                         wav=final_wav or "",
                         mp3=final_mp3 or "")
         # wav_complete = ALLE geplanten Segmente waren erfolgreich UND ein
-        # Output-WAV existiert (Benchmark validiert zusätzlich Grösse/
-        # Lesbarkeit/Dauer).
-        wav_complete = bool(n_successful == n_seg
+        # Output-WAV existiert. FAIL-CLOSED: sobald ein Segment fehlschlägt
+        # (failed_segments > 0) gilt der Part als unvollständig - der
+        # Runner darf daraus KEIN FullScript bauen und muss den Status
+        # FAILED/INCOMPLETE liefern.
+        all_segments_ok = (n_successful == n_seg and failed_segments == 0)
+        wav_complete = bool(all_segments_ok
                             and final_wav and Path(final_wav).exists())
         report.update({
-            "ok": True,
-            "wav": final_wav,
-            "mp3": final_mp3,
+            # ok=True nur, wenn WAV existiert UND alle geplanten Segmente
+            # erfolgreich erzeugt wurden (keine stillen Fehlschläge).
+            "ok": bool(final_wav and Path(final_wav).exists()
+                       and all_segments_ok),
+            "wav": final_wav if wav_complete else None,
+            "mp3": final_mp3 if wav_complete else None,
             "output_format": output_format,
             "segments": n_seg,
             "segments_planned": n_seg,
@@ -665,6 +671,8 @@ class Pipeline:
             "elapsed_s": round(elapsed, 1),
             "project_id": project_id,
             "wav_complete": wav_complete,
+            "error": (None if all_segments_ok
+                      else f"{failed_segments} von {n_seg} Segmenten fehlgeschlagen - unvollstaendiges Audio"),
         })
         qlog(f"FILE {input_path.name}: ok segments={n_seg} reused={reused} "
              f"regen={regenerated} failed={failed_segments} "
