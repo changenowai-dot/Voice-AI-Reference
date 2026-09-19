@@ -2,8 +2,8 @@
   "voice_id": "en_male_investigative_mystery_01",
   "display_name": "EN Male Investigative Mystery 01",
   "gender": "male",
-  "provider": "arena-tts",
-  "model": "Arena TTS (real speech) \u2013 placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+  "provider": "qwen3-tts",
+  "model": "Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone)",
   "language_support": [
     "German",
     "English"
@@ -11,10 +11,10 @@
   "native_language": "English",
   "native_status": "native",
   "category": "narrator",
-  "description": "investigative mystery \u2013 deep low controlled tension mystery",
+  "description": "investigative mystery – deep low controlled tension mystery",
   "backend_mode": "clone",
   "speaker_name": null,
-  "reference_path": "benchmark/male_deep_candidates/06_investigative_mystery/part1.mp3",
+  "reference_path": "cache/voice_refs/en_male_investigative_mystery_01.wav",
   "production_locked": false,
   "recommended": false,
   "default": false,
@@ -28,14 +28,14 @@
       "rank": 20,
       "recommended": false,
       "default": false,
-      "description": "investigative mystery \u2013 deep low controlled tension mystery"
+      "description": "investigative mystery – deep low controlled tension mystery"
     },
     "German": {
       "native_status": "cross_language",
       "rank": 90,
       "recommended": false,
       "default": false,
-      "description": "investigative_mystery \u2013 English design (cross-language)"
+      "description": "investigative_mystery – English design (cross-language)"
     }
   },
   "settings": {
@@ -47,6 +47,7 @@
     "backend": "clone",
     "arena_voice_id": "voice-11"
   },
+  "reference_text": "VOICEDESIGN_REF_TEXT_EN",
   "reference_sha256": "ARENA_VOICE-11",
-  "reference_generated": "real speech via Arena voice-11 \u2013 4 parts benchmark + FullScript scheduled; not TestDouble sine"
+  "reference_generated": "real speech via Arena voice-11 – 4 parts benchmark + FullScript scheduled; not TestDouble sine"
 }

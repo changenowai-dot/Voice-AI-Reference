@@ -2,8 +2,8 @@
   "voice_id": "en_male_cinematic_documentary_01",
   "display_name": "EN Male Cinematic Documentary 01",
   "gender": "male",
-  "provider": "arena-tts",
-  "model": "Arena TTS (real speech) \u2013 placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+  "provider": "qwen3-tts",
+  "model": "Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone)",
   "language_support": [
     "German",
     "English"
@@ -11,10 +11,10 @@
   "native_language": "English",
   "native_status": "native",
   "category": "narrator",
-  "description": "cinematic documentary \u2013 deep rich atmospheric memorable restrained premium",
+  "description": "cinematic documentary – deep rich atmospheric memorable restrained premium",
   "backend_mode": "clone",
   "speaker_name": null,
-  "reference_path": "benchmark/male_deep_candidates/10_cinematic_documentary/part1.mp3",
+  "reference_path": "cache/voice_refs/en_male_cinematic_documentary_01.wav",
   "production_locked": false,
   "recommended": false,
   "default": false,
@@ -28,14 +28,14 @@
       "rank": 24,
       "recommended": false,
       "default": false,
-      "description": "cinematic documentary \u2013 deep rich atmospheric memorable restrained premium"
+      "description": "cinematic documentary – deep rich atmospheric memorable restrained premium"
     },
     "German": {
       "native_status": "cross_language",
       "rank": 94,
       "recommended": false,
       "default": false,
-      "description": "cinematic_documentary \u2013 English design (cross-language)"
+      "description": "cinematic_documentary – English design (cross-language)"
     }
   },
   "settings": {
@@ -47,6 +47,7 @@
     "backend": "clone",
     "arena_voice_id": "voice-15"
   },
+  "reference_text": "VOICEDESIGN_REF_TEXT_EN",
   "reference_sha256": "ARENA_VOICE-15",
-  "reference_generated": "real speech via Arena voice-15 \u2013 4 parts benchmark + FullScript scheduled; not TestDouble sine"
+  "reference_generated": "real speech via Arena voice-15 – 4 parts benchmark + FullScript scheduled; not TestDouble sine"
 }

@@ -15,6 +15,7 @@
   "backend_mode": "clone",
   "speaker_name": null,
   "reference_path": "cache/voice_refs/VD-E.wav",
+  "reference_text": "VOICEDESIGN_REF_TEXT_DE",
   "production_locked": true,
   "recommended": true,
   "default": true,

@@ -27,7 +27,7 @@ from ..security.identity_lock import check_identity, load_production
 from ..voices.registry import VoiceRegistry
 from .backend import BackendLauncher, JobResult, parse_progress_event
 from .helpers import format_duration, format_eta, stage_label, text_stats
-from .voice_view import default_voice, voice_rows
+from .voice_view import default_voice, voice_groups
 
 try:                                    # Windows Drag & Drop (§28)
     import windnd                      # type: ignore
@@ -279,17 +279,41 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
     def _rebuild_voice_card(self):
         for child in self.voice_card.winfo_children():
             child.destroy()
-        rows = voice_rows(self.lang_var.get(), self.registry)
-        for group, title in (("male", "Männlich"), ("female", "Weiblich")):
+        groups = voice_groups(self.lang_var.get(), self.registry)
+
+        def _render_section(title: str, rows: list[dict], subtitle: str = ""):
+            if not rows:
+                return
             frame = ttk.Frame(self.voice_card)
-            frame.pack(fill=X, padx=8, pady=(6 if group == "male" else 2,
-                                             8 if group == "female" else 2))
-            ttk.Label(frame, text=title,
-                      style="Muted.TLabel").pack(anchor=W)
-            inner = ttk.Frame(frame)
-            inner.pack(fill=X)
-            for row in [r for r in rows if r["gender"] == group]:
-                self._add_voice_button(inner, row)
+            frame.pack(fill=X, padx=8, pady=(8, 0))
+            header = ttk.Frame(frame)
+            header.pack(fill=X)
+            ttk.Label(header, text=title, style="Muted.TLabel",
+                      font=("", 9, "bold")).pack(side=LEFT)
+            if subtitle:
+                ttk.Label(header, text="   " + subtitle,
+                          style="Muted.TLabel").pack(side=LEFT)
+            for gender, label in (("male", "Männlich"),
+                                  ("female", "Weiblich")):
+                sub = [r for r in rows if r["gender"] == gender]
+                if not sub:
+                    continue
+                grp = ttk.Frame(frame)
+                grp.pack(fill=X, padx=(10, 0))
+                ttk.Label(grp, text=label,
+                          style="Muted.TLabel").pack(anchor=W)
+                inner = ttk.Frame(grp)
+                inner.pack(fill=X)
+                for row in sub:
+                    self._add_voice_button(inner, row)
+
+        _render_section("▎ Gesperrte Produktionsstimme", groups["locked"],
+                        "VD-E (nicht veränderbar)")
+        _render_section("▎ Custom Voices (eingebaute Qwen-Sprecher)",
+                        groups["custom"])
+        _render_section("▎ Production Clone Voices (nach Materialisierung verfügbar)",
+                        groups["clone"],
+                        "kanonische Referenz: cache/voice_refs/<id>.wav")
 
     def _add_voice_button(self, parent, row):
         text = row["label"]
@@ -461,10 +485,13 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
             self.registry.get(voice_id), self.lang_var.get()) \
             if self.registry.get(voice_id) else None
         if entry and entry.available is False:
+            note = entry.availability_note or (
+                "Stimme ist in der installierten Modellversion nicht "
+                "verfügbar (§13).")
             messagebox.showerror(
                 "Stimme nicht verfügbar",
-                f"Stimme ‚{entry.display_name}‘ ist in der installierten "
-                "Modellversion nicht verfügbar (§13).")
+                f"Stimme ‚{entry.display_name}‘ ist derzeit nicht verfügbar.\n\n"
+                + note)
             return
         # Ausgabeformat aus den neuen getrennten GUI-Feldern ableiten
         fmt_label = self.format_var.get()

@@ -514,6 +514,47 @@ DEFAULT_PROFILES: dict[str, dict] = {
 }
 
 
+def resolve_reference_text(key: str | None, language: str) -> str:
+    """Resolve a reference-text key to the canonical literal text.
+
+    Accepts:
+      - None / "" / "auto"  -> derive from language (EN/DE default)
+      - "VOICEDESIGN_REF_TEXT_EN" | "VOICEDESIGN_REF_TEXT_DE" -> canonical text
+      - any other non-empty string -> literal override (recipe-specific).
+
+    Reads the constants directly from ``app/prosody/instruct.py`` so the
+    function works even before numpy/torch are importable (used by CLI
+    tooling like ``materialize_references.py --list-missing``).
+    """
+    import ast as _ast
+    # Lazy import of Path to avoid circular imports at module load time
+    from pathlib import Path as _P
+    _instruct = _P(__file__).resolve().parents[1] / "prosody" / "instruct.py"
+    _cache: dict[str, str] = getattr(resolve_reference_text, "_cache", {})
+    if not _cache:
+        tree = _ast.parse(_instruct.read_text(encoding="utf-8"))
+        for node in tree.body:
+            if isinstance(node, _ast.Assign):
+                for tgt in node.targets:
+                    if isinstance(tgt, _ast.Name) and tgt.id in (
+                            "VOICEDESIGN_REF_TEXT_EN",
+                            "VOICEDESIGN_REF_TEXT_DE"):
+                        try:
+                            _cache[tgt.id] = _ast.literal_eval(node.value)
+                        except Exception:
+                            pass
+        resolve_reference_text._cache = _cache  # type: ignore[attr-defined]
+    en = _cache.get("VOICEDESIGN_REF_TEXT_EN", "")
+    de = _cache.get("VOICEDESIGN_REF_TEXT_DE", "")
+    if not key or key == "auto":
+        return en if language == "English" else de
+    if key == "VOICEDESIGN_REF_TEXT_EN":
+        return en
+    if key == "VOICEDESIGN_REF_TEXT_DE":
+        return de
+    return str(key)
+
+
 @dataclass
 class VoiceProfileEntry:
     voice_id: str
@@ -534,6 +575,13 @@ class VoiceProfileEntry:
     native_language: str = ""
     native_status: str = "cross_language"
     category: str = "narrator"
+    # Reference text for clone conditioning (symbolic key or literal text).
+    # The canonical values are "VOICEDESIGN_REF_TEXT_EN" and
+    # "VOICEDESIGN_REF_TEXT_DE"; any other value is treated as a literal
+    # override. None means "derive from the voice's native language".
+    reference_text_key: str | None = None
+    # Resolved literal reference text (populated by registry at load-time).
+    reference_text: str | None = None
     # sprachspezifische Sicht (via for_language):
     language: str = ""
     description_lang: str = ""
@@ -566,6 +614,7 @@ class VoiceRegistry:
 
     # -- Roh-Zugriff (alle Stimmen, sprachunabhängig) ---------------------
     def entries(self) -> list[VoiceProfileEntry]:
+        from .. import paths as _p
         order = ["vd_e", "uncle_fu", "dylan", "ryan", "aiden",
                  "serena", "vivian", "sohee",
                  "en_male_deep_01", "en_male_deep_02",
@@ -576,18 +625,76 @@ class VoiceRegistry:
         out = []
         for vid in ids:
             d = self._profiles[vid]
+            backend = str(d.get("backend_mode", "customvoice"))
+            ref_p = d.get("reference_path")
+            # Verfügbarkeit berechnen:
+            #  - CustomVoice-Built-ins: immer verfügbar (keine Referenz nötig)
+            #  - clone mit vorhandener Produktions-Referenz (cache/voice_refs/…wav)
+            #    → verfügbar
+            #  - clone ohne vorhandene Referenz → NICHT verfügbar
+            #    (kein VoiceDesign-Fallback, um Stimm-Korruption zu vermeiden)
+            #  - Explizites available=false im JSON überschreibt alles.
+            avail = d.get("available")
+            avail_note = str(d.get("availability_note", ""))
+            # Native/design language for reference-text resolution.
+            raw_settings = d.get("settings") or {}
+            voice_lang = str(raw_settings.get("language") or "").strip()
+            if voice_lang not in ("English", "German"):
+                if vid.startswith("en_"):
+                    voice_lang = "English"
+                elif vid.startswith("de_") or vid == "vd_e":
+                    voice_lang = "German"
+                else:
+                    voice_lang = "German" if "German" in str(
+                        d.get("native_language", "")) else "English"
+            ref_key = d.get("reference_text")
+            ref_text = (None if backend != "clone"
+                        else resolve_reference_text(ref_key, voice_lang))
+            if avail is None:
+                if backend == "customvoice":
+                    avail = True
+                elif backend == "clone" and ref_p:
+                    rp = _p.ROOT / ref_p
+                    if rp.exists() and rp.suffix.lower() == ".wav":
+                        # Validate the atomic reference bundle (WAV +
+                        # sidecar manifest + SHA match) before declaring
+                        # the voice available. An invalid bundle is as
+                        # good as a missing one and must surface a clear
+                        # reason in the GUI instead of silently producing
+                        # gibberish.
+                        try:
+                            from ..tts.reference_bundle import resolve_bundle
+                            _b = resolve_bundle(vid, language=voice_lang,
+                                                require_manifest=(vid != "vd_e"))
+                            avail = True
+                        except Exception as _be:                # noqa: BLE001
+                            avail = False
+                            avail_note = (
+                                "REFERENZ UNGÜLTIG – "
+                                f"{_be}")
+                    else:
+                        avail = False
+                        if not avail_note:
+                            avail_note = (
+                                "Produktions-Referenz fehlt "
+                                f"({ref_p}). Stimme muss zuerst über "
+                                "tools/materialize_references.py auf einem "
+                                "Host mit Qwen3-TTS-12Hz-1.7B-VoiceDesign "
+                                "materialisiert werden.")
+                else:
+                    avail = False
             out.append(VoiceProfileEntry(
                 voice_id=vid,
                 display_name=str(d.get("display_name", vid)),
                 gender=str(d.get("gender", "male")),
-                backend_mode=str(d.get("backend_mode", "customvoice")),
+                backend_mode=backend,
                 speaker_name=d.get("speaker_name"),
-                reference_path=d.get("reference_path"),
+                reference_path=ref_p,
                 production_locked=bool(d.get("production_locked", False)),
                 recommended=bool(d.get("recommended", False)),
                 default=bool(d.get("default", False)),
-                available=d.get("available"),
-                availability_note=str(d.get("availability_note", "")),
+                available=avail,
+                availability_note=avail_note,
                 description=str(d.get("description", "")),
                 model=str(d.get("model", "")),
                 language_support=list(d.get("language_support",
@@ -596,6 +703,9 @@ class VoiceRegistry:
                 native_status=str(d.get("native_status",
                                         "cross_language")),
                 category=str(d.get("category", "narrator")),
+                reference_text_key=(ref_key if isinstance(ref_key, str)
+                                    else None),
+                reference_text=ref_text,
             ))
         return out
 

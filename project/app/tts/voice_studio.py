@@ -174,6 +174,22 @@ class QwenVoiceStudio(BaseVoiceStudio):
         write_wav(out, wav, int(sr), bit_depth=16)
         log.info("VoiceDesign-Referenz %s -> %s (%.1f s)", candidate_id,
                  out, len(wav) / sr)
+        # Write atomic reference-bundle manifest sidecar so the WAV is
+        # NEVER left without provenance — a WAV without its .wav.json
+        # fails closed at resolve_bundle() time (except VD-E bootstrap).
+        try:
+            from .reference_bundle import create_bundle as _cb, \
+                write_bundle_atomically
+            b = _cb(voice_id=candidate_id, wav_path=out, ref_text=ref_text,
+                    language=language, seed=seed,
+                    description=description,
+                    model="Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+                    engine_version="qwen-voicestudio-v1")
+            write_bundle_atomically(b)
+            b.log_provenance(prefix="REFBUNDLE_WRITE")
+        except Exception as e:                          # noqa: BLE001
+            log.error("Failed to write reference bundle manifest for %s: %s",
+                      candidate_id, e)
         return VoiceRef(candidate_id=candidate_id, description=description,
                         ref_text=ref_text, wav_path=out, language=language)
 

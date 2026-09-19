@@ -1,0 +1,13 @@
+strategy   segs spoken_s  pause_s  total_s   avg   med   min   max near0  types
+classic       6    72.53     5.49    78.03  0.92  0.90  0.82  1.11     0  end_of_text=1,paragraph=5
+semantic      6    72.53     5.95    78.48  0.99  0.99  0.91  1.11     0  end_of_text=1,paragraph=5
+flow          6    72.53     6.21    78.74  1.03  1.04  0.95  1.11     0  end_of_text=1,paragraph=5
+narrative     6    72.53     7.59    80.13  1.27  1.25  1.15  1.48     0  end_of_text=1,paragraph=5
+
+Narrative per-segment pauses (6 segments):
+  [000] paragraph            pause=1.271s  chars=169  There is a quiet force shaping every moment of your life. You barely n
+  [001] paragraph            pause=1.233s  chars= 24  That force is attention.
+  [002] paragraph            pause=1.181s  chars=212  Most people never choose where it goes. They react to notifications, t
+  [003] paragraph            pause=1.286s  chars=230  Attention is not infinite. It is a limited resource, far more valuable
+  [004] paragraph            pause=1.146s  chars=271  The first step is simple, though not easy: notice where your attention
+  [005] end_of_text          pause=1.477s  chars=182  In that watching, something shifts. You are no longer lost inside the 

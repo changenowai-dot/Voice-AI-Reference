@@ -2,8 +2,8 @@
   "voice_id": "en_male_ultra_deep_calm_02",
   "display_name": "EN Male Ultra Deep Calm",
   "gender": "male",
-  "provider": "arena-tts",
-  "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+  "provider": "qwen3-tts",
+  "model": "Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone)",
   "language_support": [
     "German",
     "English"
@@ -14,7 +14,7 @@
   "description": "ultra deep calm – profoundly low, warm, exceptionally serene and controlled, natural authority",
   "backend_mode": "clone",
   "speaker_name": null,
-  "reference_path": "benchmark/fast_audition/11_ultra_deep_calm.mp3",
+  "reference_path": "cache/voice_refs/en_male_ultra_deep_calm_02.wav",
   "production_locked": false,
   "recommended": false,
   "default": false,
@@ -47,6 +47,7 @@
     "backend": "clone",
     "arena_voice_id": "voice-16"
   },
+  "reference_text": "VOICEDESIGN_REF_TEXT_EN",
   "reference_sha256": "ARENA_VOICE-16",
   "reference_generated": "real speech via Arena voice-16 – fast_audition identical short text; not TestDouble sine"
 }

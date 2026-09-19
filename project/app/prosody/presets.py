@@ -16,11 +16,35 @@ PRESETS = {
                        "narrator: warm, serious, intelligent, slightly "
                        "cinematic, never melodramatic."),
         "pause_style": "auto",
+        "pause_strategy": "classic",
         "emotion": "AUTO",
         "intensity": "AUTO",
         "speed": 1.0,
         "description": "Psychologie, Philosophie, Geschichte, Deep Dives "
-                       "(Standard)."
+                       "(Standard, Referenzverhalten)."
+    },
+    # NARRATIVE (2026-09-19 Prosodie/Pausen-Optimierung)
+    # Gleiche Stimmidentität wie deep_documentary, aber: explizite
+    # pause_strategy="narrative" + leicht entspannter Stil. Aktiviert
+    # hörbare Satz-/Absatz-/Part-Pausen und kleine Denkpausen nach
+    # Komma/Semikolon/Doppelpunkt/Gedankenstrich, ohne das Sprechtempo
+    # zu drosseln. Optimiert für tiefe, ruhige Erzählstimmen wie
+    # en_male_ultra_deep_calm_resonant_01 und en_male_warm_storytelling_authoritative_02.
+    "narrative_documentary": {
+        "label": "Narrative Documentary (calmer pauses)",
+        "base_style": ("Speak as a deep, calm, highly credible documentary "
+                       "narrator: warm, serious, intelligent, slightly "
+                       "cinematic, never melodramatic. Breathe naturally "
+                       "between sentences and sections; let ideas land; "
+                       "keep an unhurried, steady storytelling rhythm "
+                       "without slowing down."),
+        "pause_style": "relaxed",
+        "pause_strategy": "narrative",
+        "emotion": "AUTO",
+        "intensity": "AUTO",
+        "speed": 1.0,
+        "description": "Ruhigere Langform-Erzählung mit hörbaren Atem-/"
+                       "Denkpausen (für tiefe männliche Erzählstimmen)."
     },
     "psychological": {
         "label": "Psychological",

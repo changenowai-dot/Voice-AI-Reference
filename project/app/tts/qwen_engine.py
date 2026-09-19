@@ -254,25 +254,26 @@ class VoiceCloneEngine(TTSEngine):
     def __init__(self, hw: HardwareInfo, candidate_id: str,
                  description: str, models_dir: Path | None = None,
                  attn_implementation: str | None = None,
-                 allow_design: bool = True,
+                 allow_design: bool = False,
                  reference_path: Path | None = None,
                  language: str = "German",
                  ref_text: str | None = None,
                  seed: int | None = None):
-        """allow_design=False (VD-E-Produktion, §12): die Referenzdatei
-        MUSS vorhanden sein – niemals neu designen/clonen.
+        """allow_design=False (PRODUCTION DEFAULT, §12): die
+        Referenzdatei MUSS vorhanden sein – niemals stumm neu designen.
+
+        Nur der explizite Materialisierungspfad (tools/materialize_references.py)
+        setzt allow_design=True via VOICEOVER_ALLOW_VOICEDESIGN_MATERIALIZE=1.
 
         reference_path: Optional explicit override for the reference WAV path.
         If None, uses default paths.VOICE_REFS_DIR / f"{candidate_id}.wav".
-        Used by test harness to pass runtime reference (VOICEOVER_RUNTIME_REF).
 
         language: "German" oder "English" — wählt den passenden
                   Standard-Referenztext für create_voice_clone_prompt.
-        ref_text: Optional abweichender Referenztext (für nicht-de/engl.
-                  Stimmen oder Rezept-spezifische Texte).
-        seed:     Optionaler Seed für die VoiceDesign-Referenzgenerierung
-                  (wird andernfalls auf den bestehenden Versuchs-Algorithmus
-                  zurückgegriffen).
+        ref_text: Optional canonical reference text. When provided it MUST
+                  match the actual spoken content of reference_path exactly.
+                  If None, resolved from language via VOICEDESIGN_REF_TEXT_*.
+        seed:     Optionaler Seed für die VoiceDesign-Referenzgenerierung.
         """
         log.debug("[DIAG-D.1] VoiceCloneEngine.__init__() entered")
         
@@ -301,6 +302,7 @@ class VoiceCloneEngine(TTSEngine):
         
         self._prompt = None
         self._ref = None
+        self._bundle = None
         log.debug("[DIAG-D.2] VoiceCloneEngine.__init__() completed")
 
     def _ensure_prompt(self):
@@ -308,54 +310,180 @@ class VoiceCloneEngine(TTSEngine):
             return
         from .. import paths
         from .voice_studio import VoiceRef
-        from ..prosody.instruct import (VOICEDESIGN_REF_TEXT_DE,
-                                        VOICEDESIGN_REF_TEXT_EN)
-        # Use explicit override if provided (test harness/runtime reference),
-        # otherwise fall back to default cache location
-        if self.reference_path is not None:
-            ref_path = Path(self.reference_path)
-        else:
-            ref_path = paths.VOICE_REFS_DIR / f"{self.candidate_id}.wav"
-        # Make sure the reference is a 24 kHz mono WAV before handing it to
-        # create_voice_clone_prompt. If the configured reference is an MP3
-        # (e.g. a shortlist audition file we are re-using as a reference),
-        # transcode it once via ffmpeg into the cache and point at the WAV.
-        # This keeps clone conditioning consistent across runs and avoids
-        # passing MP3 bytes to an API that expects WAV.
-        ref_path = self._ensure_wav_reference(ref_path)
-        # Pick language-appropriate reference text for clone conditioning
+        from .reference_bundle import (BundleResolutionError,
+                                       ReferenceBundle,
+                                       default_bundle_path,
+                                       resolve_bundle)
+
         lang = getattr(self, "_language", None) or "German"
-        default_ref_text = (VOICEDESIGN_REF_TEXT_EN if lang == "English"
-                            else VOICEDESIGN_REF_TEXT_DE)
-        ref_text_for_clone = getattr(self, "_ref_text_override", None) or default_ref_text
-        # Allow description to carry per-voice info (voice JSON / recipe)
-        if ref_path.exists():
-            self._ref = VoiceRef(candidate_id=self.candidate_id,
-                                 description=self.description,
-                                 ref_text=ref_text_for_clone,
-                                 wav_path=ref_path,
-                                 language=lang)
-        else:
-            if not self.allow_design:
+
+        # --------------------------------------------------------------
+        # Strict reference-bundle resolution (fail-closed):
+        #   * If an explicit reference_path override was supplied (test
+        #     harness / direct engine call) AND an explicit ref_text was
+        #     also supplied, we construct an ad-hoc bundle from them AND
+        #     verify the WAV is readable. The caller is responsible for
+        #     the pair matching; we still refuse ref_text=None.
+        #   * Otherwise (production GUI/runner/pipeline path) we MUST
+        #     resolve the canonical bundle via resolve_bundle() which
+        #     enforces sidecar manifest, audio/text SHA match, language
+        #     match and unambiguous file location.
+        # The previous behaviour — silently defaulting ref_text to
+        # VOICEDESIGN_REF_TEXT_EN/DE when none was supplied — produced
+        # a corrupt clone prompt whenever the on-disk WAV had been
+        # generated with a DIFFERENT text (e.g. voice-09 gibberish on
+        # the first long-form benchmark). That fallback is removed.
+        # --------------------------------------------------------------
+        bundle: ReferenceBundle | None = None
+        canonical_wav = default_bundle_path(self.candidate_id)
+        is_explicit_override = (self.reference_path is not None and
+                                Path(self.reference_path).resolve() !=
+                                canonical_wav.resolve())
+
+        if is_explicit_override:
+            ref_path = Path(self.reference_path)
+            if not self._ref_text_override:
+                # Caller passed a WAV but no transcript. REFUSE.
                 raise TTSError(
-                    f"VD-E-Referenz fehlt: {ref_path}. Neuerzeugung ist "
-                    "gesperrt (LOCKED PRODUCTION, §12/§24).")
+                    "REFERENCE_TEXT_MISSING\n"
+                    f"Reference WAV {ref_path} supplied for "
+                    f"{self.candidate_id} but no matching ref_text was "
+                    "provided. A clone reference is an atomic "
+                    "(audio+text+provenance) bundle; synthesizing with "
+                    "ref_text=None produces gibberish and is not "
+                    "permitted in production. Pass the exact transcript "
+                    "of the WAV or use the canonical bundle resolution "
+                    f"(cache/voice_refs/{self.candidate_id}.wav + "
+                    f".wav.json manifest).")
+            # Ad-hoc bundle from explicit override (still validated
+            # for readability/format/duration). Caller accepts
+            # responsibility for the pair matching.
+            ref_path = self._ensure_wav_reference(ref_path)
+            if not ref_path.exists():
+                raise TTSError(
+                    f"REFERENCE_AUDIO_MISSING: {ref_path}")
+            from .reference_bundle import create_bundle
+            bundle = create_bundle(
+                voice_id=self.candidate_id, wav_path=ref_path,
+                ref_text=self._ref_text_override, language=lang,
+                seed=self._design_seed,
+                description=self.description,
+                model="Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+                engine_version=self.ENGINE_VERSION_CLONE,
+                extra={"note": "ad-hoc bundle from explicit override"})
+        else:
+            # Canonical bundle resolution (reads sidecar manifest,
+            # validates SHA, detects duplicates, etc.).
+            try:
+                bundle = resolve_bundle(self.candidate_id, language=lang,
+                                        require_manifest=not self.allow_design)
+            except BundleResolutionError as e:
+                if self.allow_design:
+                    # Materialization path: design a fresh reference
+                    # using the recipe ref text (caller must have
+                    # supplied one — we refuse to invent it).
+                    if not self._ref_text_override:
+                        raise TTSError(
+                            "REFERENCE_TEXT_MISSING\n"
+                            f"allow_design=True for {self.candidate_id} "
+                            "but no ref_text was supplied to "
+                            "VoiceCloneEngine. Cannot safely design a "
+                            "reference without knowing which transcript "
+                            "to speak. Pass ref_text explicitly (tools/"
+                            "materialize_references.py does this).")\
+                            from e
+                    bundle = None   # trigger design below
+                else:
+                    raise TTSError(str(e)) from e
+
+        if bundle is None:
+            # --- VoiceDesign materialization (only under allow_design=True)
+            if not self.allow_design:
+                # Shouldn't happen (resolve_bundle already raised),
+                # but guard defensively.
+                raise TTSError(
+                    f"REFERENCE_AUDIO_MISSING: {default_bundle_path(self.candidate_id)}")
             self._ref = self.studio.design_reference(
                 self.candidate_id, self.description, language=lang,
-                ref_text=ref_text_for_clone, seed=self._design_seed)
+                ref_text=self._ref_text_override, seed=self._design_seed)
+            # design_reference writes the WAV; write the atomic bundle
+            # manifest sidecar IMMEDIATELY after so the WAV is never
+            # left without provenance.
+            from .reference_bundle import create_bundle as _cb, \
+                write_bundle_atomically
+            new_bundle = _cb(
+                voice_id=self.candidate_id,
+                wav_path=self._ref.wav_path,
+                ref_text=self._ref.ref_text,
+                language=lang,
+                seed=self._design_seed,
+                description=self.description,
+                model="Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+                engine_version=self.ENGINE_VERSION_CLONE)
+            ok, summ, _ = new_bundle.validate()
+            if not ok:
+                raise TTSError(
+                    "REFERENCE_BUNDLE_INVALID after design_reference:\n"
+                    + summ)
+            write_bundle_atomically(new_bundle)
+            new_bundle.log_provenance(prefix="REFBUNDLE_WRITE")
+            bundle = new_bundle
+        else:
+            # Validate the resolved/overridden bundle before use.
+            ok, summ, _ = bundle.validate()
+            if not ok:
+                raise TTSError(summ)
+            # Materialize VoiceRef for build_clone_prompt
+            self._ref = VoiceRef(candidate_id=bundle.voice_id,
+                                 description=self.description,
+                                 ref_text=bundle.reference_text,
+                                 wav_path=bundle.audio_path,
+                                 language=bundle.language)
+
+        bundle.log_provenance(prefix="REFBUNDLE_LOAD")
+        self._bundle = bundle
         self._prompt = self.studio.build_clone_prompt(self._ref)
 
     def _ensure_wav_reference(self, ref_path: Path) -> Path:
-        """If ref_path points to an MP3/M4A/OGG/FLAC, transcode to 24 kHz mono
-        WAV in cache/voice_refs/_converted/ on first use and return that WAV.
-        WAV inputs pass through unchanged. Missing files are returned as-is so
-        the caller can trigger VoiceDesign (allow_design=True) or fail with a
-        clear error (allow_design=False)."""
+        """Production-reference guard.
+
+        A production clone-conditioning reference MUST be a 24 kHz mono WAV
+        living under ``cache/voice_refs/`` (or another location explicitly
+        supplied by a test harness / runtime override), previously generated
+        by ``QwenVoiceStudio.design_reference()``.
+
+        Audition-MP3s (benchmark/fast_audition*/*.mp3 etc.) are final renders
+        for human listening — they speak the AUDITION text ("Every discovery
+        begins with a question…" / "Jede Entdeckung beginnt…") while
+        ``build_clone_prompt`` is called with ``VOICEDESIGN_REF_TEXT_EN/DE``
+        ("There is a book…" / "Es gibt ein Buch…"). Passing them through
+        would create a text/audio mismatch → corrupt clone prompt → garbled
+        output. We therefore refuse non-WAV references outright in
+        production and only accept them if the caller explicitly set the
+        ``VOICEOVER_REFS_ACCEPT_NONWAV`` env flag (test harness / explicit
+        user override). Missing files are returned as-is so the caller can
+        trigger VoiceDesign (allow_design=True) or fail with a clear error
+        (allow_design=False).
+        """
+        import os as _os
         if not ref_path.exists():
             return ref_path
         suf = ref_path.suffix.lower()
         if suf == ".wav":
             return ref_path
+        accept_nonwav = bool(_os.environ.get("VOICEOVER_REFS_ACCEPT_NONWAV"))
+        if not accept_nonwav:
+            from .engine_base import TTSError
+            raise TTSError(
+                f"Produktions-Referenz {ref_path} ist kein WAV "
+                f"(Suffix '{suf}'). Audition-/Benchmark-MP3s sind Hör-Renders, "
+                "keine Clone-Konditionierungsreferenzen (Text/Audio-Mismatch "
+                "→ korrumpierter Prompt → Stimm-Korruption).\n"
+                "Die kanonische Referenz muss per VoiceDesign erzeugt "
+                "werden und unter cache/voice_refs/ als 24 kHz mono WAV "
+                "vorliegen. Nutze tools/materialize_references.py auf dem "
+                "GPU-Host oder setze VOICEOVER_REFS_ACCEPT_NONWAV=1 nur für "
+                "explizite Tests.")
         from .. import paths as _p
         from hashlib import sha256
         conv_dir = _p.VOICE_REFS_DIR / "_converted"
@@ -366,8 +494,6 @@ class VoiceCloneEngine(TTSEngine):
         out_wav = conv_dir / f"{ref_path.stem}_{digest}_24k_mono.wav"
         if out_wav.exists():
             return out_wav
-        # Attempt ffmpeg transcode: 24 kHz mono PCM s16le (matches the
-        # VoiceDesign reference format).
         try:
             from ..audio.ffmpeg import run_ffmpeg
             ok, _msg = run_ffmpeg([
@@ -376,8 +502,11 @@ class VoiceCloneEngine(TTSEngine):
                 "-c:a", "pcm_s16le", str(out_wav),
             ], timeout_s=120)
             if ok and out_wav.exists() and out_wav.stat().st_size > 0:
-                log.info("Reference %s -> WAV transcoded to %s",
-                         ref_path, out_wav)
+                log.warning(
+                    "Reference %s ist kein WAV — akzeptiert nur, weil "
+                    "VOICEOVER_REFS_ACCEPT_NONWAV gesetzt ist. "
+                    "Transkodiert nach %s (Text/Audio-Mismatch möglich!).",
+                    ref_path, out_wav)
                 return out_wav
             log.warning("ffmpeg-Transkodierung fehlgeschlagen (%s); "
                         "versuche Original-Pfad direkt zu verwenden.", _msg)
@@ -404,10 +533,12 @@ class VoiceCloneEngine(TTSEngine):
 
     def synthesize(self, request: SynthesisRequest) -> SynthesisResult:
         self._ensure_prompt()
+        if getattr(self, "_bundle", None) is not None:
+            self._bundle.log_provenance(prefix="REFBUNDLE_SYNTH")
         return self.studio.synth_clone(self._prompt, request)
 
     def info(self) -> dict:
-        return {
+        info = {
             "engine": self.name,
             "engine_version": self.ENGINE_VERSION_CLONE,
             "model_size": "1.7B",
@@ -416,3 +547,14 @@ class VoiceCloneEngine(TTSEngine):
             "hardware_mode": self.hw.mode,
             "candidate_id": self.candidate_id,
         }
+        b = getattr(self, "_bundle", None)
+        if b is not None:
+            info["reference_bundle"] = {
+                "bundle_id": b.bundle_id(),
+                "audio_path": str(b.audio_path),
+                "audio_sha256": b.audio_sha256,
+                "text_sha256": b.reference_text_sha256,
+                "language": b.language,
+                "seed": b.generation.get("seed"),
+            }
+        return info

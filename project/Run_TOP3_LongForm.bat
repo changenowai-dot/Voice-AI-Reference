@@ -45,11 +45,12 @@ echo.
 set RC=%ERRORLEVEL%
 echo.
 if %RC%==0 (
-    echo === OK – echte Neusynthese abgeschlossen (ExitCode 0) ===
+    echo === OK – alle 3 Stimmen VOLLSTAENDIG (ExitCode 0) ===
 ) else if %RC%==2 (
-    echo === WARNUNG – Cache-Reuse erkannt, KEINE saubere Neusynthese! ===
+    echo === WARNUNG – Cache-Reuse erkannt, KEINE saubere Neusynthese! (ExitCode 2) ===
 ) else (
-    echo === FEHLER (ExitCode %RC%) ===
+    echo === FEHLER / unvollstaendiger Lauf (ExitCode %RC%) ===
+    echo     (Einzelstimmen-Fehler siehe longform_metrics.json / run_summary.json)
 )
 echo Ergebnisse unter: reproduction\TOP3_LONGFORM_REAL\SUMMARY.md
 pause

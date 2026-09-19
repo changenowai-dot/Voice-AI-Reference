@@ -2,8 +2,8 @@
   "voice_id": "de_male_deep_academic_01",
   "display_name": "DE Male Deep Academic",
   "gender": "male",
-  "provider": "arena-tts",
-  "model": "Arena TTS (real speech) – placeholder for Qwen3-TTS-12Hz-1.7B-VoiceDesign->Clone on RTX 5060",
+  "provider": "qwen3-tts",
+  "model": "Qwen3-TTS-12Hz-1.7B-Base (VoiceDesign->Clone)",
   "language_support": [
     "German",
     "English"
@@ -14,7 +14,7 @@
   "description": "deep academic – tief, intelligent, präzise, kultiviert, wissenschaftlich",
   "backend_mode": "clone",
   "speaker_name": null,
-  "reference_path": "benchmark/fast_audition_de/04_de_male_deep_academic.mp3",
+  "reference_path": "cache/voice_refs/de_male_deep_academic_01.wav",
   "production_locked": false,
   "recommended": false,
   "default": false,
@@ -49,6 +49,7 @@
     "visible_position": 4,
     "round": "de_fast_audition"
   },
+  "reference_text": "VOICEDESIGN_REF_TEXT_DE",
   "reference_sha256": "ARENA_VOICE-31",
   "reference_generated": "real speech via Arena voice-31 – de_fast_audition identical German short text; not TestDouble sine",
   "human_selected": false,

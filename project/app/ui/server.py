@@ -75,13 +75,31 @@ class AppContext:
                 else:
                     from .. import config as _cfg
                     gcfg = _cfg.load_config().get("german", {}) or {}
-                    if gcfg.get("engine_mode") == "voicedesign" and                             (gcfg.get("voicedesign") or {}).get(
+                    if gcfg.get("engine_mode") == "voicedesign" and \
+                            (gcfg.get("voicedesign") or {}).get(
                                 "candidate_id"):
                         from ..tts.qwen_engine import VoiceCloneEngine
+                        from ..voices.registry import VoiceRegistry
+                        from ..jobs.runner import _resolve_voice_native_language
+                        reg = VoiceRegistry()
                         vd = gcfg["voicedesign"]
+                        cid = vd["candidate_id"]
+                        entry = reg.get(cid)
+                        lang = (_resolve_voice_native_language(reg, entry)
+                                if entry is not None else
+                                ("English" if cid.startswith("en_")
+                                 else "German"))
+                        # ref_text=None → VoiceCloneEngine loads the
+                        # atomic reference-bundle sidecar and refuses
+                        # to run if the manifest is missing/hash-mismatch
+                        # (fail-closed, no silent fallback to default).
                         self._engine = VoiceCloneEngine(
-                            hw=self.hw, candidate_id=vd["candidate_id"],
-                            description=vd.get("description", ""),
+                            hw=self.hw, candidate_id=cid,
+                            description=vd.get("description",
+                                               entry.description if entry else ""),
+                            language=lang,
+                            ref_text=None,
+                            allow_design=False,
                             attn_implementation=adv.get(
                                 "attn_implementation") or None)
                     else:
