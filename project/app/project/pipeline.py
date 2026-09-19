@@ -152,10 +152,13 @@ class Pipeline:
             u["term"] for u in pron_result.unknown_problem_words[:15]]
 
         # 6) Segmentierung ------------------------------------------------------
+        # Defaults aus app.config.DEFAULT_CONFIG (420/120/700) – kurze
+        # Segmente = mehr natürliche Satzenden im Audiostrom, was wiederum
+        # hörbare Pausen und bessere Langform-Konsistenz erzeugt.
         seg_cfg = SegmentationConfig(
-            target_chars=int(adv.get("segment_target_chars", 900)),
-            min_chars=int(adv.get("segment_min_chars", 350)),
-            max_chars=int(adv.get("segment_max_chars", 1500)),
+            target_chars=int(adv.get("segment_target_chars", 420)),
+            min_chars=int(adv.get("segment_min_chars", 120)),
+            max_chars=int(adv.get("segment_max_chars", 700)),
             close_slack=float(adv.get("segment_close_slack", 0.45)),
             hard_start_min_chars=int(adv.get("segment_hard_start_min_chars", 200)),
             respect_paragraph_boundary=not bool(adv.get(
@@ -186,10 +189,18 @@ class Pipeline:
             "instruct_variant", GERMAN_CFG_DEFAULTS["instruct_variant"])
         min_german_score = float(german_cfg.get(
             "min_german_score", GERMAN_CFG_DEFAULTS["min_german_score"]))
-        pause_strategy = adv.get("pause_strategy", "classic")
+        # Pausenstrategie/Stil: explizite cfg-Einträge haben Vorrang,
+        # sonst Preset-Standard (damit narrative_documentary automatisch
+        # strategy=narrative aktiviert).
+        pause_strategy = adv.get(
+            "pause_strategy",
+            self.cfg.get("pause_strategy", preset.get("pause_strategy", "classic")))
         de_modifier = getattr(profile, "de_modifier", "")
-        speed = float(self.cfg.get("speed", 1.0) or 1.0)
+        speed = float(self.cfg.get("speed", preset.get("speed", 1.0)) or 1.0)
         pause_style = self.cfg.get("pause_style", preset.get("pause_style", "auto"))
+        log.info("Pausen: preset=%s style=%s strategy=%s speed=%.2f segs=%d",
+                 self.cfg.get("preset", "deep_documentary"), pause_style,
+                 pause_strategy, speed, len(segments))
         assign_pauses(segments, style=pause_style, speed=speed,
                       strategy=pause_strategy)
 
