@@ -53,13 +53,34 @@ def _resolve_reference_path(production: dict) -> Path:
     """Ermittelt den Pfad zur VD-E-Referenz.
     
     Priorität:
+    0. Auto-Bootstrap aus Golden Reference (project/VD-E_GOLDEN_REFERENCE/VD-E.wav)
+       falls der Runtime-Cache die Datei noch nicht enthält. Die Golden
+       Reference wird dabei NUR kopiert, niemals verändert. Die SHA-Prüfung
+       geschieht nach dem Kopieren (in reference_bundle._materialize_vd_e_from_golden).
     1. VOICEOVER_RUNTIME_REF Environment-Variable (expliziter Dateipfad)
     2. VOICEOVER_REFS_DIR Environment-Variable (Verzeichnis + Dateiname aus Config)
     3. reference_path aus production.json Config (relativ zu ROOT)
     4. Default: cache/voice_refs/VD-E.wav (relativ zu ROOT)
+    5. Fallback: Golden Reference direkt (read-only), falls Cache leer.
     """
     import os
-    
+
+    # 0. Auto-Bootstrap aus der Golden Reference (idempotent).
+    try:
+        from ..tts.reference_bundle import ensure_bundle_materialized
+        ensure_bundle_materialized("vd_e")
+    except Exception as e:                                # noqa: BLE001
+        log.warning(f"VD-E auto-bootstrap fehlgeschlagen: {e}")
+
+    # 0b. Falls nach Bootstrap immer noch nichts im Cache liegt, nutze
+    # direkt die Golden Reference (read-only), damit VD-E nie stillschweigend
+    # "fehlt", solange das Repo/Release die Golden Datei enthält.
+    golden = paths.VD_E_GOLDEN_REF_PATH
+    cache_wav = paths.VOICE_REFS_DIR / "VD-E.wav"
+    if not cache_wav.exists() and golden.exists():
+        log.info("Verwende VD-E Golden Reference direkt (ohne Cache-Kopie).")
+        return golden
+
     # 1. Expliziter Dateipfad hat höchste Priorität
     env_ref = os.environ.get("VOICEOVER_RUNTIME_REF")
     if env_ref:

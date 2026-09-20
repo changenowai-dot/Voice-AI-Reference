@@ -46,6 +46,16 @@ CACHE_SEGMENT_DIR = CACHE_DIR / "segments"
 CACHE_PROJECT_DIR = CACHE_DIR / "projects"
 VOICE_REFS_DIR = Path(os.environ.get("VOICEOVER_REFS_DIR") or str(CACHE_DIR / "voice_refs"))
 
+# Versionierte Referenz-Bundles (werden mit dem Repo/Release ausgeliefert).
+# Diese Dateien werden NICHT zur Laufzeit geschrieben; sie werden einmalig
+# beim Release-Build/Import in das Repo gestellt. Die Laufzeit-Logik
+# sucht eine Referenz zuerst im Runtime-Cache (VOICE_REFS_DIR), dann im
+# mitgelieferten Bundle-Verzeichnis, und materialisiert sie bei Bedarf
+# automatisch in den Cache. VD-E wird aus der Golden Reference gebootstrappt.
+BUNDLED_REF_DIR = APP_DIR / "voices" / "bundles"
+VD_E_GOLDEN_REF_PATH = ROOT / "VD-E_GOLDEN_REFERENCE" / "VD-E.wav"
+VD_E_EXPECTED_SHA256 = "b156c02a60a873ad95fc92390c4a136c85308b20188373cd734bee5e5e5f2025"
+
 CONFIG_FILE = CONFIG_DIR / "config.json"
 PRESETS_FILE = CONFIG_DIR / "presets.json"
 VOICES_FILE = CONFIG_DIR / "voices.json"
@@ -68,6 +78,10 @@ def ensure_directories() -> None:
         CACHE_PROJECT_DIR, VOICE_REFS_DIR, STATE_DIR,
     ):
         d.mkdir(parents=True, exist_ok=True)
+    # BUNDLED_REF_DIR ist eine *Quell*-Ressource (mit Repo ausgeliefert)
+    # und wird NICHT erstellt, wenn sie fehlt (sonst würden wir einen
+    # leeren Ordner im Cache erzeugen). Sie muss im Release enthalten sein.
+    # VD-E-Golden-Ordner wird ebenfalls nicht erstellt (Read-Only).
     # Hugging-Face-Cache lokal bündeln (Models-Ordner), bevor hf importiert
     os.environ.setdefault("HF_HOME", str(MODELS_DIR / "hf"))
 

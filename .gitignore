@@ -23,15 +23,24 @@ env/
 .mypy_cache/
 .ruff_cache/
 
-# Cache / Temp (nur Root-Level cache/-Verzeichnis für Runtime-Daten;
-# der Python-Source-Code unter project/app/cache/ wird NICHT ignoriert).
+# Cache / Temp (Runtime-Daten; zur Laufzeit generiert, niemals committen).
+# - project/cache/  ist das Runtime-Cache-Verzeichnis der App (s. paths.py:
+#   ROOT = <repo>/project, CACHE_DIR = ROOT/cache = project/cache).
+# - /cache/         ist ein Root-Level-Cache (fälschlicherweise früher
+#   angelegt, bleibt ignoriert).
+# - project/app/cache/ ist Source-Code (Cache-Manager) und wird NICHT ignoriert.
+# - project/app/voices/bundles/ sind VERSIONIERTE Referenz-Bundles (WAV + Manifest),
+#   die mit dem Release ausgeliefert werden und MÜSSEN getrackt bleiben.
 .cache/
 /cache/
+project/cache/
 caches/
 tmp/
 temp/
 *.tmp
 *.temp
+!project/app/voices/bundles/
+!project/app/voices/bundles/**
 
 # Logs
 *.log

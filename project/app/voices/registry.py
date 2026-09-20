@@ -653,34 +653,22 @@ class VoiceRegistry:
             if avail is None:
                 if backend == "customvoice":
                     avail = True
-                elif backend == "clone" and ref_p:
-                    rp = _p.ROOT / ref_p
-                    if rp.exists() and rp.suffix.lower() == ".wav":
-                        # Validate the atomic reference bundle (WAV +
-                        # sidecar manifest + SHA match) before declaring
-                        # the voice available. An invalid bundle is as
-                        # good as a missing one and must surface a clear
-                        # reason in the GUI instead of silently producing
-                        # gibberish.
-                        try:
-                            from ..tts.reference_bundle import resolve_bundle
-                            _b = resolve_bundle(vid, language=voice_lang,
-                                                require_manifest=(vid != "vd_e"))
-                            avail = True
-                        except Exception as _be:                # noqa: BLE001
-                            avail = False
-                            avail_note = (
-                                "REFERENZ UNGÜLTIG – "
-                                f"{_be}")
-                    else:
-                        avail = False
-                        if not avail_note:
-                            avail_note = (
-                                "Produktions-Referenz fehlt "
-                                f"({ref_p}). Stimme muss zuerst über "
-                                "tools/materialize_references.py auf einem "
-                                "Host mit Qwen3-TTS-12Hz-1.7B-VoiceDesign "
-                                "materialisiert werden.")
+                elif backend == "clone":
+                    # Verfügbarkeit wird NUR über die Bundle-Existenz
+                    # bestimmt – ohne Seiteneffekt (keine Kopie in den
+                    # Cache bei GUI-Abfrage). Ein Bundle das in EINEM
+                    # der drei Orte existiert UND valide ist, macht die
+                    # Stimme auswählbar:
+                    #   (a) release-bundled (project/app/voices/bundles)
+                    #   (b) runtime-cache   (project/cache/voice_refs)
+                    #   (c) VD-E Golden Reference (nur für vd_e)
+                    from ..tts.reference_bundle import bundle_exists
+                    ok, reason = bundle_exists(vid, language=voice_lang)
+                    avail = ok
+                    if not ok and not avail_note:
+                        avail_note = (
+                            "NICHT VERFÜGBAR – Referenz fehlt (weder im "
+                            "Release-Bundle noch im Runtime-Cache).")
                 else:
                     avail = False
             out.append(VoiceProfileEntry(

@@ -246,7 +246,97 @@ def manifest_path_for(wav_path: Path) -> Path:
 
 
 def default_bundle_path(voice_id: str) -> Path:
+    """Preferred runtime (cache) location for a voice's reference WAV."""
     return paths.VOICE_REFS_DIR / f"{voice_id}.wav"
+
+
+def bundled_bundle_path(voice_id: str) -> Path:
+    """Release-bundled (immutable) reference WAV shipped with the repo."""
+    return paths.BUNDLED_REF_DIR / f"{voice_id}.wav"
+
+
+# ---------------------------------------------------------------------------
+# Auto-materialization: populate VOICE_REFS_DIR from bundled/Golden sources
+# on first run (idempotent, never overwrites an existing cache entry).
+# ---------------------------------------------------------------------------
+_materialized: set[str] = set()   # process-local memo; avoids re-copy per call
+
+
+def _materialize_vd_e_from_golden() -> Path | None:
+    """Copy the locked Golden VD-E into the runtime cache if missing.
+
+    Returns the resulting cache path, or None if the Golden reference is
+    not available at all (caller surfaces that as a hard error).
+
+    The Golden WAV itself is NEVER modified; we only copy and verify SHA.
+    """
+    cache_wav = default_bundle_path("vd_e")
+    if cache_wav.exists():
+        return cache_wav
+    golden = paths.VD_E_GOLDEN_REF_PATH
+    if not golden.exists():
+        # legacy top-level location
+        legacy = paths.ROOT.parent / "reference" / "VD-E_GOLDEN_REFERENCE" / "VD-E.wav"
+        if legacy.exists():
+            golden = legacy
+        else:
+            return None
+    import shutil
+    cache_wav.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(golden, cache_wav)
+    # Verify SHA after copy — corruption defense.
+    actual = sha256_file(cache_wav)
+    if actual.lower() != paths.VD_E_EXPECTED_SHA256.lower():
+        try:
+            cache_wav.unlink()
+        except Exception:                               # noqa: BLE001
+            pass
+        raise BundleResolutionError(
+            "VD_E_GOLDEN_SHA_MISMATCH\n"
+            f"Golden source: {golden}\n"
+            f"Copied to:     {cache_wav}\n"
+            f"Expected SHA:  {paths.VD_E_EXPECTED_SHA256}\n"
+            f"Actual SHA:    {actual}\n"
+            "Identity lock FAILED; refusing to proceed. Re-acquire the "
+            "untouched Golden Reference VD-E.wav.")
+    return cache_wav
+
+
+def _materialize_from_bundled(voice_id: str) -> Path | None:
+    """Copy a bundle shipped with the release into the runtime cache.
+
+    Copies both the WAV and the sidecar manifest (if present). Returns the
+    cache WAV path, or None if no bundled copy exists. Never overwrites
+    an existing cache entry (user materialization wins).
+    """
+    cache_wav = default_bundle_path(voice_id)
+    if cache_wav.exists():
+        return cache_wav
+    src_wav = bundled_bundle_path(voice_id)
+    if not src_wav.exists():
+        return None
+    import shutil
+    cache_wav.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src_wav, cache_wav)
+    src_manifest = manifest_path_for(src_wav)
+    dst_manifest = manifest_path_for(cache_wav)
+    if src_manifest.exists() and not dst_manifest.exists():
+        shutil.copy2(src_manifest, dst_manifest)
+    return cache_wav
+
+
+def ensure_bundle_materialized(voice_id: str) -> Path | None:
+    """Best-effort materialization. Returns resolved cache WAV or None."""
+    if voice_id in _materialized:
+        return default_bundle_path(voice_id)
+    # Priority order: cache > bundled > (VD-E golden special case)
+    if voice_id == "vd_e":
+        result = _materialize_vd_e_from_golden()
+    else:
+        result = _materialize_from_bundled(voice_id)
+    if result is not None:
+        _materialized.add(voice_id)
+    return result
 
 
 def write_bundle_atomically(bundle: ReferenceBundle) -> Path:
@@ -346,106 +436,215 @@ class BundleResolutionError(RuntimeError):
 
 
 def resolve_bundle(voice_id: str, *, language: str | None = None,
-                   require_manifest: bool = False
+                   require_manifest: bool = False,
+                   auto_materialize: bool = True,
                    ) -> ReferenceBundle:
     """Resolve the single canonical reference bundle for ``voice_id``.
 
-    Resolution rules (deliberately strict):
-      1. The bundle MUST live in ``paths.VOICE_REFS_DIR / f"{voice_id}.wav"``.
-      2. If multiple candidate WAVs with the same voice_id stem exist in
-         other cache/backup/temp locations that is an
-         ``AMBIGUOUS_REFERENCE_BUNDLE`` error.
-      3. If a sidecar manifest exists it is loaded and its hashes/language
-         validated against the WAV on disk.
-      4. If no manifest exists AND ``require_manifest`` is False the bundle
-         is constructed ad-hoc for Golden-Voice bootstrapping (VD-E) and
-         ONLY if ``voice_id == "vd_e"`` — every other voice without a
-         manifest is INVALID (fail closed).
-      5. The returned bundle is validated; invalid bundles raise
+    Resolution priority (distribution-first, per release-architecture):
+      0. VD-E special: bootstrap from the locked Golden Reference into
+         the runtime cache, SHA-verified, then resolve from cache.
+      1. **Bundled reference** (immutable, shipped with release, in
+         ``project/app/voices/bundles/``) – Source of Truth for
+         distribution. If it exists and is valid and auto_materialize
+         is True, it is copied idempotently into the runtime cache and
+         the cache copy is returned (TTS engine needs a stable writable
+         location for converted-cached sidecars).
+      2. **Runtime cache** (``project/cache/voice_refs/``) – locally
+         materialized/user-generated references; wins over bundled if
+         its SHA differs (user-local override / development).
+      3. If neither location provides a valid bundle AND
+         ``require_manifest`` is False AND ``voice_id == "vd_e"``, the
+         implicit Golden bootstrap bundle is used (legacy path for
+         VD-E which predates the manifest scheme).
+      4. The returned bundle is validated; invalid bundles raise
          :class:`BundleResolutionError` with a human-readable reason.
+
+    Setting ``auto_materialize=False`` makes the function a pure lookup
+    (used for availability checks from the GUI without writing to
+    cache).
     """
-    ref_dir = paths.VOICE_REFS_DIR
-    canonical_wav = ref_dir / f"{voice_id}.wav"
+    # --- Lookup both locations without writing ---
+    bundled_wav = bundled_bundle_path(voice_id)
+    cache_wav = default_bundle_path(voice_id)
+    bundled_bundle: ReferenceBundle | None = None
+    cache_bundle: ReferenceBundle | None = None
 
-    # 2. Reject duplicate/ambiguous candidates anywhere under cache/voice_refs
-    candidates = []
-    if ref_dir.exists():
-        for ext in ("wav", "mp3", "flac", "ogg"):
-            for p in ref_dir.rglob(f"{voice_id}.{ext}"):
-                candidates.append(p)
-        # also include stem-matches in _converted/ etc.
-        for p in ref_dir.rglob(f"{voice_id}*.*"):
-            if p.suffix.lower() in (".wav", ".json") or "_converted" in str(p):
-                if p not in candidates and p.suffix.lower() == ".wav":
-                    candidates.append(p)
-    # de-duplicate
-    candidates = sorted(set(candidates))
-    if len(candidates) > 1:
-        # Canonical path is the only accepted one; anything else is ambiguous.
-        non_canon = [c for c in candidates if c.resolve() != canonical_wav.resolve()]
-        if non_canon:
-            raise BundleResolutionError(
-                "AMBIGUOUS_REFERENCE_BUNDLE VOICE={}\n"
-                "Found multiple candidate reference files for this voice:\n"
-                "{}\n"
-                "Canonical path expected: {}\n"
-                "Remove or archive stale/duplicate files before synthesis; "
-                "the system will not guess which one is correct."
-                .format(voice_id,
-                        "\n".join(f"  - {c}" for c in candidates),
-                        canonical_wav))
-
-    if not canonical_wav.exists():
-        # CustomVoice voices don't have refs; caller should not ask.
+    # Duplicate/ambiguity scan runs over both directories combined.
+    candidates = _find_candidate_wavs(voice_id)
+    # Strict: any WAV outside the two canonical paths is ambiguous.
+    canonical_set = {bundled_wav.resolve(), cache_wav.resolve()}
+    non_canon = [c for c in candidates if c.resolve() not in canonical_set]
+    if non_canon:
         raise BundleResolutionError(
-            f"REFERENCE_AUDIO_MISSING VOICE={voice_id}\n"
-            f"Expected canonical reference WAV: {canonical_wav}\n"
-            "Materialize it via `python project/tools/materialize_references.py "
-            f"--voice-id {voice_id}` on the GPU host, then re-run.")
+            "AMBIGUOUS_REFERENCE_BUNDLE VOICE={}\n"
+            "Found reference WAV(s) outside the two canonical locations:\n{}\n"
+            "Canonical locations:\n  bundled: {}\n  cache:   {}\n"
+            "Remove or archive stale duplicates before synthesis; the "
+            "system will not guess."
+            .format(voice_id, "\n".join(f"  - {c}" for c in non_canon),
+                    bundled_wav, cache_wav))
 
-    # Load manifest sidecar if present
-    bundle = load_bundle(canonical_wav, voice_id=voice_id,
-                         expected_language=language)
+    # Try loading from each location.
+    if bundled_wav.exists():
+        b = load_bundle(bundled_wav, voice_id=voice_id,
+                        expected_language=language)
+        if b is not None:
+            ok_b, _, _ = b.validate(wav_must_exist=True)
+            if ok_b:
+                bundled_bundle = b
+    if cache_wav.exists():
+        c = load_bundle(cache_wav, voice_id=voice_id,
+                        expected_language=language)
+        if c is not None:
+            ok_c, _, _ = c.validate(wav_must_exist=True)
+            if ok_c:
+                cache_bundle = c
 
-    if bundle is None:
-        if voice_id == "vd_e" and not require_manifest:
-            # Bootstrap: Golden voice existed before the manifest scheme.
-            # Build an implicit bundle from the canonical German ref text.
-            _en_default, ref_text = _load_default_ref_texts()
-            bundle = ReferenceBundle(
-                voice_id="vd_e",
-                audio_path=canonical_wav,
-                audio_sha256=sha256_file(canonical_wav),
-                reference_text=ref_text,
-                reference_text_sha256=sha256_text(ref_text),
-                language="German",
-                generation={"seed": 52001,
-                            "model": "Qwen3-TTS-12Hz-1.7B-VoiceDesign",
-                            "engine_version": "qwen-voicestudio-v1",
-                            "source_commit": _source_commit(),
-                            "created_at": "bootstrapped-from-golden",
-                            "note": "Golden VD-E; manifest auto-generated at runtime."},
-            )
+    chosen: ReferenceBundle | None = None
+    chosen_location = ""
+
+    if cache_bundle is not None and bundled_bundle is not None:
+        if cache_bundle.audio_sha256.lower() == bundled_bundle.audio_sha256.lower():
+            # Cache matches bundled → use cache (already materialized).
+            chosen, chosen_location = cache_bundle, "cache(=bundled)"
         else:
-            raise BundleResolutionError(
-                f"REFERENCE_BUNDLE_MANIFEST_MISSING VOICE={voice_id}\n"
-                f"Canonical WAV exists at {canonical_wav} but no sidecar "
-                f"manifest `{canonical_wav.name}.json` was found.\n"
-                "Without a manifest the audio/text provenance cannot be "
-                "verified; refuse to synthesize. Re-materialize this voice "
-                "via tools/materialize_references.py to write the bundle.")
+            # Cache has a different SHA than bundled — treat as a
+            # legitimate local override (user-materialized dev copy)
+            # but log a warning. Use cache.
+            log.warning(
+                "REFERENCE_OVERRIDE VOICE=%s: cache SHA %s… differs from "
+                "bundled SHA %s… — using cache (local override).",
+                voice_id, cache_bundle.audio_sha256[:12],
+                bundled_bundle.audio_sha256[:12])
+            chosen, chosen_location = cache_bundle, "cache(override)"
+    elif cache_bundle is not None:
+        chosen, chosen_location = cache_bundle, "cache"
+    elif bundled_bundle is not None:
+        chosen, chosen_location = bundled_bundle, "bundled"
 
-    # If caller knows the language, ensure it matches.
-    if language and bundle.language != language:
-        # Not fatal — engine can proceed with bundle language — but log.
+    # VD-E Golden bootstrap if neither location has anything and VD-E
+    # Golden reference is present.
+    if chosen is None and voice_id == "vd_e" and not require_manifest:
+        if auto_materialize:
+            mat = _materialize_vd_e_from_golden()
+            if mat is not None and mat.exists():
+                after = load_bundle(mat, voice_id="vd_e",
+                                    expected_language="German")
+                if after is None:
+                    # Build implicit bundle (pre-manifest legacy path).
+                    _en_default, ref_text = _load_default_ref_texts()
+                    chosen = ReferenceBundle(
+                        voice_id="vd_e",
+                        audio_path=mat,
+                        audio_sha256=sha256_file(mat),
+                        reference_text=ref_text,
+                        reference_text_sha256=sha256_text(ref_text),
+                        language="German",
+                        generation={"seed": 52001,
+                                    "model": "Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+                                    "note": "bootstrapped-from-golden"},
+                    )
+                    chosen_location = "golden(implicit)"
+                else:
+                    chosen, chosen_location = after, "golden(materialized)"
+        else:
+            # Lookup-only mode: check if Golden file exists; report it
+            # via a synthetic bundle without copying.
+            g = paths.VD_E_GOLDEN_REF_PATH
+            if g.exists():
+                actual_sha = sha256_file(g)
+                if actual_sha.lower() != paths.VD_E_EXPECTED_SHA256.lower():
+                    raise BundleResolutionError(
+                        "VD_E_GOLDEN_SHA_MISMATCH\n"
+                        f"File: {g}\nExpected: {paths.VD_E_EXPECTED_SHA256}\n"
+                        f"Actual:   {actual_sha}")
+                _en_default, ref_text = _load_default_ref_texts()
+                chosen = ReferenceBundle(
+                    voice_id="vd_e",
+                    audio_path=g,
+                    audio_sha256=actual_sha,
+                    reference_text=ref_text,
+                    reference_text_sha256=sha256_text(ref_text),
+                    language="German",
+                    generation={"note": "golden-readonly-lookup"},
+                )
+                chosen_location = "golden(readonly)"
+
+    if chosen is None:
+        # Not found anywhere — build helpful error.
+        hint = (f"REFERENCE_AUDIO_MISSING VOICE={voice_id}\n"
+                f"Geprüft:\n"
+                f"  (bundled) {bundled_wav}  exists={bundled_wav.exists()}\n"
+                f"  (cache)   {cache_wav}    exists={cache_wav.exists()}")
+        if voice_id == "vd_e":
+            hint += (f"\n  (golden)  {paths.VD_E_GOLDEN_REF_PATH}  "
+                     f"exists={paths.VD_E_GOLDEN_REF_PATH.exists()}\n"
+                     f"Erwarteter SHA: {paths.VD_E_EXPECTED_SHA256[:16]}…")
+        else:
+            hint += ("\nDieses Bundle ist nicht Teil des Releases. "
+                     "Materialisiere die Stimme auf dem GPU-Host via\n"
+                     "  python project/tools/materialize_references.py "
+                     f"--voice-id {voice_id}\n"
+                     "und importiere sie danach mit\n"
+                     "  python project/tools/import_voice_bundles.py "
+                     "--from-cache")
+        raise BundleResolutionError(hint)
+
+    # If caller knows the language, ensure it matches (non-fatal warning).
+    if language and chosen.language != language:
         log.warning("Reference bundle language=%s but requested language=%s "
-                    "for %s", bundle.language, language, voice_id)
+                    "for %s (location=%s)",
+                    chosen.language, language, voice_id, chosen_location)
 
-    ok, summary, _detail = bundle.validate()
+    # If we resolved the bundle from the bundled folder and caller wants
+    # a writable copy (auto_materialize=True), materialize into cache
+    # and return the cache copy so downstream engine sees a stable path
+    # it can write sidecars to.
+    if auto_materialize and chosen_location.startswith("bundled"):
+        mat = _materialize_from_bundled(voice_id)
+        if mat is not None:
+            reloaded = load_bundle(mat, voice_id=voice_id,
+                                   expected_language=language)
+            if reloaded is not None:
+                ok_r, _, _ = reloaded.validate()
+                if ok_r:
+                    chosen = reloaded
+                    chosen_location = "cache(materialized-from-bundled)"
+
+    ok, summary, _detail = chosen.validate()
     if not ok:
-        raise BundleResolutionError(summary)
+        raise BundleResolutionError(
+            f"REFERENCE_BUNDLE_INVALID location={chosen_location}\n{summary}")
 
-    return bundle
+    chosen.log_provenance(prefix=f"REFBUNDLE[{chosen_location}]")
+    return chosen
+
+
+def _find_candidate_wavs(voice_id: str) -> list[Path]:
+    """Find any WAV with the given voice_id stem under either ref dir."""
+    out: list[Path] = []
+    for d in (paths.VOICE_REFS_DIR, paths.BUNDLED_REF_DIR):
+        if not d.exists():
+            continue
+        for ext in ("wav", "mp3", "flac", "ogg"):
+            for p in d.rglob(f"{voice_id}.{ext}"):
+                out.append(p)
+    return sorted(set(out))
+
+
+def bundle_exists(voice_id: str, *, language: str | None = None) -> tuple[bool, str]:
+    """Pure-existence check (no cache writes). Used by GUI availability.
+
+    Returns (available, human_reason_or_location).
+    """
+    try:
+        b = resolve_bundle(voice_id, language=language,
+                           require_manifest=(voice_id != "vd_e"),
+                           auto_materialize=False)
+        return True, f"bundled/cache: {b.audio_path}"
+    except BundleResolutionError as e:
+        return False, str(e)
 
 
 # ---------------------------------------------------------------------------

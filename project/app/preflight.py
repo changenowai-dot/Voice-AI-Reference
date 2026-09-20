@@ -45,6 +45,7 @@ class PreflightReport:
     gpu_name: str = ""
     ffmpeg_available: bool = False
     models: dict[str, Any] = field(default_factory=dict)
+    data: dict[str, Any] = field(default_factory=dict)
 
     def add(self, r: CheckResult) -> None:
         self.checks.append(r)
@@ -173,26 +174,77 @@ def run_preflight() -> PreflightReport:
                                   "detail": "qwen_tts nicht installiert"}
     rpt.models = model_status
 
-    # --- Reference-Bundles ------------------------------------------------
-    refs_dir = paths.VOICE_REFS_DIR
-    ref_count = 0
-    ref_invalid = 0
-    ref_wav_missing = 0
-    if refs_dir.exists():
-        for wav in refs_dir.glob("*.wav"):
-            ref_count += 1
-            manifest = wav.with_suffix(".wav.json")
-            if not manifest.exists():
-                ref_wav_missing += 1
-                continue
-            try:
-                import json as _json
-                _json.loads(manifest.read_text(encoding="utf-8"))
-            except Exception:                              # noqa: BLE001
-                ref_invalid += 1
-    rpt.add(CheckResult(
-        "Referenz-Bundles", True,
-        f"{ref_count} WAVs in {refs_dir}"
-        + (f" · {ref_wav_missing} ohne Manifest" if ref_wav_missing else "")
-        + (f" · {ref_invalid} ungültig" if ref_invalid else "")))
+    # --- Reference-Bundles (Bundled + Cache + VD-E Golden) ----------------
+    # Versuche zuerst auto-materialization (idempotent), damit ein frischer
+    # Checkout nach dem Setup ohne GPU bereits über alle Release-Bundles
+    # im Cache verfügt.
+    missing_production: list[str] = []
+    try:
+        from .voices.registry import VoiceRegistry, tier_for
+        from .tts.reference_bundle import (
+            bundled_bundle_path, default_bundle_path,
+            ensure_bundle_materialized, load_bundle, manifest_path_for,
+        )
+        reg = VoiceRegistry()
+        production_ids = [vid for vid, prof in reg._profiles.items()
+                          if tier_for(prof) == "ACTIVE" and vid != "vd_e"
+                          and prof.get("backend_mode") == "clone"]
+        materialized = 0
+        invalid = 0
+        for vid in production_ids:
+            # Versuche Materialisierung aus gebündeltem Ordner.
+            mat = ensure_bundle_materialized(vid)
+            if mat is not None and mat.parent == paths.VOICE_REFS_DIR:
+                materialized += 1
+            # Prüfe WAV + Manifest im Cache ODER im Bundle-Ordner.
+            candidates = [default_bundle_path(vid), bundled_bundle_path(vid)]
+            found = None
+            for c in candidates:
+                if c.exists():
+                    found = c; break
+            if found is None:
+                missing_production.append(vid); continue
+            mp = manifest_path_for(found)
+            if not mp.exists():
+                missing_production.append(vid); continue
+            bundle = load_bundle(found, voice_id=vid)
+            if bundle is None:
+                invalid += 1
+        # VD-E separat
+        ensure_bundle_materialized("vd_e")
+        vde_cache = default_bundle_path("vd_e")
+        vde_bundled = bundled_bundle_path("vd_e")
+        vde_ok = vde_cache.exists() or vde_bundled.exists() or paths.VD_E_GOLDEN_REF_PATH.exists()
+        rpt.data["reference_bundles"] = {
+            "production_count": len(production_ids),
+            "materialized": materialized,
+            "missing": missing_production,
+            "invalid": invalid,
+            "vde_ok": vde_ok,
+            "bundled_dir": str(paths.BUNDLED_REF_DIR),
+            "cache_dir": str(paths.VOICE_REFS_DIR),
+        }
+        detail = (f"{len(production_ids)} Production-Stimmen · "
+                  f"Cache: {paths.VOICE_REFS_DIR}")
+        if materialized:
+            detail += f" · {materialized} aus Bundle kopiert"
+        if missing_production:
+            detail += f" · FEHLEND: {', '.join(missing_production[:4])}"
+            detail += " …" if len(missing_production) > 4 else ""
+            rpt.add(CheckResult(
+                "Referenz-Bundles", False, detail, fatal=False))
+        else:
+            rpt.add(CheckResult("Referenz-Bundles", True, detail))
+        if not vde_ok:
+            rpt.add(CheckResult(
+                "VD-E Runtime-Referenz", False,
+                f"Weder Cache noch Golden Reference vorhanden "
+                f"({paths.VD_E_GOLDEN_REF_PATH})", fatal=True))
+        else:
+            rpt.add(CheckResult(
+                "VD-E Runtime-Referenz", True,
+                "verfügbar (Golden Reference gebootstrappt oder im Cache)"))
+    except Exception as e:                              # noqa: BLE001
+        rpt.add(CheckResult("Referenz-Bundles", False,
+                            f"Prüfung fehlgeschlagen: {e}", fatal=False))
     return rpt
