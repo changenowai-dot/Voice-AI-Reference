@@ -685,8 +685,7 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
                                             "full")}
         # Neuen Launcher pro Job – jede Instanz hat eine eindeutige job_id
         self.launcher = BackendLauncher(on_event=self._on_event,
-                                        on_state=lambda s: self._post(
-                                            self._on_state_msg, s),
+                                        on_state=lambda s: self._post(self._on_state_msg, msg=s),
                                         on_done=self._on_done)
         self.active_job_id = self.launcher.job_id
         self.job_state = self.JOB_STARTING
