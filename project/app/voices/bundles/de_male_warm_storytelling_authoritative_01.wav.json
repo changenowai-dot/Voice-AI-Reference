@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "voice_id": "de_male_warm_storytelling_authoritative_01",
+  "reference_audio": {
+    "path": "de_male_warm_storytelling_authoritative_01.wav",
+    "sha256": "7fc2b6d87c01bc7429473f54e3ae036ebb81714323d1fe2a45c5fd4a8d78dde4"
+  },
+  "reference_text": {
+    "text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+    "sha256": "559798e3614071a625f8e2b467fadce4dfcde338459a7faf86686bb67f91a346"
+  },
+  "language": "German",
+  "generation": {
+    "seed": 53003,
+    "model": "Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+    "model_version": "unknown",
+    "engine_version": "qwen-voicestudio-v1",
+    "source_commit": "72e93c9778b72b6f77d2dedea64b23ce283e05b7",
+    "created_at": "2026-09-17T13:19:06+0200",
+    "description": "warm storytelling authority – tief, warm, menschlich, erzählerisch, subtil autoritativ"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "voice_id": "de_female_deep_calm_intelligent_01",
+  "reference_audio": {
+    "path": "de_female_deep_calm_intelligent_01.wav",
+    "sha256": "b22bb809831b7abedbe6856ce5a9cd6034f8edc16d9d5872aa6859704adfa145"
+  },
+  "reference_text": {
+    "text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+    "sha256": "559798e3614071a625f8e2b467fadce4dfcde338459a7faf86686bb67f91a346"
+  },
+  "language": "German",
+  "generation": {
+    "seed": 53012,
+    "model": "Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+    "model_version": "unknown",
+    "engine_version": "qwen-voicestudio-v1",
+    "source_commit": "72e93c9778b72b6f77d2dedea64b23ce283e05b7",
+    "created_at": "2026-09-17T13:08:13+0200",
+    "description": "deep calm intelligent – ruhig, klar, intelligent, elegant, natürlich"
+  }
+}

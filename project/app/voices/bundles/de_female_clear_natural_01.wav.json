@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "voice_id": "de_female_clear_natural_01",
+  "reference_audio": {
+    "path": "de_female_clear_natural_01.wav",
+    "sha256": "db9d229c1713345011fb17e2af16d725366f3764b531362f6308e12d682d2890"
+  },
+  "reference_text": {
+    "text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+    "sha256": "ead5a028a016638be35e2f6f02de2a5dbf16bd6b1caa62e1ef3c382a807cade3"
+  },
+  "language": "German",
+  "generation": {
+    "seed": 53019,
+    "model": "Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+    "model_version": "unknown",
+    "engine_version": "qwen-voicestudio-v1",
+    "source_commit": "72e93c9778b72b6f77d2dedea64b23ce283e05b7",
+    "created_at": "2026-09-17T13:07:18+0200",
+    "description": "clear natural — klar, natürlich, elegant, intelligent"
+  }
+}

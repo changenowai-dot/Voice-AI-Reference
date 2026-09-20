@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "voice_id": "en_male_ultra_calm_deep_01",
+  "reference_audio": {
+    "path": "en_male_ultra_calm_deep_01.wav",
+    "sha256": "3638071b355c7784663a7afdf836a47a73aa78a7bafede0ef46423e23a521054"
+  },
+  "reference_text": {
+    "text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+    "sha256": "f4ba8094adfb0c4e06f3ae6e168a6f884ad94b492cb89d8df4601d1aa2573413"
+  },
+  "language": "English",
+  "generation": {
+    "seed": 52015,
+    "model": "Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+    "model_version": "unknown",
+    "engine_version": "qwen-voicestudio-v1",
+    "source_commit": "72e93c9778b72b6f77d2dedea64b23ce283e05b7",
+    "created_at": "2026-09-17T13:01:46+0200",
+    "description": "ultra calm deep – very deep low dark warm extremely calm"
+  }
+}

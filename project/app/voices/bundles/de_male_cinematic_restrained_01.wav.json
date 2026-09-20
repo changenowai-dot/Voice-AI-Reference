@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "voice_id": "de_male_cinematic_restrained_01",
+  "reference_audio": {
+    "path": "de_male_cinematic_restrained_01.wav",
+    "sha256": "45b16f6b6dcec85045fcc804ba7f060050cc0a519c29273942b5ae5fdf23ad9d"
+  },
+  "reference_text": {
+    "text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+    "sha256": "ead5a028a016638be35e2f6f02de2a5dbf16bd6b1caa62e1ef3c382a807cade3"
+  },
+  "language": "German",
+  "generation": {
+    "seed": 53017,
+    "model": "Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+    "model_version": "unknown",
+    "engine_version": "qwen-voicestudio-v1",
+    "source_commit": "72e93c9778b72b6f77d2dedea64b23ce283e05b7",
+    "created_at": "2026-09-17T13:10:55+0200",
+    "description": "cinematic restrained — filmisch, kontrolliert, zurückhaltend, spannend"
+  }
+}

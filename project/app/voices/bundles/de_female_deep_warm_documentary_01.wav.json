@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "voice_id": "de_female_deep_warm_documentary_01",
+  "reference_audio": {
+    "path": "de_female_deep_warm_documentary_01.wav",
+    "sha256": "9c6db1f788d399849cf75145919b1f58f7cc62aa96bbf5c946adb6ef4eb5d100"
+  },
+  "reference_text": {
+    "text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil in ihm eine Frage steht, die niemand laut aussprechen möchte: Wer bestimmt, was wirklich ist?",
+    "sha256": "559798e3614071a625f8e2b467fadce4dfcde338459a7faf86686bb67f91a346"
+  },
+  "language": "German",
+  "generation": {
+    "seed": 53011,
+    "model": "Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+    "model_version": "unknown",
+    "engine_version": "qwen-voicestudio-v1",
+    "source_commit": "72e93c9778b72b6f77d2dedea64b23ce283e05b7",
+    "created_at": "2026-09-17T13:09:10+0200",
+    "description": "deep warm documentary – warm, tief, ruhig, reif, glaubwürdig"
+  }
+}

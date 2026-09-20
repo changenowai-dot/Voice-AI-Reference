@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "voice_id": "en_male_warm_grounded_humanist_01",
+  "reference_audio": {
+    "path": "en_male_warm_grounded_humanist_01.wav",
+    "sha256": "fb1e47ee5a2250f8bdcf0014f3b9c037f5f22e3b8c74926a4d8920485f260a4e"
+  },
+  "reference_text": {
+    "text": "There is a book no one claims to have written. And yet it has moved generations. Perhaps because it asks a question no one dares to speak aloud: Who decides what is real?",
+    "sha256": "f4ba8094adfb0c4e06f3ae6e168a6f884ad94b492cb89d8df4601d1aa2573413"
+  },
+  "language": "English",
+  "generation": {
+    "seed": 52034,
+    "model": "Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+    "model_version": "unknown",
+    "engine_version": "qwen-voicestudio-v1",
+    "source_commit": "72e93c9778b72b6f77d2dedea64b23ce283e05b7",
+    "created_at": "2026-09-17T13:05:06+0200",
+    "description": "warm grounded humanist – empathetic, sincere, mature, comforting and human"
+  }
+}

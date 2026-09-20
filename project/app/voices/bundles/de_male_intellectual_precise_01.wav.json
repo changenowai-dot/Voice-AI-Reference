@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "voice_id": "de_male_intellectual_precise_01",
+  "reference_audio": {
+    "path": "de_male_intellectual_precise_01.wav",
+    "sha256": "f4668360c8246fd7482fe6b6effcbae3e9867c4b77d4ff39c73c82dde10a5834"
+  },
+  "reference_text": {
+    "text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+    "sha256": "ead5a028a016638be35e2f6f02de2a5dbf16bd6b1caa62e1ef3c382a807cade3"
+  },
+  "language": "German",
+  "generation": {
+    "seed": 53015,
+    "model": "Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+    "model_version": "unknown",
+    "engine_version": "qwen-voicestudio-v1",
+    "source_commit": "72e93c9778b72b6f77d2dedea64b23ce283e05b7",
+    "created_at": "2026-09-17T13:15:22+0200",
+    "description": "intellectual precise — intelligent, präzise, kultiviert, klar"
+  }
+}

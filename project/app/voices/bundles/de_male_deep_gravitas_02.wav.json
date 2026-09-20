@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "voice_id": "de_male_deep_gravitas_02",
+  "reference_audio": {
+    "path": "de_male_deep_gravitas_02.wav",
+    "sha256": "8f20a872b82734ddd9562fb807f710ca0a3f8ffb1607a84ac0c51c9d0c4c9fb7"
+  },
+  "reference_text": {
+    "text": "Es gibt ein Buch, das niemand geschrieben haben will. Und doch hat es Generationen bewegt. Vielleicht, weil es eine Frage stellt, die niemand auszusprechen wagt: Wer bestimmt, was wirklich ist?",
+    "sha256": "ead5a028a016638be35e2f6f02de2a5dbf16bd6b1caa62e1ef3c382a807cade3"
+  },
+  "language": "German",
+  "generation": {
+    "seed": 53013,
+    "model": "Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+    "model_version": "unknown",
+    "engine_version": "qwen-voicestudio-v1",
+    "source_commit": "72e93c9778b72b6f77d2dedea64b23ce283e05b7",
+    "created_at": "2026-09-17T13:13:46+0200",
+    "description": "deep gravitas — sehr tief, wuchtig, seriös, dokumentarisch"
+  }
+}
