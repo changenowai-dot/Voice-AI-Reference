@@ -352,6 +352,7 @@ class Pipeline:
             def _regen_progress(attempt: int, ar, _phase="qc") -> None:
                 # Fortschrittsanzeige während QC/Regeneration (Anforderung 31)
                 self._emit(phase=_phase,
+                           attempt=attempt,
                            current_segment=pos + 1,
                            total_segments=n_seg,
                            qc_percent=min(100, int(attempt / max(1, max_attempts) * 100)),

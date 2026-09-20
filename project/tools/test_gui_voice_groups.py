@@ -38,6 +38,7 @@ def main() -> int:
     fails = 0
     cases = [
         ("English", [
+            ("vd_e",                                    "locked"),
             ("en_male_ultra_deep_calm_resonant_01", "candidates"),
             ("en_male_deep_01",                         "clone"),
             ("en_male_warm_storytelling_authoritative_02", "clone"),

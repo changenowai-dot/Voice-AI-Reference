@@ -77,11 +77,28 @@ class JobSpec:
 
 _JOB_META = {"current_part": None, "current_parts": None}
 
+# Hinweis zu P15 (Performance): Das Backend wird pro Job als neuer
+# Subprocess gestartet (Design-Entscheidung für Isolation/GPU-Cleanup).
+# Modell-Caching über Subprocess-Grenzen hinweg würde einen persistenten
+# Backend-Daemon mit Job-Queue erfordern; das ist ein größerer Refactor
+# und außerhalb dieses Stabilisierungsauftrags. Innerhalb eines einzelnen
+# Prozesses werden bereits geladene Modelle von QwenModelPool korrekt
+# wiederverwendet (self._loaded-Dict).
+
 def emit(event: str, **data) -> None:
-    """JSONL-Ereignis an die GUI (stdout, flush)."""
+    """JSONL-Ereignis an die GUI (stdout, flush).
+
+    Jedes Event enthält die aktuelle Part-Metadaten automatisch;
+    das ``done``-Event setzt die Metadaten zurück, damit der
+    nächste Prozess (selbes Python-Modul im Test/Doppelmodus)
+    nicht vererbt.
+    """
     if event == "stage" and data.get("stage") == "part":
         _JOB_META["current_part"] = data.get("part")
         _JOB_META["current_parts"] = data.get("parts")
+    if event == "done":
+        _JOB_META["current_part"] = None
+        _JOB_META["current_parts"] = None
     payload = {"event": event, "ts": round(time.time(), 2)}
     payload.update(data)
     if _JOB_META["current_part"] is not None:

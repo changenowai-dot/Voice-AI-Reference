@@ -47,6 +47,19 @@ FONTS_MONO = ("Consolas", 10)
 
 
 class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
+    # Job-Zustandsmaschine (§4):
+    #   IDLE -> STARTING -> LOADING -> SYNTHESIZING -> QC -> ASSEMBLING
+    #       -> SUCCESS | INCOMPLETE | FAILED | CANCELLING -> CANCELLED
+    #       -> IDLE (Reset erlaubt sofort neuen START).
+    JOB_IDLE = "IDLE"
+    JOB_STARTING = "STARTING"
+    JOB_RUNNING = "RUNNING"
+    JOB_CANCELLING = "CANCELLING"
+    JOB_SUCCESS = "SUCCESS"
+    JOB_INCOMPLETE = "INCOMPLETE"
+    JOB_FAILED = "FAILED"
+    JOB_CANCELLED = "CANCELLED"
+
     def __init__(self):
         super().__init__()
         self.title("VoiceOverApp")
@@ -58,6 +71,8 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
         self.production = load_production()
         self.identity = check_identity(self.production)
         self.launcher: BackendLauncher | None = None
+        self.job_state: str = self.JOB_IDLE
+        self.active_job_id: str | None = None
         self.job_start = 0.0
         self.last_summary: dict = {}
         self.last_wav = ""
@@ -68,6 +83,7 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
         self._refresh_identity_badge()
         self._init_drag_drop()
         self._on_format_change()
+        self._reset_progress_ui()
         threading.Timer(0.2, self._startup_checks).start()
 
     # ------------------------------------------------------------- Style
@@ -292,6 +308,15 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
         self._job_start_monotonic = 0.0
         self._segment_start_monotonic = 0.0
         self._heartbeat_after_id = None
+        # Progress-State-Felder (werden in _reset_job_state gesetzt)
+        self._last_progress_pct = 0
+        self._current_stage: str | None = None
+        self._current_part: int | None = None
+        self._current_parts_total: int | None = None
+        self._current_segment: int | None = None
+        self._current_segments_total: int | None = None
+        self._current_detail: str = ""
+        self._current_attempt: int | None = None
 
         # AUSGABE
         out_card = ttk.Labelframe(container, text=" Ausgabe ")
@@ -555,10 +580,48 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
             pass
 
     # ---------------------------------------------------------------- Job
+    def _reset_job_state(self) -> None:
+        """Setzt alle Job-bezogenen Zustandsfelder zurück (§22)."""
+        self._last_event_time = 0.0
+        self._job_start_monotonic = 0.0
+        self._segment_start_monotonic = 0.0
+        self._last_progress_pct = 0
+        self._current_stage = None
+        self._current_part = None
+        self._current_parts_total = None
+        self._current_segment = None
+        self._current_segments_total = None
+        self._current_detail = ""
+        self._current_attempt = None
+
+    def _reset_progress_ui(self, msg: str = "Bereit.") -> None:
+        """Setzt Fortschritts-Labels/Progressbar auf Ruhezustand (§22)."""
+        self.progress["value"] = 0
+        self.stage_label.config(text=msg)
+        self.seg_label.config(text="")
+        self.qc_label.config(text="")
+        self.heartbeat_label.config(text="")
+
+    def _finalize_job_ui(self) -> None:
+        """Einheitliches UI-Cleanup nach SUCCESS/INCOMPLETE/FAILED/CANCELLED."""
+        self._set_running_ui(False)
+        self._stop_heartbeat()
+        # Launcher-Referenz freigeben (Prozess ist bereits beendet)
+        self.launcher = None
+        self._reset_job_state()
+
     def start_job(self):
-        if self.launcher and self.launcher.running:
+        # §3/§5: Während STARTING/RUNNING/CANCELLING kein neuer Start
+        if self.job_state in (self.JOB_STARTING, self.JOB_RUNNING,
+                              self.JOB_CANCELLING):
+            messagebox.showinfo(
+                "Läuft bereits",
+                "Es läuft bereits ein Auftrag. Bitte warten oder "
+                "vorher abbrechen.")
+            return
+        if self.launcher is not None and self.launcher.running:
             messagebox.showinfo("Läuft bereits",
-                                "Es läuft bereits ein Auftrag (§16).")
+                                "Es läuft noch ein Backend-Prozess.")
             return
         text = self._current_text().strip()
         if not text:
@@ -613,7 +676,6 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
                 "voice_id": voice_id,
                 "speed": float(self.speed_var.get()),
                 "output_dir": self.outdir_var.get(),
-                # Beides schicken – output_format hat Vorrang in Runner/Pipeline
                 "formats": output_format,
                 "output_format": output_format,
                 "wav_bit_depth": wav_bits,
@@ -621,32 +683,33 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
                 "splitting_enabled": bool(self.split_var.get()),
                 "output_mode": mode_map.get(self.outmode_var.get(),
                                             "full")}
-        self._set_running_ui(True)
-        self.job_start = time.perf_counter()
-        self._job_start_monotonic = self.job_start
-        self._segment_start_monotonic = self.job_start
-        self._last_event_time = self.job_start
-        self._last_progress_pct = 0
-        self._current_stage = "startup"
-        self._current_part = None
-        self._current_parts_total = None
-        self._current_segment = None
-        self._current_segments_total = None
-        self._current_detail = ""
+        # Neuen Launcher pro Job – jede Instanz hat eine eindeutige job_id
+        self.launcher = BackendLauncher(on_event=self._on_event,
+                                        on_state=lambda s: self._post(
+                                            self._on_state_msg, s),
+                                        on_done=self._on_done)
+        self.active_job_id = self.launcher.job_id
+        self.job_state = self.JOB_STARTING
+        self._reset_job_state()
+        now = time.perf_counter()
+        self.job_start = now
+        self._job_start_monotonic = now
+        self._segment_start_monotonic = now
+        self._last_event_time = now
         self.progress["value"] = 0
         self.stage_label.config(text="Backend wird gestartet …")
         self.seg_label.config(text="")
         self.qc_label.config(text="")
         self.heartbeat_label.config(text="")
+        self._set_running_ui(True)
         self._start_heartbeat()
-        self.launcher = BackendLauncher(on_event=self._on_event,
-                                        on_state=lambda s: self._post(
-                                            self._on_state_msg, s),
-                                        on_done=self._on_done)
         try:
             self.launcher.start(spec)
+            self.job_state = self.JOB_RUNNING
         except Exception as e:                           # noqa: BLE001
-            self._set_running_ui(False)
+            self.job_state = self.JOB_FAILED
+            self._finalize_job_ui()
+            self._reset_progress_ui("Start fehlgeschlagen.")
             messagebox.showerror("Start fehlgeschlagen", str(e))
 
     def _set_running_ui(self, running: bool):
@@ -661,16 +724,30 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
 
     # --- Cancel + Heartbeat / Runtime status --------------------------------
     def _cancel_job(self):
-        if self.launcher and self.launcher.running:
-            self.cancel_btn.config(state="disabled", text="ABBRUCH …")
-            self.stage_label.config(text="Abgebrochen – Prozess wird beendet …")
-            try:
-                self.launcher.cancel()
-            except Exception:
-                pass
+        if self.job_state == self.JOB_CANCELLING:
+            return
+        if not (self.launcher and self.launcher.running
+                and self.job_state in (self.JOB_STARTING, self.JOB_RUNNING)):
+            # Race: Done ist bereits eingetroffen, bevor der Cancel-Klick
+            # verarbeitet wurde – Button einfach zurücksetzen.
+            self.cancel_btn.config(state="disabled", text="ABBRECHEN")
+            return
+        self.job_state = self.JOB_CANCELLING
+        self.cancel_btn.config(state="disabled", text="ABBRUCH …")
+        self.stage_label.config(
+            text="Abgebrochen – Prozess wird beendet …")
+        self.heartbeat_label.config(
+            text="Abbruch wird ausgeführt …", foreground="#c59a2f")
+        try:
+            self.launcher.cancel()
+        except Exception:
+            pass
 
     def _on_state_msg(self, msg: str):
-        # Called from backend's on_state callback (text updates)
+        # Text-Updates aus dem Backend nur, wenn noch derselbe Job aktiv ist
+        if self.job_state not in (self.JOB_RUNNING, self.JOB_CANCELLING,
+                                  self.JOB_STARTING):
+            return
         self.stage_label.config(text=msg)
         self._last_event_time = time.perf_counter()
 
@@ -688,7 +765,12 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
             self._heartbeat_after_id = None
 
     def _update_runtime_labels(self):
+        if self.job_state not in (self.JOB_RUNNING, self.JOB_CANCELLING,
+                                  self.JOB_STARTING):
+            return
         if not self.launcher or not self.launcher.running:
+            # Prozess ist gerade gestorben – _on_done kommt asynchron;
+            # hier keine Labels mehr updaten.
             return
         now = time.perf_counter()
         total_elapsed = now - self._job_start_monotonic
@@ -731,19 +813,29 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
 
     # ------------------------------------------------------------- Events
     def _on_event(self, evt: dict):
+        # §23: Events von vergangenen Jobs IGNORIEREN (wichtig für
+        # START->CANCEL->START und START->SUCCESS->START).
+        evt_job_id = evt.get("_job_id")
+        if evt_job_id and evt_job_id != self.active_job_id:
+            return
+        if self.job_state not in (self.JOB_RUNNING, self.JOB_CANCELLING,
+                                  self.JOB_STARTING):
+            return
         p = parse_progress_event(evt)
         kind = evt.get("event")
 
         def apply():
+            # Nochmal prüfen, falls der Job inzwischen abgeschlossen wurde
+            if self.job_state not in (self.JOB_RUNNING, self.JOB_CANCELLING,
+                                      self.JOB_STARTING):
+                return
             now = time.perf_counter()
             self._last_event_time = now
             if p.get("stage"):
                 self._current_stage = p["stage"]
                 self._current_detail = p.get("detail") or ""
-                # New stage resets segment timer
                 self._segment_start_monotonic = now
             if kind == "stage":
-                # Track part progress from events like stage="part" part=... parts=...
                 if evt.get("part") is not None:
                     self._current_part = evt["part"]
                     self._current_parts_total = evt.get("parts")
@@ -754,6 +846,8 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
                 self._segment_start_monotonic = now
             if p.get("segments_total") is not None:
                 self._current_segments_total = p["segments_total"]
+            if p.get("attempt") is not None:
+                self._current_attempt = p["attempt"]
             if p.get("percent") is not None:
                 self._last_progress_pct = max(0, min(100, p["percent"]))
                 self.progress["value"] = self._last_progress_pct
@@ -771,9 +865,13 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
                     label = label + (f"   ·   Restzeit ≈ {eta}" if label else f"Restzeit ≈ {eta}")
                 self.seg_label.config(text=label)
             if p.get("qc") is not None:
+                attempt_txt = ""
+                if self._current_attempt:
+                    attempt_txt = f"   ·   Versuch {self._current_attempt}"
                 self.qc_label.config(text=f"QC: {p['qc']} %"
                                           + (f"   ·   Schritt: {self._current_detail}"
-                                             if self._current_detail else ""))
+                                             if self._current_detail else "")
+                                          + attempt_txt)
             if kind == "identity_check":
                 self.identity = check_identity(self.production)
                 self._refresh_identity_badge()
@@ -786,18 +884,26 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
             pass
 
     def _on_done(self, result: JobResult):
+        # §23: Resultate eines veralteten Jobs ignorieren
+        if self.active_job_id and result.job_id and \
+                result.job_id != self.active_job_id:
+            return
+
         def apply():
-            self._set_running_ui(False)
+            # Finales UI-Cleanup (Buttons, Heartbeat, Launcher-Referenz)
+            self._finalize_job_ui()
             elapsed = time.perf_counter() - self.job_start
             s = result.summary or {}
-            # Determine effective status: runner marks ok only on full
-            # success; backend mirrors that via summary.ok.
+            cancelled = bool(result.cancelled or s.get("cancelled"))
             failed_n = int(s.get("failed") or 0)
             parts_planned = int(s.get("parts_planned") or 1)
             parts_ok = int(s.get("parts_succeeded") or 0)
             has_full = bool(s.get("fullscript_built") or s.get("fullscript_wav"))
-            is_incomplete = (not result.ok) and parts_ok > 0 and failed_n >= 0
-            # Enable buttons for files that ACTUALLY exist.
+            is_incomplete = (not result.ok and not cancelled
+                             and parts_ok > 0)
+
+            # Ergebnis-Buttons aktivieren, wenn die Dateien TATSÄCHLICH
+            # existieren – nie auf veraltete Pfade zeigen.
             wav = s.get("wav") or ""
             mp3 = s.get("mp3") or ""
             if wav and not Path(wav).exists(): wav = ""
@@ -807,19 +913,40 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
             self.last_summary = s
             if not self.last_report:
                 self.last_report = _find_report(self.outdir_var.get())
+            # Always enable the output-folder button; the report button
+            # only when a report was actually written by this (or a
+            # previous successful) run.
             self.btn_wav.config(state="normal" if self.last_wav else "disabled")
             self.btn_mp3.config(state="normal" if self.last_mp3 else "disabled")
-            self.btn_report.config(state="normal" if self.last_report else "disabled")
+            self.btn_report.config(
+                state="normal" if self.last_report else "disabled")
 
             parts_line = ""
-            if s.get("parts_planned", 1) != 1 or s.get("output_mode") in ("parts","parts_plus_full"):
+            if parts_planned != 1 or s.get("output_mode") in ("parts","parts_plus_full"):
                 parts_line = (f"\nParts: {parts_ok}/{parts_planned}  "
                               f"Fehlende Segmente: {int(s.get('failed_segments') or 0)}  "
                               f"Fehlgeschlagene Parts: {len(s.get('failed_parts') or [])}")
                 if has_full: parts_line += "  FullScript: OK"
                 else: parts_line += "  FullScript: NICHT erzeugt"
 
-            if result.ok and failed_n == 0:
+            if cancelled:
+                # §6/§12: expliziter Abbruch
+                self.job_state = self.JOB_CANCELLED
+                self.progress["value"] = 0
+                self._reset_progress_ui("Abgebrochen.")
+                self.seg_label.config(
+                    text=f"Abgebrochen nach "
+                         f"{format_duration(s.get('duration_s') or elapsed)}."
+                         "  Start für neuen Auftrag wieder verfügbar.")
+                self.heartbeat_label.config(text="", foreground=MUTED)
+                # Kein Fehler-Popup bei Abbruch (kein "unerwartet beendet")
+                messagebox.showinfo(
+                    "Abgebrochen",
+                    "Der Auftrag wurde abgebrochen.\n"
+                    "Bereits erzeugte Teildateien bleiben im Ausgabeordner "
+                    "erhalten. Sie können sofort einen neuen Auftrag starten.")
+            elif result.ok and failed_n == 0:
+                self.job_state = self.JOB_SUCCESS
                 self.progress["value"] = 100
                 self.stage_label.config(text="Fertig.")
                 self.seg_label.config(
@@ -829,38 +956,52 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
                          f"{s.get('regenerations')} · Fehler: 0 · QC: "
                          f"{s.get('qc')} · Dauer: "
                          f"{format_duration(s.get('duration_s') or elapsed)}")
+                self.qc_label.config(text="")
+                self.heartbeat_label.config(text="", foreground=MUTED)
                 messagebox.showinfo(
                     "Fertig",
                     f"Status: Erfolgreich\nVoice: {s.get('voice')}\n"
                     f"Segmente: {s.get('segments')}\nQC: {s.get('qc')}"
                     f"{parts_line}")
             elif is_incomplete:
-                # Some audio produced but job not fully successful
+                self.job_state = self.JOB_INCOMPLETE
                 self.progress["value"] = 60
-                self.stage_label.config(text="UNVOLLSTAENDIG.")
+                self.stage_label.config(text="UNVOLLSTÄNDIG.")
                 self.seg_label.config(
                     text=f"Voice: {s.get('voice')} · Sprache: "
                          f"{s.get('language')} · Fehler: {failed_n} · QC: "
                          f"{s.get('qc')} · Dauer: "
                          f"{format_duration(s.get('duration_s') or elapsed)}"
                          f"{parts_line}")
+                self.heartbeat_label.config(text="", foreground=MUTED)
                 messagebox.showwarning(
-                    "Auftrag unvollstaendig",
+                    "Auftrag unvollständig",
                     f"Status: {s.get('status','INCOMPLETE')}\n"
                     f"Voice: {s.get('voice')}\n"
                     f"Fehlgeschlagene Segmente/Parts: {failed_n}\n"
-                    f"Teil-Ausgaben koennen bereits vorhanden sein, "
-                    f"es wurde aber KEINE vollstaendige Gesamtdatei "
+                    f"Teil-Ausgaben können bereits vorhanden sein, "
+                    f"es wurde aber KEINE vollständige Gesamtdatei "
                     f"freigegeben.\n{parts_line}\n\n"
                     f"Details:\n{(result.error or '')}")
             else:
+                self.job_state = self.JOB_FAILED
                 self.progress["value"] = 0
                 self.stage_label.config(text="Fehler.")
+                self.seg_label.config(
+                    text=f"Fehler nach "
+                         f"{format_duration(s.get('duration_s') or elapsed)}"
+                         f"{parts_line}")
+                self.heartbeat_label.config(text="", foreground=MUTED)
                 detail = (result.detail or "")[:1500]
                 messagebox.showerror(
                     "Auftrag fehlgeschlagen",
                     f"{result.error}\n{parts_line}\n\n"
                     f"Technische Details:\n{detail}")
+            # Nach jedem Ende zurück in IDLE (§4) und Progress-Bar
+            # finalisieren. Start-Button wurde bereits in
+            # _finalize_job_ui auf "normal" gesetzt.
+            self.job_state = self.JOB_IDLE
+            self.active_job_id = None
         self._post_wrapper(apply)
 
     # -------------------------------------------------------------- Öffnen

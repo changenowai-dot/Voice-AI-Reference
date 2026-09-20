@@ -47,15 +47,22 @@ def voice_sort_key(voice: dict) -> int:
 SPEECH_STAGES_DE = {
     "startup": "Backend wird gestartet",
     "text_ready": "Text vorbereitet",
+    "split": "Text wird in Parts aufgeteilt",
+    "part": "Nächster Part",
     "voice_load": "Stimme wird geladen",
     "model_load": "Modell wird geladen (einmalig)",
     "model_ready": "Modell bereit",
+    "synthesis": "Sprachsynthese",
     "tts": "Sprachsynthese läuft",
+    "qc": "Qualitätsprüfung (QC)",
     "assembling": "Segmente werden zusammengefügt",
+    "concat": "FullScript wird zusammengefügt",
+    "concat_done": "FullScript fertiggestellt",
     "speed": "Tempo wird angepasst",
     "mastering": "Mastering (YouTube-Lautheit)",
     "done": "Fertig",
     "benchmark_done": "Benchmark abgeschlossen",
+    "error": "Fehler",
 }
 
 
