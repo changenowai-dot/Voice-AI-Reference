@@ -563,15 +563,54 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
                 foreground="#ff5d73")
 
     def _startup_checks(self):
-        """Modelle vorhanden? (§30) – nur Meldung, kein Download."""
+        """Echter Preflight mit strukturierter Meldung (statt blindem
+        Ordner-Check). Zeigt VD-E-Status, CUDA, Modelle, FFmpeg etc."""
         try:
-            models = list((paths.MODELS_DIR).glob("Qwen3-TTS*"))
-            if not models:
-                self._post(self.stage_label.config,
-                           text="Hinweis: keine lokalen Modelle in models/ "
-                                "gefunden (install.ps1 ausführen).")
-        except Exception:                               # noqa: BLE001
-            pass
+            from ..preflight import run_preflight
+            r = run_preflight()
+            msg_lines = []
+            # Positiv-Summary
+            if r.torch_version and r.cuda_available:
+                msg_lines.append(
+                    f"Bereit. Torch {r.torch_version} · "
+                    f"CUDA {r.cuda_version} · {r.gpu_name}")
+            elif r.torch_version:
+                msg_lines.append(
+                    f"Keine CUDA-GPU erkannt (Torch {r.torch_version} · "
+                    "CPU only – Produktion benötigt CUDA).")
+            else:
+                msg_lines.append("Bereit.")
+            # VD-E
+            for c in r.checks:
+                if c.name.startswith("VD-E") and c.ok:
+                    msg_lines.append("VD-E: Identität geprüft (SHA OK).")
+                    break
+            # Modelle
+            models_ok = sum(1 for c in r.checks if c.name.startswith("Modell") and c.ok)
+            models_total = sum(1 for c in r.checks if c.name.startswith("Modell"))
+            if models_total:
+                msg_lines.append(f"Modelle: {models_ok}/{models_total} gefunden.")
+            # FFmpeg
+            if not r.ffmpeg_available:
+                msg_lines.append("Hinweis: FFmpeg fehlt im PATH.")
+            # Referenzen
+            for c in r.checks:
+                if c.name == "Referenz-Bundles":
+                    msg_lines.append("Referenz-Bundles: " + c.detail)
+                    break
+            self._post(self.stage_label.config,
+                       text="  ·  ".join(msg_lines))
+            # Fatale Fehler -> ausführlichen Hinweis anzeigen (aber GUI
+            # nicht blockieren – der Benutzer sieht dann beim Klick auf
+            # START die vollständige Fehlermeldung noch einmal).
+            if r.fatal_missing:
+                fatal = [c for c in r.checks if not c.ok and c.fatal]
+                warn = ("Startvoraussetzungen unvollständig – "
+                        + "; ".join(f"{c.name}: {c.detail[:100]}" for c in fatal))
+                self._post(self.heartbeat_label.config, text=warn)
+        except Exception as e:                              # noqa: BLE001
+            self._post(self.stage_label.config,
+                       text=f"Preflight fehlgeschlagen: {e}")
 
     def _post(self, fn, **kw):
         try:
