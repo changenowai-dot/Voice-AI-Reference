@@ -42,7 +42,13 @@ class JobSpec:
     speed: float = 1.0
     output_dir: str = ""               # leer = Standard output/
     output_name: str = ""              # leer = aus Eingabe
+    # formats: legacy list ["wav"]/["wav","mp3"]/["mp3"] oder neuer String
+    # "wav_mp3"/"wav"/"mp3". Beides wird in pipeline/master über
+    # normalize_output_format() konsolidiert.
     formats: list = field(default_factory=lambda: ["wav", "mp3"])
+    output_format: str = ""            # expliziter String hat Vorrang
+    wav_bit_depth: int | None = None   # None -> aus config.advanced
+    mp3_bitrate: str | None = None     # None -> aus config.advanced
     engine: str = "qwen"               # intern: test_double nur für Tests
     volume_db: float = 0.0
     resume: bool = True                # §19
@@ -69,11 +75,19 @@ class JobSpec:
         return spec
 
 
+_JOB_META = {"current_part": None, "current_parts": None}
+
 def emit(event: str, **data) -> None:
     """JSONL-Ereignis an die GUI (stdout, flush)."""
+    if event == "stage" and data.get("stage") == "part":
+        _JOB_META["current_part"] = data.get("part")
+        _JOB_META["current_parts"] = data.get("parts")
     payload = {"event": event, "ts": round(time.time(), 2)}
     payload.update(data)
-    print(json.dumps(payload, ensure_ascii=False), flush=True)
+    if _JOB_META["current_part"] is not None:
+        payload.setdefault("part", _JOB_META["current_part"])
+        payload.setdefault("parts", _JOB_META["current_parts"])
+    print(json.dumps(payload, ensure_ascii=False, default=str), flush=True)
 
 
 def _acquire_lock() -> None:
@@ -101,6 +115,53 @@ def _release_lock() -> None:
         pass
 
 
+def _profile_settings(registry, voice_id: str) -> dict:
+    """Lese das settings-Dict einer Stimme aus der VoiceRegistry (ohne
+    die VoiceProfileEntry-Dataclass, die 'settings' nicht exponiert)."""
+    return (registry._profiles.get(voice_id, {}) or {}).get("settings", {}) or {}
+
+
+def _resolve_voice_native_language(registry, entry) -> str:
+    """Bestimme die SPRACHE DER STIMME (für Clone-Prompt-Bau).
+
+    Achtung: gilt NUR für Clone-Stimmen (backend_mode == "clone").
+    CustomVoice-Stimmen (Ryan/Serena/...) nutzen KEINEN Design-Referenztext;
+    für sie ist der Rückgabewert irrelevant, weil VoiceCloneEngine nie
+    gebaut wird. Wir geben daher für CustomVoice-Stimmen einfach "English"
+    zurück (wird ignoriert) und entscheiden für Clone-Stimmen wie folgt:
+
+    1. Explizit settings.language aus dem Voice-Profil.
+    2. vd_e -> German (LOCKED).
+    3. en_*-Präfix -> English; de_*-Präfix -> German (Projektkonvention).
+    4. Fallback: English (statt früher "German", das englische Stimmen
+       falsch auf den deutschen Referenztext legte).
+    """
+    if entry.backend_mode != "clone":
+        return "English"  # irrelevant für CustomVoice; sicherer Default
+    if entry.voice_id == "vd_e":
+        return "German"
+    settings = _profile_settings(registry, entry.voice_id)
+    lang = str(settings.get("language") or "").strip()
+    if lang in ("English", "German"):
+        return lang
+    if entry.voice_id.startswith("en_"):
+        return "English"
+    if entry.voice_id.startswith("de_"):
+        return "German"
+    if "English" in str(entry.native_language or ""):
+        return "English"
+    return "English"  # sicherer Fallback – niemals mehr DE Default für EN-Stimmen
+
+
+def _resolve_voice_seed(registry, entry) -> int | None:
+    settings = _profile_settings(registry, entry.voice_id)
+    s = settings.get("seed")
+    try:
+        return int(s) if s is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
 # ---------------------------------------------------------------------------
 # Produktions-Konfiguration anwenden (§3 LOCKED)
 # ---------------------------------------------------------------------------
@@ -110,8 +171,6 @@ def apply_production(cfg: dict, production: dict) -> dict:
     adv = cfg.setdefault("advanced", {})
     gcfg = cfg.setdefault("german", {})
     if production.get("cache_version"):
-        # Cache-Version steuert der Sampler zentral (PARAM_SET_VERSION);
-        # Dokumentation hier, damit der Stand nachvollziehbar bleibt.
         gcfg["cache_version"] = production["cache_version"]
     if production.get("expressive_sampling"):
         sp = PARAM_SETS.get(str(production.get("sampling_set", "expressive")),
@@ -119,8 +178,6 @@ def apply_production(cfg: dict, production: dict) -> dict:
         for k in ("temperature", "top_k", "top_p", "repetition_penalty"):
             adv[k] = sp[k]
         adv["do_sample"] = True
-    # Variant BASE (§3): Fachwort-Germanisierung aus, Variation aus,
-    # aber Aussprachewörterbuch + Prosody-Support aktiv.
     gcfg["tech_germanization"] = False
     gcfg.setdefault("variation", {})["enabled"] = False
     gcfg["instruct_variant"] = gcfg.get("instruct_variant",
@@ -131,16 +188,22 @@ def apply_production(cfg: dict, production: dict) -> dict:
 def build_engine(spec: JobSpec, production: dict):
     """Engine-Auswahl nach voice_id (§12: vd_e = eigener Pfad).
 
-    Unterstützt:
-    - vd_e (LOCKED, Identity-Lock, allow_design=False)
-    - vier neue englische Teststimmen en_male_deep_*/en_female_calm_* (Clone,
-      VoiceDesign->Base, Referenz wird bei Bedarf erzeugt)
+    WICHTIGER BUGFIX: Bei Clone-Stimmen wird die SPRACHE DER STIMME aus
+    dem Registry-Eintrag gelesen (settings.language bzw. en_*/de_-Präfix)
+    und an VoiceCloneEngine(language=...) übergeben. Vorher wurde nie ein
+    language-Argument übergeben, sodass der Default "German" aktiv war
+    – auch für englische Stimmen wie en_male_deep_* und en_female_calm_*;
+    das führte zu Murmeln/Artefakten, weil der Clone-Prompt mit dem
+    deutschen Referenztext gebaut wurde obwohl die Stimme englisch designt war.
     """
     from ..voices.registry import VoiceRegistry
     registry = VoiceRegistry()
     entry = registry.get(spec.voice_id)
     if entry is None:
         raise RuntimeError(f"Unbekannte Stimme: {spec.voice_id!r}")
+
+    voice_language = _resolve_voice_native_language(registry, entry)
+    voice_seed = _resolve_voice_seed(registry, entry)
 
     if entry.backend_mode == "clone":
         # VD-E: strikter Identity-Lock
@@ -162,23 +225,27 @@ def build_engine(spec: JobSpec, production: dict):
                 adv_cfg = cfgmod.load_config().get("advanced", {})
             except Exception:                              # noqa: BLE001
                 pass
+            from ..prosody.instruct import VOICEDESIGN_REF_TEXT_DE
             return VoiceCloneEngine(
                 hw, candidate_id="VD-E",
                 description="produktion",
+                language="German",
+                ref_text=VOICEDESIGN_REF_TEXT_DE,
                 attn_implementation=adv_cfg.get("attn_implementation") or None,
                 allow_design=False), entry
-        # Neue englische Teststimmen (clone, VoiceDesign->Base)
+
+        # Clone-Stimmen (en_*, de_*, zukünftige Premium-Rezept-Stimmen)
         if spec.engine == "test_double":
             from ..tts.test_double import TestDoubleCloneEngine
-            # TestDouble: deterministische Stimme je voice_id, Referenz-Existenz
-            # wird im Prüfstand nicht strikt verlangt (echte Produktion geprüft separat)
             return TestDoubleCloneEngine(allow_design=True,
                                          voice_id=entry.voice_id,
-                                         candidate_id=entry.voice_id), entry
-        # Echte Produktion: Qwen VoiceCloneEngine mit Design->Clone
+                                         candidate_id=entry.voice_id,
+                                         language=voice_language), entry
+
         from ..hardware.detector import detect_hardware
         from ..tts.qwen_engine import VoiceCloneEngine
-        from ..prosody.instruct import ENGLISH_VOICEDESIGN_DESCRIPTIONS, VOICEDESIGN_DESCRIPTIONS
+        from ..prosody.instruct import (ENGLISH_VOICEDESIGN_DESCRIPTIONS,
+                                        VOICEDESIGN_DESCRIPTIONS)
         hw = detect_hardware()
         adv_cfg = {}
         try:
@@ -186,33 +253,94 @@ def build_engine(spec: JobSpec, production: dict):
             adv_cfg = cfgmod.load_config().get("advanced", {})
         except Exception:  # noqa: BLE001
             pass
-        # Beschreibung für VoiceDesign (falls Referenz neu erzeugt werden muss)
         desc_entry = (ENGLISH_VOICEDESIGN_DESCRIPTIONS.get(entry.voice_id)
                       or VOICEDESIGN_DESCRIPTIONS.get(entry.voice_id) or {})
-        description = desc_entry.get("description") or entry.description or "English narrator"
-        # Referenzpfad prüfen: existiert bereits -> allow_design=False, sonst True (einmalig Design)
+        description = (desc_entry.get("description")
+                       or entry.description
+                       or (f"{voice_language} narrator"))
         from .. import paths as _p
-        ref_path = None
-        allow_design = True
+        # HARD DEFAULT: allow_design=False. Niemals stumm VoiceDesign
+        # anwerfen, nur weil eine Referenz fehlt. Das würde (a) das
+        # nicht-installierte VoiceDesign-Modell anfordern und (b) eine
+        # beliebige / korrumpierte Prompt-Erzeugung auslösen.
+        # Explizite Materialisierung (z. B. tools/materialize_references.py)
+        # muss VOICEOVER_ALLOW_VOICEDESIGN_MATERIALIZE=1 setzen.
+        import os as _os
+        allow_design = bool(_os.environ.get(
+            "VOICEOVER_ALLOW_VOICEDESIGN_MATERIALIZE"))
+        candidate_id = entry.voice_id
+        canonical_wav = _p.VOICE_REFS_DIR / f"{candidate_id}.wav"
+        # ref_text_for_engine:
+        #   * None when the canonical WAV exists -> VoiceCloneEngine will
+        #     load the atomic reference bundle sidecar (WAV + .wav.json
+        #     manifest) and refuse to synthesize if it is missing/invalid.
+        #     We deliberately DO NOT pass entry.reference_text here because
+        #     the registry's fallback value ("VOICEDESIGN_REF_TEXT_EN"
+        #     = "There is a book…") is ONLY valid if the WAV was actually
+        #     generated from that exact text; if someone materialized the
+        #     voice with a different script the bundle manifest is the
+        #     single source of truth. Passing the fallback silently would
+        #     reintroduce the gibberish bug.
+        #   * recipe text when we are about to materialize (allow_design).
+        ref_text_for_engine = None
         if entry.reference_path:
             rp = _p.ROOT / entry.reference_path
-            if rp.exists():
-                ref_path = rp
+            if rp.exists() and rp.resolve() == canonical_wav.resolve():
+                # Canonical reference present: rely on bundle manifest.
+                emit("stage", stage="voice_load", voice=entry.display_name,
+                     detail=f"Produktions-Referenz vorhanden ({voice_language}): {rp.name}")
                 allow_design = False
-                emit("stage", stage="voice_load", voice=entry.display_name,
-                     detail=f"Referenz vorhanden: {rp.name}")
+            elif rp.exists():
+                # Non-canonical reference path configured — should not
+                # happen in production, but refuse rather than guess.
+                raise RuntimeError(
+                    f"NICHT-KANONISCHE REFERENZ für Stimme "
+                    f"‚{entry.display_name}‘ ({entry.voice_id}):\n"
+                    f"  konfiguriert: {rp}\n"
+                    f"  erwartet:     {canonical_wav}\n"
+                    "Mehrdeutige Referenzdateien führen zu Text/Audio-"
+                    "Mismatch → Murks. Bitte die Referenz unter den "
+                    "kanonischen Pfad legen oder das Voice-JSON korrigieren.")
             else:
+                if not allow_design:
+                    raise RuntimeError(
+                        f"Produktions-Referenz fehlt für Stimme "
+                        f"‚{entry.display_name}‘ ({entry.voice_id}): {rp}\n\n"
+                        f"Die kanonische Referenz muss zuerst über die "
+                        f"VoiceDesign->Clone-Pipeline erzeugt werden "
+                        f"(cache/voice_refs/{entry.voice_id}.wav + "
+                        f"dazugehöriges .wav.json Manifest).\n"
+                        f"Auf dem Host mit GPU + Qwen3-TTS-12Hz-1.7B-"
+                        f"VoiceDesign:\n"
+                        f"    python project/tools/materialize_references.py "
+                        f"--voice-id {entry.voice_id} --language {voice_language}\n"
+                        f"Bis dahin ist die Stimme im GUI deaktiviert.")
                 emit("stage", stage="voice_load", voice=entry.display_name,
-                     detail=f"Referenz fehlt – wird einmalig via VoiceDesign erzeugt")
+                     detail=f"Referenz fehlt – wird via VoiceDesign "
+                            f"materialisiert ({voice_language})")
                 allow_design = True
-        candidate_id = entry.voice_id  # Dateiname ohne Pfad: en_male_deep_01.wav
+                ref_text_for_engine = entry.reference_text   # recipe text
+        else:
+            # Kein reference_path: kein clone-Betrieb möglich ohne Design.
+            if not allow_design:
+                raise RuntimeError(
+                    f"Clone-Stimme ‚{entry.display_name}‘ hat keine "
+                    f"Referenz konfiguriert und Auto-Design ist deaktiviert.")
+            emit("stage", stage="voice_load", voice=entry.display_name,
+                 detail=f"VoiceDesign-Modus ({voice_language}, seed={voice_seed})")
+            ref_text_for_engine = entry.reference_text
+        # reference_path=None -> engine uses canonical location + bundle
+        # manifest (we do not bypass the resolver with an explicit Path).
         return VoiceCloneEngine(
             hw, candidate_id=candidate_id,
             description=description,
+            language=voice_language,
+            ref_text=ref_text_for_engine,
+            seed=voice_seed,
             models_dir=None,
             attn_implementation=adv_cfg.get("attn_implementation") or None,
             allow_design=allow_design,
-            reference_path=ref_path), entry
+            reference_path=None), entry
 
     # CustomVoice (§13): Verfügbarkeit PRÜFEN, kein Fallback
     if spec.engine == "test_double":
@@ -284,29 +412,46 @@ def run_job(spec: JobSpec) -> int:
 
         # 2) Produktion + Konfiguration (§3/§25: GUI kann sie nicht ändern)
         from .. import config as cfgmod
+        from ..audio.master import normalize_output_format
         from ..security.identity_lock import load_production
         production = load_production()
         cfg = cfgmod.load_config()
         if spec.voice_id == "vd_e":
             cfg = apply_production(cfg, production)
-        cfg["language"] = spec.language
+
+        # Zuerst Registry + Entry laden (wird für Sprache/Seed gebraucht)
+        from ..voices.registry import VoiceRegistry
+        registry = VoiceRegistry()
+        entry = registry.get(spec.voice_id)
+        if entry is None:
+            raise RuntimeError(f"Unbekannte Stimme: {spec.voice_id!r}")
+
+        # TTS-Sprache = vom Nutzer ausgewählte Textsprache
+        tts_language = spec.language
+        cfg["language"] = tts_language
         cfg["speed"] = spec.speed
         cfg["volume_db"] = spec.volume_db
-        # Voice-spezifischer deterministischer Seed:
-        # VD-E: 52001 (LOCKED); neue Englisch-Teststimmen: ihr registry-seed (52011…)
-        # CustomVoice: hash-basiert (None)
-        prod_seed = None
-        if spec.voice_id == "vd_e":
+
+        # Ausgabeformat konsolidieren (String "wav_mp3"/"wav"/"mp3")
+        cfg["output_format"] = normalize_output_format(
+            spec.output_format or spec.formats)
+        # WAV/MP3-Bit-Tiefe/Bitrate aus JobSpec (GUI) falls übergeben,
+        # sonst config/default.
+        adv = cfg.setdefault("advanced", {})
+        if spec.wav_bit_depth in (16, 24, 32):
+            adv["wav_bit_depth"] = int(spec.wav_bit_depth)
+        if spec.mp3_bitrate:
+            adv["mp3_bitrate"] = str(spec.mp3_bitrate)
+
+        # Voice-spezifischer deterministischer Seed
+        voice_seed = _resolve_voice_seed(registry, entry)
+        if entry.voice_id == "vd_e":
             prod_seed = production.get("seed")
+        elif entry.backend_mode == "clone":
+            prod_seed = voice_seed
         else:
-            # Für en_* Clone-Teststimmen: registry settings seed nutzen
-            from ..voices.registry import VoiceRegistry as _VR
-            try:
-                _e = _VR().get(spec.voice_id)
-                prod_seed = (_e.settings.get("seed") if hasattr(_e, "settings") else None) \
-                    or (_VR()._profiles.get(spec.voice_id, {}).get("settings", {}).get("seed"))
-            except Exception:
-                prod_seed = None
+            prod_seed = None
+
         cfg["voice"] = {"id": spec.voice_id,
                         "speaker": None,
                         "production_seed": prod_seed}
@@ -327,11 +472,9 @@ def run_job(spec: JobSpec) -> int:
         if entry.backend_mode == "customvoice":
             cfg["voice"]["speaker"] = entry.speaker_name
         else:
-            # Clone: VD-E bleibt "VD-E", neue Teststimmen nutzen voice_id als Cache-Speaker-Key
-            if entry.voice_id == "vd_e":
-                cfg["voice"]["speaker"] = "VD-E"
-            else:
-                cfg["voice"]["speaker"] = entry.voice_id
+            # Clone: als Cache-Speaker-Key die voice_id verwenden (VD-E bleibt "VD-E")
+            cfg["voice"]["speaker"] = ("VD-E" if entry.voice_id == "vd_e"
+                                       else entry.voice_id)
         emit("stage", stage="model_ready")
 
         # 4) Pipeline mit Fortschritts-Events (§17)
@@ -346,9 +489,13 @@ def run_job(spec: JobSpec) -> int:
                        "segment": kw.get("current_segment"),
                        "segments_total": kw.get("total_segments"),
                        "tts_percent": kw.get("tts_percent"),
-                       "qc_percent": kw.get("qc_percent")}
+                       "qc_percent": kw.get("qc_percent"),
+                       "part": getattr(self, "_current_part", None),
+                       "parts": getattr(self, "_current_parts", None),
+                       "phase": kw.get("phase")}
                 if kw.get("phase"):
                     evt["stage"] = kw["phase"]
+                # Forward part progress too (emitted below as stage="part")
                 emit("progress", **{k: v for k, v in evt.items()
                                     if v is not None})
 
@@ -364,10 +511,9 @@ def run_job(spec: JobSpec) -> int:
             sections = split_manuscript(text)
             mode = spec.output_mode
             if mode == "full":
-                # Splitting an + Modus A: hochstufig auf C (dokumentiert)
                 mode = "parts_plus_full"
                 emit("stage", stage="split",
-                     detail=f"Splitting aktiv, Modus A -> C "
+                     detail="Splitting aktiv, Modus A -> C "
                             f"({len(sections)} Parts + FullScript)")
             emit("stage", stage="split",
                  detail=f"{len(sections)} Abschnitte erkannt "
@@ -377,10 +523,8 @@ def run_job(spec: JobSpec) -> int:
             mode = "full"
 
         base_name = (spec.output_name or
-                     f"gui_{time.strftime('%Y%m%d_%H%M%S')}").stem \
-            if hasattr(spec.output_name, "stem") else \
-            Path(spec.output_name or
-                 f"gui_{time.strftime('%Y%m%d_%H%M%S')}").stem
+                     f"gui_{time.strftime('%Y%m%d_%H%M%S')}")
+        base_name = Path(base_name).stem
 
         part_reports = []
         failed_parts: list[str] = []
@@ -397,8 +541,7 @@ def run_job(spec: JobSpec) -> int:
             report = pipe.process_file(src)
             if not report.get("ok"):
                 failed_parts.append(f"Part_{i:03d}: "
-                                    + str(report.get("error",
-                                                     "Fehler")))
+                                    + str(report.get("error", "Fehler")))
                 emit("error",
                      message=f"Abschnitt {i} fehlgeschlagen: "
                              f"{report.get('error', '')}",
@@ -413,29 +556,64 @@ def run_job(spec: JobSpec) -> int:
                  stage="pipeline")
             return 2
 
-        # v2 (§10 MODE C): FullScript aus PART-Materialien (kein Re-TTS)
+        # v2 (§10 MODE C): FullScript aus PART-Materialien (kein Re-TTS).
+        # FAIL-CLOSED: FullScript NUR wenn (a) alle Parts erfolgreich
+        # erzeugt wurden (keine failed_segments, WAV existiert) und
+        # (b) genau len(sections) Parts vorliegen. Ein einzelner Fehlschlag
+        # führt zu Status FAILED ohne FullScript.
         full_wav = full_mp3 = None
+        output_fmt = cfg.get("output_format", "wav_mp3")
+        parts_total = len(sections)
+        parts_ok = len(part_reports)
+        parts_failed_segs = sum(int(r.get("failed_segments") or 0)
+                                for r in part_reports)
+        fullscript_allowed = (parts_ok == parts_total
+                              and parts_failed_segs == 0
+                              and not failed_parts
+                              and all(r.get("wav") and Path(r["wav"]).exists()
+                                      for r in part_reports))
         if plan_use_split and mode == "parts_plus_full":
-            emit("stage", stage="concat",
-                 detail="FullScript wird aus den Parts zusammengefügt")
-            from ..audio.concat import concat_wavs, encode_mp3
-            from ..audio.io import read_wav
-            part_wavs = [Path(r["wav"]) for r in part_reports]
-            full_wav = out_dir / f"{base_name}_{FULLSCRIPT_SUFFIX}.wav"
-            cres = concat_wavs(part_wavs, full_wav,
-                               bit_depth=int(adv_cfg_bit_depth(cfg)))
-            if not cres.get("ok"):
+            if not fullscript_allowed:
                 emit("error",
-                     message="FullScript-Zusammenfügen fehlgeschlagen: "
-                             f"{cres.get('error', '')}",
-                     stage="concat")
-                return 2
-            full_mp3 = full_wav.with_suffix(".mp3")
-            if not encode_mp3(full_wav, full_mp3):
-                full_mp3 = None
-            emit("stage", stage="concat_done",
-                 detail=f"FullScript: {cres.get('seconds')} s "
-                        f"({cres.get('method')})")
+                     message=("FullScript wird NICHT erzeugt: "
+                              f"{parts_ok}/{parts_total} Parts ok, "
+                              f"{parts_failed_segs} fehlgeschlagene Segmente, "
+                              f"{len(failed_parts)} fehlgeschlagene Parts."),
+                     stage="concat",
+                     detail="Setze Ausgabemodus auf 'Nur Parts' und beende mit Status FAILED.")
+                mode = "parts"        # GUI zeigt dann keine FullScript-Datei
+            else:
+                emit("stage", stage="concat",
+                     detail="FullScript wird aus den Parts zusammengefuegt")
+                from ..audio.concat import concat_wavs, encode_mp3
+                from ..audio.master import _should_produce_mp3
+                part_wavs = [Path(r["wav"]) for r in part_reports if r.get("wav")]
+                full_wav = out_dir / f"{base_name}_{FULLSCRIPT_SUFFIX}.wav"
+                cres = concat_wavs(part_wavs, full_wav,
+                                   bit_depth=int(adv.get("wav_bit_depth", 24)))
+                if not cres.get("ok"):
+                    emit("error",
+                         message="FullScript-Zusammenfuegen fehlgeschlagen: "
+                                 f"{cres.get('error', '')}",
+                         stage="concat")
+                    full_wav = None
+                    mode = "parts"
+                else:
+                    full_mp3 = full_wav.with_suffix(".mp3")
+                    mp3_ok = True
+                    if _should_produce_mp3(output_fmt):
+                        mp3_ok = encode_mp3(full_wav, full_mp3,
+                                            bitrate=str(adv.get("mp3_bitrate", "320k")))
+                    else:
+                        if full_mp3.exists():
+                            try: full_mp3.unlink()
+                            except OSError: pass
+                        full_mp3 = None
+                    if not mp3_ok:
+                        full_mp3 = None
+                    emit("stage", stage="concat_done",
+                         detail=f"FullScript: {cres.get('seconds')} s "
+                                f"({cres.get('method')})")
 
         # 5) Ergebnis / Report (§21/§22)
         elapsed = time.perf_counter() - t0
@@ -443,42 +621,75 @@ def run_job(spec: JobSpec) -> int:
         seg_total = sum(int(r.get("segments") or 0) for r in part_reports)
         regen_total = sum(int(r.get("regenerated") or 0)
                           for r in part_reports)
-        failed_total = sum(int(r.get("failed_segments") or 0)
-                           for r in part_reports) + len(failed_parts)
         qc_values = [r.get("avg_score") for r in part_reports
                      if r.get("avg_score") is not None]
+        failed_total = parts_failed_segs + len(failed_parts) + \
+                       (0 if fullscript_allowed or mode != "parts_plus_full"
+                        else (parts_total - parts_ok))
+        overall_ok = (failed_total == 0
+                      and (not plan_use_split
+                           or mode == "parts" and parts_ok > 0 and parts_failed_segs == 0
+                           or mode == "parts_plus_full" and full_wav is not None))
+        # Klarer Status-String
+        if overall_ok and failed_total == 0:
+            status_str = "Erfolgreich"
+        elif parts_ok == 0:
+            status_str = "FAILED (keine Audioausgabe)"
+        else:
+            status_str = "INCOMPLETE"
         import numpy as _np
+        last_wav = None
+        last_mp3 = None
+        if plan_use_split:
+            if mode == "parts_plus_full" and full_wav:
+                last_wav = str(full_wav); last_mp3 = str(full_mp3) if full_mp3 else None
+            elif part_reports:
+                # Parts-only: auf den letzten erzeugten Part zeigen
+                for r in reversed(part_reports):
+                    if r.get("wav"):
+                        last_wav = r.get("wav"); last_mp3 = r.get("mp3"); break
+        else:
+            last_wav = last.get("wav")
+            last_mp3 = last.get("mp3")
         summary = {
-            "status": "Erfolgreich" if not failed_parts else
-                      "Teilweise fehlerhaft",
+            "status": status_str,
+            "ok": overall_ok and failed_total == 0,
             "voice": ("VD-E" if spec.voice_id == "vd_e"
                       else entry.display_name),
-            "language": spec.language,
+            "language": tts_language,
             "segments": seg_total,
             "regenerations": regen_total,
             "failed": failed_total,
+            "failed_segments": parts_failed_segs,
             "failed_parts": failed_parts,
-            "qc": round(float(_np.mean(qc_values)), 1) if qc_values
-            else None,
+            "parts_planned": parts_total if plan_use_split else 1,
+            "parts_succeeded": parts_ok if plan_use_split else 1,
+            "qc": round(float(_np.mean(qc_values)), 1) if qc_values else None,
             "duration_s": round(elapsed, 1),
-            "wav": last.get("wav"), "mp3": last.get("mp3"),
+            "wav": last_wav,
+            "mp3": last_mp3,
+            "output_format": output_fmt,
             "elapsed_s": round(elapsed, 1),
             "audio_dur_s": sum(float(r.get("duration_s") or 0)
                                for r in part_reports),
-            "parts": ([{"wav": r.get("wav"), "mp3": r.get("mp3"),
-                        "segments": r.get("segments")}
-                       for r in part_reports] if plan_use_split else None),
+            "parts": ([{
+                "wav": r.get("wav"), "mp3": r.get("mp3"),
+                "segments": r.get("segments"),
+                "failed_segments": r.get("failed_segments"),
+                "ok": bool(r.get("ok") and r.get("wav")),
+            } for r in part_reports] if plan_use_split else None),
             "fullscript_wav": str(full_wav) if full_wav else None,
             "fullscript_mp3": str(full_mp3) if full_mp3 else None,
+            "fullscript_built": bool(full_wav),
             "output_mode": mode,
         }
-        emit("done", summary=summary, wav=summary["wav"],
-             mp3=summary["mp3"],
-             parts=summary["parts"], fullscript=str(full_wav) if full_wav
-             else None,
+        emit("done", summary=summary,
+             wav=summary["wav"], mp3=summary["mp3"],
+             parts=summary["parts"],
+             fullscript=str(full_wav) if full_wav else None,
              report=_latest_report_md(out_dir))
-        _verify_vd_e_hash_post_run(production)        # §33
-        return 0 if not failed_parts else 1
+        _verify_vd_e_hash_post_run(production)
+        return 0 if (overall_ok and failed_total == 0) else 1
     except Exception as e:                            # noqa: BLE001
         log.exception("Job fehlgeschlagen")
         import traceback

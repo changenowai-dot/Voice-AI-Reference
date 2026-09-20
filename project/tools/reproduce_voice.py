@@ -162,7 +162,9 @@ def reproduce(voice_id: str, language: str, text: str):
         print(f"Reference -> {ref.wav_path} ({ref.duration_s}s)")
         prompt = studio.build_clone_prompt(ref)
         print(f"Clone prompt built (key {voice_id}:{ref.wav_path.stat().st_mtime})")
-        req = SynthesisRequest(text=text or r["voicedesign_reference_text"], language=language, seed=r["seed"])
+        req = SynthesisRequest(text=text or r["voicedesign_reference_text"],
+                               language=language, speaker=voice_id,
+                               seed=r["seed"])
         wav, sr = studio.synth_clone(prompt, req)
         print(f"Synthesis done: sr={sr}, samples={len(wav)}")
         out = ROOT / "project" / "benchmark" / "reproduce_test" / f"{voice_id}.wav"

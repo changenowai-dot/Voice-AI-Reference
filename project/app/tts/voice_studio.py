@@ -25,6 +25,7 @@ from pathlib import Path
 from .. import paths
 from ..logging_setup import get_logger
 from ..tts.engine_base import SynthesisRequest, SynthesisResult, TTSError
+from ..tts.rng import set_deterministic_seed
 
 log = get_logger("voicestudio")
 
@@ -75,15 +76,20 @@ class QwenVoiceStudio(BaseVoiceStudio):
         import numpy as np
         import time
         model = self.pool.get("customvoice")
-        import torch
-        if request.seed:
-            torch.manual_seed(request.seed)
-            if torch.cuda.is_available():
-                torch.cuda.manual_seed_all(request.seed)
+        import torch, inspect as _insp
+        gen = None
+        if request.seed is not None:
+            gen = set_deterministic_seed(int(request.seed))
         gen_kwargs = dict(request.sampling or {})
         from .sampler import max_new_tokens_for
         gen_kwargs.setdefault("max_new_tokens",
                               max_new_tokens_for(request.max_seconds_hint))
+        try:
+            if gen is not None and "generator" in _insp.signature(
+                    model.generate_custom_voice).parameters:
+                gen_kwargs["generator"] = gen
+        except Exception:
+            pass
         t0 = time.perf_counter()
         try:
             wavs, sr = model.generate_custom_voice(
@@ -101,28 +107,54 @@ class QwenVoiceStudio(BaseVoiceStudio):
                          dtype=np.float32).reshape(-1)
         if wav.size == 0:
             raise TTSError("Leeres Audio zurückgegeben")
+        if torch.cuda.is_available():
+            try:
+                torch.cuda.synchronize()
+            except Exception:
+                pass
         return SynthesisResult(waveform=wav, sample_rate=int(sr),
                                duration_s=round(len(wav) / sr, 3),
                                elapsed_s=round(time.perf_counter() - t0, 3),
                                engine=self.name,
                                params_used={"seed": request.seed,
-                                            "speaker": request.speaker})
+                                            "speaker": request.speaker,
+                                            "gen_kwargs": gen_kwargs})
 
     # -------------------------------------------------- VoiceDesign -------
     def design_reference(self, candidate_id: str, description: str,
-                         language: str = "German") -> VoiceRef:
-        """Schritt 1+2: Referenz klängen (VoiceDesign) und speichern."""
+                         language: str = "German",
+                         ref_text: str | None = None,
+                         seed: int | None = None) -> VoiceRef:
+        """Schritt 1+2: Referenz klängen (VoiceDesign) und speichern.
+
+        Parameter:
+          candidate_id  - z.B. en_male_warm_storytelling_authoritative_02
+          description   - VoiceDesign-Instruct (Persona-Beschreibung)
+          language      - "German" | "English"
+          ref_text      - Optionaler Referenztext. Falls None wird der
+                          sprachpassende Standard (VOICEDESIGN_REF_TEXT_DE/EN)
+                          verwendet.
+          seed          - Optionaler Torch-Seed für die VoiceDesign-Generierung.
+                          Falls None wird der bestehende Versuch-Seed-Algorithmus
+                          verwendet (5100 + attempt*7). Bei einem festen Seed
+                          aus dem Rezept wird dieser exakt für die Generierung
+                          gesetzt, um die Reproduzierbarkeit zu maximieren.
+        """
         import numpy as np
-        from ..prosody.instruct import VOICEDESIGN_REF_TEXT_DE
+        from ..prosody.instruct import (VOICEDESIGN_REF_TEXT_DE,
+                                        VOICEDESIGN_REF_TEXT_EN)
         from .sampler import params_for_set
         from ..audio.io import write_wav
         model = self.pool.get("voicedesign")
-        ref_text = VOICEDESIGN_REF_TEXT_DE
+        if ref_text is None:
+            ref_text = (VOICEDESIGN_REF_TEXT_EN if language == "English"
+                        else VOICEDESIGN_REF_TEXT_DE)
         res = None
         last_err: Exception | None = None
         for attempt in range(1, 4):
             import torch
-            torch.manual_seed(5100 + attempt * 7)
+            vd_seed = int(seed + (attempt - 1) * 10009) if seed is not None else int(5100 + attempt * 7)
+            set_deterministic_seed(vd_seed)
             try:
                 wavs, sr = model.generate_voice_design(
                     text=ref_text, language=language, instruct=description,
@@ -142,6 +174,22 @@ class QwenVoiceStudio(BaseVoiceStudio):
         write_wav(out, wav, int(sr), bit_depth=16)
         log.info("VoiceDesign-Referenz %s -> %s (%.1f s)", candidate_id,
                  out, len(wav) / sr)
+        # Write atomic reference-bundle manifest sidecar so the WAV is
+        # NEVER left without provenance — a WAV without its .wav.json
+        # fails closed at resolve_bundle() time (except VD-E bootstrap).
+        try:
+            from .reference_bundle import create_bundle as _cb, \
+                write_bundle_atomically
+            b = _cb(voice_id=candidate_id, wav_path=out, ref_text=ref_text,
+                    language=language, seed=seed,
+                    description=description,
+                    model="Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+                    engine_version="qwen-voicestudio-v1")
+            write_bundle_atomically(b)
+            b.log_provenance(prefix="REFBUNDLE_WRITE")
+        except Exception as e:                          # noqa: BLE001
+            log.error("Failed to write reference bundle manifest for %s: %s",
+                      candidate_id, e)
         return VoiceRef(candidate_id=candidate_id, description=description,
                         ref_text=ref_text, wav_path=out, language=language)
 
@@ -163,15 +211,20 @@ class QwenVoiceStudio(BaseVoiceStudio):
         import numpy as np
         import time
         model = self.pool.get("base")
-        import torch
-        if request.seed:
-            torch.manual_seed(request.seed)
-            if torch.cuda.is_available():
-                torch.cuda.manual_seed_all(request.seed)
+        import torch, inspect as _insp
+        gen = None
+        if request.seed is not None:
+            gen = set_deterministic_seed(int(request.seed))
         gen_kwargs = dict(request.sampling or {})
         from .sampler import max_new_tokens_for
         gen_kwargs.setdefault("max_new_tokens",
                               max_new_tokens_for(request.max_seconds_hint))
+        try:
+            if gen is not None and "generator" in _insp.signature(
+                    model.generate_voice_clone).parameters:
+                gen_kwargs["generator"] = gen
+        except Exception:
+            pass
         t0 = time.perf_counter()
         try:
             wavs, sr = model.generate_voice_clone(
@@ -188,12 +241,18 @@ class QwenVoiceStudio(BaseVoiceStudio):
                          dtype=np.float32).reshape(-1)
         if wav.size == 0:
             raise TTSError("Leeres Audio zurückgegeben")
+        if torch.cuda.is_available():
+            try:
+                torch.cuda.synchronize()
+            except Exception:
+                pass
         return SynthesisResult(waveform=wav, sample_rate=int(sr),
                                duration_s=round(len(wav) / sr, 3),
                                elapsed_s=round(time.perf_counter() - t0, 3),
                                engine=self.name,
                                params_used={"seed": request.seed,
-                                            "clone": True})
+                                            "clone": True,
+                                            "gen_kwargs": gen_kwargs})
 
 
 # ===========================================================================

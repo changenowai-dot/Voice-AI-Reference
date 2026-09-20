@@ -228,10 +228,51 @@ PAUSE_BASE_DE = {
     "end_of_text": 1.05,
 }
 
+# ---------------------------------------------------------------------------
+# Terminologie-Marker (narrative Pausenstrategie)
+# ---------------------------------------------------------------------------
+# Satz-Endzeichen, bestimmt die stärkste Pause nach einem Segment.
+_TERMINATOR_TO_ROLE = {
+    ".": "statement",
+    "!": "exclamation",
+    "?": "question",
+    ";": "semicolon",
+    ":": "colon",
+    "—": "dash", "–": "dash", "-": "dash",
+    "…": "ellipsis", ",": "comma",
+}
+# Starke Klauselzeichen (Semikolon/Doppelpunkt/Gedankenstrich/Auslassung)
+_CLAUSE_STRONG = (";", ":", "—", "–", "…")
+_CLAUSE_MEDIUM = (",",)
+
+
+_TERMINATOR_CLOSERS = tuple("\"'”»)]")
+
+def terminator_role(text: str) -> str | None:
+    """Letztes nicht-whitespace/nicht-schliessendes Satzzeichen des Segments.
+
+    Wird von der ``narrative``-Pause-Strategie verwendet, um Satz-,
+    Komma-, Doppelpunkt- und Gedankenstich-Pausen feiner abzustufen,
+    ohne die bestehenden Satzrollen zu verändern.
+    """
+    t = text.rstrip()
+    # Strip trailing closing quotes/brackets only (NOT terminators like …)
+    while t and t[-1] in _TERMINATOR_CLOSERS:
+        t = t[:-1]
+    t = t.rstrip()
+    if not t:
+        return None
+    # Handle multi-char ellipsis "..."
+    if t.endswith("..."):
+        return "ellipsis"
+    last = t[-1]
+    return _TERMINATOR_TO_ROLE.get(last)
+
+
 PAUSE_STRATEGIES: dict[str, dict] = {
-    # Phase-1-Verhalten (Referenz)
+    # Phase-1-Verhalten (Referenz, unverändert)
     "classic": {},
-    # semantisch gewichtet: mehr Raum nach Fragen/Dramatik,Atmung bei
+    # semantisch gewichtet: mehr Raum nach Fragen/Dramatik, Atmung bei
     # Transitionen, fester Fluss in Aufzählungen
     "semantic": {
         "after_rhetorical": 1.30,
@@ -248,6 +289,53 @@ PAUSE_STRATEGIES: dict[str, dict] = {
         "paragraph": 1.00,
         "chapter": 1.50,
         "after_rhetorical": 1.20,
+    },
+    # NARRATIVE (Prosodie/Pausen-Optimierung 2026-09-19):
+    # Ziel: ruhiger, natürlicher Langform-Rhythmus für tiefe Erzählstimmen
+    # (en_male_ultra_deep_calm_resonant_01, voice-09 etc.).
+    # Aussagen-Atmung etwas vergrößert, Satzenden deutlicher, Absatz-
+    # grenzen hörbar, Kapitelgrenzen mit echter Denkpause. Kommt ohne
+    # Temporeduktion aus – die Geschwindigkeit bleibt natürlich, die
+    # Pausen werden lediglich hörbarer.
+    # Aktivierbar über advanced.pause_strategy="narrative" (CLI/GUI)
+    # oder über Preset; ändert NICHTS am Verhalten der anderen
+    # Strategien.
+    "narrative": {
+        # Satzrollen (direkte Overrides für PAUSE_BASE_DE) – natürliche,
+        # hörbare, etwas großzügigere Pausen für ruhige Langform-Dokumentation
+        "statement": 0.62,
+        "question": 0.85,
+        "rhetorical_question": 1.10,
+        "exclamation": 0.80,
+        "explanation": 0.66,
+        "contrast": 0.78,
+        "emphasis": 0.84,
+        "transition": 0.88,
+        "calm": 0.70,
+        "list": 0.62,
+        "dramatic": 1.20,
+        "emotional": 0.92,
+        # Strukturelle Grenzen
+        "paragraph": 1.35,
+        "chapter": 2.10,
+        "heading": 1.45,
+        "heading_after": 1.00,
+        "list_item": 0.76,
+        "quote_end": 1.00,
+        "end_of_text": 1.55,
+        # Klauselzeichen-Endungen (Komma/Semikolon/Doppelpunkt/Gedankenstrich/Auslassung)
+        "after_comma": 0.34,
+        "after_semicolon": 0.56,
+        "after_colon": 0.60,
+        "after_dash": 0.64,
+        "after_ellipsis": 0.72,
+        "in_list": 0.54,
+        "after_rhetorical": 1.40,
+        "after_question": 1.25,
+        "after_dramatic": 1.45,
+        "transition_extra": 0.16,
+        "list_factor": 1.00,
+        "paragraph_min": 1.20,
     },
 }
 

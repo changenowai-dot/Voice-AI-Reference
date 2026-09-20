@@ -124,9 +124,16 @@ class BackendLauncher:
                 result.detail = str(evt.get("detail", ""))
                 self._on_event(evt)
             elif kind == "done":
-                result.ok = True
-                result.summary = evt.get("summary", {}) or {}
-                result.returncode = 0
+                summ = evt.get("summary", {}) or {}
+                # The runner sets summary.ok = True only when every
+                # segment + every part succeeded AND (if parts+full)
+                # FullScript was actually assembled. Respect that.
+                result.ok = bool(summ.get("ok", True))
+                if not result.ok:
+                    result.error = (summ.get("status") or "INCOMPLETE")
+                    result.detail = json.dumps(summ, ensure_ascii=False)[:2000]
+                result.summary = summ
+                result.returncode = 0 if result.ok else 1
                 self._on_event(evt)
             else:
                 self._on_event(evt)
@@ -151,12 +158,16 @@ def parse_progress_event(evt: dict) -> dict:
     """Extrahiert GUI-relevante Fortschrittsfelder (testbar, §17)."""
     out = {}
     if evt.get("event") == "progress":
-        out = {"stage": evt.get("stage"),
+        out = {"stage": evt.get("stage") or evt.get("phase"),
                "percent": evt.get("percent") or evt.get("tts_percent"),
                "segment": evt.get("segment"),
                "segments_total": evt.get("segments_total"),
-               "qc": evt.get("qc_percent")}
+               "qc": evt.get("qc_percent"),
+               "part": evt.get("part"),
+               "parts_total": evt.get("parts")}
     elif evt.get("event") == "stage":
         out = {"stage": evt.get("stage"),
-               "detail": evt.get("detail", "")}
+               "detail": evt.get("detail", ""),
+               "part": evt.get("part"),
+               "parts_total": evt.get("parts")}
     return out

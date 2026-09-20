@@ -1,7 +1,15 @@
 from .german import (PAUSE_BASE_DE, PAUSE_STRATEGIES,  # noqa: F401
                         GermanSentenceProfile, detect_short_sentence_run,
                         dominant_role, german_instruct_hints, hint_allowed,
-                        profile_sentence, rotate_anchor, summarize_roles)
+                        profile_sentence, rotate_anchor, summarize_roles,
+                        terminator_role)
+from .english import (PAUSE_BASE_EN, PAUSE_STRATEGIES_EN,  # noqa: F401
+                         EnglishSentenceProfile,
+                         detect_short_sentence_run as detect_short_sentence_run_en,
+                         dominant_role as dominant_role_en,
+                         english_instruct_hints,
+                         profile_sentence as profile_sentence_en,
+                         terminator_role as terminator_role_en)
 from .instruct import (DEFAULT_GERMAN_VARIANT, INSTRUCT_VARIANTS,  # noqa: F401
                        ENGLISH_VOICEDESIGN_DESCRIPTIONS,
                        VOICEDESIGN_DESCRIPTIONS, VOICEDESIGN_REF_TEXT_DE,

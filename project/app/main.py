@@ -65,9 +65,9 @@ def _make_engine(engine_name: str, cfg: dict):
     log.debug("[DIAG-A.3] Calling load_production()")
     production = load_production()
     log.debug("[DIAG-A.4] load_production() returned: voice_id=%s", production.get("voice_id"))
-    
+
     voice_id = production.get("voice_id", "vd_e")
-    
+
     # Look up voice profile
     log.debug("[DIAG-C] Creating VoiceRegistry")
     registry = VoiceRegistry()
@@ -75,7 +75,14 @@ def _make_engine(engine_name: str, cfg: dict):
     log.debug("[DIAG-C] VoiceRegistry resolved: voice_id=%s, backend_mode=%s", voice_id, entry.backend_mode if entry else None)
     if entry is None:
         raise RuntimeError(f"Unbekannte Stimme: {voice_id!r}")
-    
+
+    # Resolve voice NATIVE language from profile settings (critical for
+    # English clone voices — without this the VoiceCloneEngine defaulted
+    # to German, using the wrong reference text and producing garbage audio).
+    from app.jobs.runner import _resolve_voice_native_language, _resolve_voice_seed
+    voice_language = _resolve_voice_native_language(registry, entry)
+    voice_seed = _resolve_voice_seed(registry, entry)
+
     # Create engine based on backend_mode
     if entry.backend_mode == "clone":
         from app.tts.qwen_engine import VoiceCloneEngine
@@ -86,54 +93,94 @@ def _make_engine(engine_name: str, cfg: dict):
             assert_vd_e_usable(production)
             log.debug("[DIAG-B] assert_vd_e_usable() passed")
             log.debug("[DIAG-D] Creating VoiceCloneEngine (candidate_id=VD-E, allow_design=False)")
+            from app.prosody.instruct import VOICEDESIGN_REF_TEXT_DE
             eng = VoiceCloneEngine(
                 hw=hw,
                 candidate_id="VD-E",
                 description="produktion",
+                language="German",
+                ref_text=VOICEDESIGN_REF_TEXT_DE,
                 models_dir=models_dir,
                 attn_implementation=adv.get("attn_implementation") or None,
                 allow_design=False
             )
             log.debug("[DIAG-D] VoiceCloneEngine VD-E created")
             return eng, hw
-        # Neue englische Teststimmen (en_male_deep_*, en_female_calm_*):
-        # VoiceDesign->Clone, Referenz wird bei Bedarf erzeugt (allow_design=True
-        # wenn Datei fehlt, danach wiederverwendet). Kein globaler VD-E-Lock.
-        from app.prosody.instruct import ENGLISH_VOICEDESIGN_DESCRIPTIONS, VOICEDESIGN_DESCRIPTIONS
+        # Andere Clone-Stimmen (en_*/de_*/Premium-Rezepte)
+        from app.prosody.instruct import (ENGLISH_VOICEDESIGN_DESCRIPTIONS,
+                                          VOICEDESIGN_DESCRIPTIONS)
         desc_entry = (ENGLISH_VOICEDESIGN_DESCRIPTIONS.get(entry.voice_id)
                       or VOICEDESIGN_DESCRIPTIONS.get(entry.voice_id) or {})
-        description = desc_entry.get("description") or entry.description or "English narrator"
-        # Referenzpfad aus Registry (z. B. cache/voice_refs/en_male_deep_01.wav)
-        ref_path = None
+        description = (desc_entry.get("description")
+                       or entry.description
+                       or f"{voice_language} narrator")
+        from app import paths as _p
+        import os as _os
+        # HARD DEFAULT: allow_design=False – gleiche Semantik wie in
+        # app/jobs/runner.py. Stummer VoiceDesign-Fallback ist verboten.
+        allow_design = bool(_os.environ.get(
+            "VOICEOVER_ALLOW_VOICEDESIGN_MATERIALIZE"))
+        candidate_id = entry.voice_id
+        canonical_wav = _p.VOICE_REFS_DIR / f"{candidate_id}.wav"
+        # ref_text_for_engine=None when canonical WAV exists → bundle
+        # manifest is the single source of truth (no silent fallback
+        # to registry default text — avoids the gibberish class of bug
+        # caused by audio/text drift).
+        ref_text_for_engine = None
         if entry.reference_path:
-            from app import paths as _p
-            ref_path = _p.ROOT / entry.reference_path
-            if not ref_path.exists():
-                # File fehlt → Design erlauben, sonst sperren
-                allow = True
-                log.info("Clone-Stimme %s: Referenz fehlt, VoiceDesign wird erzeugt: %s",
-                         entry.voice_id, ref_path)
+            rp = _p.ROOT / entry.reference_path
+            if rp.exists() and rp.resolve() == canonical_wav.resolve():
+                allow_design = False
+            elif rp.exists():
+                raise RuntimeError(
+                    f"NICHT-KANONISCHE REFERENZ für Stimme "
+                    f"‚{entry.display_name}‘ ({entry.voice_id}):\n"
+                    f"  konfiguriert: {rp}\n"
+                    f"  erwartet:     {canonical_wav}\n"
+                    "Mehrdeutige Referenzdateien → Murks. Bitte Referenz "
+                    "unter den kanonischen Pfad legen oder das Voice-JSON "
+                    "korrigieren.")
             else:
-                allow = False
+                if not allow_design:
+                    raise RuntimeError(
+                        f"Produktions-Referenz fehlt für Stimme "
+                        f"‚{entry.display_name}‘ ({entry.voice_id}): {rp}\n\n"
+                        f"Die kanonische Referenz muss zuerst über die "
+                        f"VoiceDesign->Clone-Pipeline erzeugt werden "
+                        f"(cache/voice_refs/{entry.voice_id}.wav + "
+                        f".wav.json Manifest).\n"
+                        f"Auf dem Host mit GPU + Qwen3-TTS-12Hz-1.7B-"
+                        f"VoiceDesign:\n"
+                        f"    python project/tools/materialize_references.py "
+                        f"--voice-id {entry.voice_id} --language {voice_language}")
+                log.info("Clone-Stimme %s: Referenz fehlt, VoiceDesign "
+                         "wird erzeugt (explizit freigegeben): %s",
+                         entry.voice_id, rp)
+                allow_design = True
+                ref_text_for_engine = entry.reference_text
         else:
-            allow = True
-        log.debug("[DIAG-D] Creating VoiceCloneEngine (candidate_id=%s, allow_design=%s)",
-                  entry.voice_id, allow)
-        # candidate_id für Dateinamen: en_male_deep_01 (lowercase) -> file en_male_deep_01.wav
-        # VoiceCloneEngine erwartet candidate_id passend zum Dateinamen ohne Pfad
-        candidate_id = entry.voice_id if entry.voice_id.startswith("en_") else "VD-E"
+            if not allow_design:
+                raise RuntimeError(
+                    f"Clone-Stimme ‚{entry.display_name}‘ hat keine "
+                    f"Referenz konfiguriert und Auto-Design ist deaktiviert.")
+            ref_text_for_engine = entry.reference_text
+        log.debug("[DIAG-D] Creating VoiceCloneEngine (candidate_id=%s, language=%s, allow_design=%s)",
+                  entry.voice_id, voice_language, allow_design)
         eng = VoiceCloneEngine(
             hw=hw,
             candidate_id=candidate_id,
             description=description,
+            language=voice_language,
+            ref_text=ref_text_for_engine,
+            seed=voice_seed,
             models_dir=models_dir,
             attn_implementation=adv.get("attn_implementation") or None,
-            allow_design=allow,
-            reference_path=ref_path if ref_path and ref_path.exists() else None
+            allow_design=allow_design,
+            reference_path=None   # use canonical resolution
         )
         log.debug("[DIAG-D] VoiceCloneEngine %s created", entry.voice_id)
         return eng, hw
-    
+
     else:
         # CustomVoice backend (§13)
         from app.tts.qwen_engine import QwenTTSEngine

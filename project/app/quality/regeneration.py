@@ -46,32 +46,41 @@ class AttemptResult:
 # ---------------------------------------------------------------------------
 def _classify(issues: list[str]) -> str:
     s = set(issues)
+    # EOS/Silence-Kollaps hat Vorrang: das ist ein anderes Fehlerbild
+    # als "Wort wurde verschluckt" und erfordert eine Diversifizierung
+    # mit HÖHERER Temperatur, nicht niedrigerer.
+    if s & {"silence", "no_voiced_speech", "noise_like", "dropout", "nan"}:
+        return "silence_eos"
     if s & {"question_melody_missing"}:
         return "question_melody"
     if s & {"rate_out_of_range"}:
         return "rate"
-    if s & {"too_short", "too_long", "duration_implausible", "dropout",
-            "nan", "noise_like"}:
-        return "pronunciation"
+    if s & {"too_short", "too_long", "duration_implausible",
+            "too_quiet"}:
+        return "duration"
     if s & {"monotone"}:
         return "monotone"
     if s & {"mechanical_rhythm", "mechanical_pauses"}:
         return "rhythm"
     if s & {"clipping"}:
         return "clipping"
-    if s & {"too_quiet", "too_loud"}:
+    if s & {"too_loud"}:
         return "loudness"
     return "generic"
 
 
 _INSTRUCT_FIXES = {
+    "silence_eos": "Speak the entire passage naturally from beginning to end "
+                   "in one continuous utterance; do not stop early.",
+    "duration": "Articulate every word clearly and calmly, especially names "
+                "and numbers; do not skip or repeat words.",
     "pronunciation": "Articulate every word clearly and calmly, especially "
                      "names and numbers; do not skip or repeat words.",
-    "monotone": "Use a lively but controlled German sentence melody with "
-                "natural pitch movement.",
-    "question_melody": "This is a question: end with a clearly rising German "
+    "monotone": "Use a lively but controlled sentence melody with natural "
+                "pitch movement.",
+    "question_melody": "This is a question: end with clearly rising "
                        "question intonation.",
-    "rate": "Keep a steady, natural German speaking pace.",
+    "rate": "Keep a steady, natural speaking pace.",
     "rhythm": "Vary phrase lengths naturally like a human narrator; avoid "
               "a mechanical beat.",
     "loudness": "Keep loudness perfectly even with the surrounding text.",
@@ -86,23 +95,43 @@ def attempt_changes(attempt: int, prev_issues: list[str],
     cls = _classify(prev_issues)
     sampling = dict(base_sampling)
     instruct = base_instruct
+    base_temp = float(sampling.get("temperature", 0.7))
     if attempt == 2:
-        if cls == "pronunciation":
+        if cls == "silence_eos":
+            # EOS-Kollaps: mit höherer Temperatur + größerer
+            # Nucleus-Spanne aus dem Attraktor ausbrechen
+            # (niedrigere Temperatur würde den Kollaps nur verstärken)
+            sampling["temperature"] = min(1.05, base_temp + 0.20)
+            sampling["top_p"] = 0.95
+            sampling["top_k"] = 80
+            sampling["repetition_penalty"] = 1.02
+        elif cls in ("pronunciation", "duration"):
             sampling["temperature"] = max(
-                0.45, sampling.get("temperature", 0.7) - 0.15)
+                0.50, base_temp - 0.10)
             sampling["repetition_penalty"] = 1.08
         elif cls in ("monotone", "rhythm"):
             sampling["temperature"] = min(
-                0.95, sampling.get("temperature", 0.7) + 0.15)
+                0.95, base_temp + 0.15)
             sampling["top_p"] = 0.92
         elif cls == "rate":
             pass                            # nur Instruct
         else:
             sampling = variation_for_attempt(2, sampling)
     else:  # Versuch 3+: andere Richtung als Versuch 2
-        if cls in ("pronunciation", "monotone", "rhythm"):
-            sampling.update({"temperature": 0.55, "top_p": 0.85,
-                             "top_k": 40, "repetition_penalty": 1.10})
+        if cls == "silence_eos":
+            # Stärkerer Ausbruchsversuch: hohe Temperatur, engeres top_k
+            # gegen Rauschen, Repetition-Penalty leicht zurücknehmen,
+            # damit das Modell nicht sofort wieder ins EOS fällt.
+            sampling.update({"temperature": 0.95, "top_p": 0.98,
+                             "top_k": 120, "repetition_penalty": 1.00})
+        elif cls in ("duration", "pronunciation"):
+            sampling.update({"temperature": max(0.50, base_temp - 0.15),
+                             "top_p": 0.85, "top_k": 40,
+                             "repetition_penalty": 1.10})
+        elif cls in ("monotone", "rhythm"):
+            sampling.update({"temperature": min(0.95, base_temp + 0.20),
+                             "top_p": 0.92, "top_k": 60,
+                             "repetition_penalty": 1.05})
         else:
             sampling = variation_for_attempt(3, sampling)
     fix = _INSTRUCT_FIXES.get(cls, "")
@@ -148,21 +177,41 @@ def generate_with_qc(engine, request: SynthesisRequest, text: str,
         try:
             if attempt == 1:
                 sampling, instruct = dict(base_sampling), base_instruct
+                # Attempt 1 behält den ursprünglichen Segment-Seed exakt
+                # bei (keine Veränderung, keine Rezept-/Seed-Änderung).
+                att_seed = request.seed if request.seed is not None else 0
             else:
                 changes = attempt_changes(attempt, last_issues,
                                           base_sampling, base_instruct)
                 sampling, instruct = changes["sampling"], changes["instruct"]
+                # Deterministische, VON attempt 1 VERSCHIEDENE Seeds pro
+                # Retry. Wir verwenden PRIM-Zahlen als Offset (keine neuen
+                # Abhängigkeiten, kein random.random(), kein Uhrzeit-Seed),
+                # damit der Lauf vollständig reproduzierbar ist, aber
+                # jeder Versuch einen anderen RNG-Zustand bekommt. Das
+                # alte Muster identischer 0.16-s-Ausgaben entstand dadurch,
+                # dass in qwen_engine/voice_studio `if request.seed:` bei
+                # Seed 0 den torch-RNG NICHT neu setzte.
+                base = request.seed if request.seed is not None else 0
+                # Größere Prim-Offsets, damit Retries bei EOS-Kollaps
+                # tatsächlich den RNG-Zustand verlassen.
+                if attempt == 2:
+                    att_seed = int(base) + 7919
+                else:
+                    att_seed = int(base) + 1299709
             req = SynthesisRequest(
                 text=request.text,
                 language=request.language,
                 speaker=request.speaker,
                 instruct=instruct,
                 sampling=sampling,
-                # Neuer Seed pro Versuch – deterministisch (base + attempt)
-                seed=(request.seed or 0) + attempt * 1013,
+                seed=int(att_seed),
                 max_seconds_hint=request.max_seconds_hint,
                 speed=request.speed)
-            ar.params_used = {"seed": req.seed, "sampling": sampling}
+            err_cls = (changes.get("error_class")
+                       if attempt > 1 else "first")
+            ar.params_used = {"seed": req.seed, "sampling": sampling,
+                              "attempt": attempt, "error_class": err_cls}
             result = engine.synthesize(req)
             ar.waveform = result.waveform
             ar.sample_rate = result.sample_rate
@@ -198,14 +247,21 @@ def generate_with_qc(engine, request: SynthesisRequest, text: str,
 
     if best is None and attempts:
         best = attempts[-1]
-    # leicht unter Schwelle aber valide -> akzeptieren + protokollieren
+    # Akzeptanzregel: NICHT kritisch UND Score über 60 % der Schwelle.
+    # Der alte Code überschrieb „accepted“ fälschlicherweise auch dann
+    # auf True, wenn der Score unter 60 % lag – damit landeten
+    # 0.16-s-/Silence-Varianten teilweise fälschlich als „best“ im
+    # Final-Gate. Final-Gate blockiert sie zwar noch, aber eine saubere
+    # accepted=false von Anfang an verhindert, dass Regeneration früh
+    # abbricht.
     accepted = bool(best and not best.error and not best.critical
                     and best.score >= min_score * 0.6)
-    if best and not best.error and (best.critical or best.score < min_score):
-        accepted = not best.critical
-        qlog(f"SEG best={best.score:.1f}/DE={best.german_score} unter "
-             f"Schwelle ({min_score}/{min_german_score}) – "
-             + ("kritisch, markiert" if best.critical else
-                "akzeptiert als beste verfügbare Version") +
-             f". Probleme: {','.join(best.issues)}")
+    if best and not best.error:
+        if best.critical or best.score < min_score:
+            qlog(f"SEG best={best.score:.1f}/DE={best.german_score} unter "
+                 f"Schwelle ({min_score}/{min_german_score}) – "
+                 + ("kritisch, markiert" if best.critical else
+                    ("akzeptiert als beste verfügbare Version"
+                     if accepted else "zu schwach – weiterer Versuch nötig"))
+                 + f". Probleme: {','.join(best.issues)}")
     return {"attempts": attempts, "best": best, "accepted": accepted}

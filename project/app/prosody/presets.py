@@ -9,18 +9,100 @@ from __future__ import annotations
 from .. import paths
 from ..utils import read_json
 
+_EN_DOC_BASE = (
+    "Speak as a deep, calm, highly credible English documentary narrator: "
+    "warm, serious, intelligent, slightly cinematic, never melodramatic."
+)
+_EN_NARR_BASE = (
+    "Speak as a deep, calm, highly credible English documentary narrator: "
+    "warm, serious, intelligent, slightly cinematic, never melodramatic. "
+    "Breathe naturally between sentences and sections; let ideas land; "
+    "keep an unhurried, steady storytelling rhythm without slowing down."
+)
+_DE_DOC_BASE = (
+    "Sprich als tiefer, ruhiger, hochglaubwuerdiger Dokumentarsprecher: "
+    "warm, serioes, intelligent, leicht kinematisch, niemals melodramatisch."
+)
+_DE_NARR_BASE = (
+    "Sprich als tiefer, ruhiger, hochglaubwuerdiger Dokumentarsprecher: "
+    "warm, serioes, intelligent, leicht kinematisch, niemals melodramatisch. "
+    "Atme natuerlich zwischen Saetzen und Abschnitten; lass Gedanken landen; "
+    "halte einen ruhigen Erzaehlrhythmus, ohne langsamer zu werden."
+)
+
 PRESETS = {
-    "deep_documentary": {
-        "label": "Deep Documentary",
-        "base_style": ("Speak as a deep, calm, highly credible documentary "
-                       "narrator: warm, serious, intelligent, slightly "
-                       "cinematic, never melodramatic."),
+    # --- English production profiles ---
+    "en_documentary": {
+        "label": "English Documentary",
+        "language": "English",
+        "base_style": _EN_DOC_BASE,
         "pause_style": "auto",
+        "pause_strategy": "classic",
         "emotion": "AUTO",
         "intensity": "AUTO",
         "speed": 1.0,
-        "description": "Psychologie, Philosophie, Geschichte, Deep Dives "
-                       "(Standard)."
+        "description": "Neutral English documentary baseline (semantic)."
+    },
+    "en_narrative": {
+        "label": "English Narrative Documentary",
+        "language": "English",
+        "base_style": _EN_NARR_BASE,
+        "pause_style": "relaxed",
+        "pause_strategy": "narrative",
+        "emotion": "AUTO",
+        "intensity": "AUTO",
+        "speed": 1.0,
+        "description": "Calm long-form English narration with audible "
+                       "breath/thought pauses at commas, transitions and "
+                       "paragraph boundaries."
+    },
+    # --- German production profiles ---
+    "de_documentary": {
+        "label": "Deutsch Dokumentation",
+        "language": "German",
+        "base_style": _DE_DOC_BASE,
+        "pause_style": "auto",
+        "pause_strategy": "semantic",
+        "emotion": "AUTO",
+        "intensity": "AUTO",
+        "speed": 1.0,
+        "description": "Neutrale deutsche Dokumentar-Stimme (semantische Pausen)."
+    },
+    "de_narrative": {
+        "label": "Deutsch Erzaehl-Dokumentation",
+        "language": "German",
+        "base_style": _DE_NARR_BASE,
+        "pause_style": "relaxed",
+        "pause_strategy": "narrative",
+        "emotion": "AUTO",
+        "intensity": "AUTO",
+        "speed": 1.0,
+        "description": "Ruhige deutsche Langform-Erzaehlung mit hoerbaren "
+                       "Atem-/Denkpausen nach Komma/Semikolon/Doppelpunkt/"
+                       "Gedankenstrich, deutlichen Absatzgrenzen."
+    },
+    # --- Legacy aliases (backwards compatibility) ---
+    "deep_documentary": {
+        "label": "Deep Documentary (legacy, EN)",
+        "language": "English",
+        "base_style": _EN_DOC_BASE,
+        "pause_style": "auto",
+        "pause_strategy": "classic",
+        "emotion": "AUTO",
+        "intensity": "AUTO",
+        "speed": 1.0,
+        "description": "Legacy alias for en_documentary."
+    },
+    "narrative_documentary": {
+        "label": "Narrative Documentary (legacy, EN)",
+        "language": "English",
+        "base_style": _EN_NARR_BASE,
+        "pause_style": "relaxed",
+        "pause_strategy": "narrative",
+        "emotion": "AUTO",
+        "intensity": "AUTO",
+        "speed": 1.0,
+        "description": "Legacy alias for en_narrative."
     },
     "psychological": {
         "label": "Psychological",
