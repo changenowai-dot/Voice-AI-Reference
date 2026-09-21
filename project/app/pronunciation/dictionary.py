@@ -216,7 +216,8 @@ class PronunciationDictionary:
                     repl_c = repl[0].upper() + repl[1:]
                 else:
                     repl_c = repl
-                replacements.append({"from": out, "to": repl_c})
+                replacements.append({"from": out, "to": repl_c,
+                                     "rule": "dict_entry"})
                 return repl_c
             return _r
 

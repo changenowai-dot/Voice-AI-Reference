@@ -54,11 +54,13 @@ ABBR_EN = {
     "fig.": "figure", "min.": "minutes", "max.": "maximum",
 }
 
-# Aussprechbare Akronyme (als Wort gesprochen) – alles andere wird buchiert
+# Aussprechbare Akronyme (als Wort gesprochen) – alles andere wird buchiert.
+# AI/KI bewusst hier NICHT aufgeführt (→ SPELL_OUT), damit sie in
+# deutschem Kontext als „A I“ bzw. „K I“ buchstabiert werden.
 PRONOUNCEABLE_ACRONYMS = {
     "NASA", "UNO", "UNESCO", "NATO", "CERN", "WHO", "GAFAM", "OTAN",
     "BÖRSE", "AIDS", "COVID", "LASER", "RADAR", "SIM", "PIN", "RAM",
-    "ROM", "AI", "WI-FI", "WLAN", "DAX", "TELEKOM",
+    "ROM", "WI-FI", "WLAN", "DAX", "TELEKOM",
 }
 # Fest definierte Buchier-Akronyme
 SPELL_OUT = {
@@ -67,6 +69,13 @@ SPELL_OUT = {
     "DNA", "RNA", "ADHS", "PTBS", "LKW", "PKW", "AG", "GMBH", "EG",
     "EC", "EDV", "SPD", "CDU", "CSU", "FDP", "IQ", "EQ", "LLM", "GPT",
     "TTS", "STT", "CEO", "CFO", "CTO", "PPP", "BIP", "HNO", "DJ",
+    # --- Tech/Alltag (DE_NORMALIZE_ACRO) ---
+    "PDF", "FAQ", "UFO", "FPS", "GPS", "SIM", "PIN", "SMS", "MMS",
+    "ATM", "SUV", "USB", "UART", "HDMI", "DSL", "LAN", "WLAN",
+    "RAM", "ROM", "VRAM", "BIOS", "UEFI", "NFC", "RFID",
+    "AI", "KI", "UI", "UX", "AR", "VR", "MR", "XR", "OCR",
+    "DIY", "FAQ", "B2B", "B2C", "CI", "CD", "DVD", "BD",
+    "UFO", "UNO", "NATO",
 }
 
 # Einheiten (mit Zahlen)

@@ -8,16 +8,32 @@ Pipeline-Priorität (Anforderung 8):
 
 Liefert zusätzlich Metadaten für den GermanNaturalnessScore:
 Namen-Abdeckung, Fremdwort-Entscheidungen, gekennzeichnete Stellen.
+
+Diagnostik-Logging (PRONUNCIATION_PREPROCESS_*):
+Jeder Lauf schreibt strukturierte Log-Zeilen, damit im GUI-Produktionslauf
+nachvollziehbar ist, ob die Aussprache-Optimierung angewendet wurde,
+welche Begriffe erkannt und welche Ersetzungen vorgenommen wurden.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from ..logging_setup import get_logger, text_fingerprint as _fingerprint
 from .dictionary import PronunciationDictionary
 from .foreign_words import analyze_foreign_words, apply_loanwords
 from .names import NameMention, scan_names
 from .tech_terms import (apply_tech_germanization,
                          find_uncovered_tech_terms, german_tech_map)
+
+log = get_logger("pronunciation.engine")
+
+# Regel-ID-Präfixe – jede Schicht bekommt einen eindeutigen Namensraum,
+# damit Audits/Regressionstests nachvollziehbar bleiben:
+#   DE_TECH_<nr>   Fachwort-Germanisierung in tech_terms.py
+#   DE_LOAN_<nr>   Fremdwort-/Anglizismus-Ersetzung in foreign_words.py
+#   DE_DICT_<nr>   Wörterbuch-Eintrag (built-in oder user)
+#   DE_NORM_<nr>   Textnormalisierung (Zahlen/Abkürzungen/Symbole)
+#   DE_SUFFIX_*    generische Komposita-Suffixregel
 
 
 @dataclass
@@ -53,19 +69,36 @@ class PronunciationEngine:
     def process(self, text: str, language: str,
                 suggest_unknown: bool = True,
                 collect_meta: bool = False) -> PronunciationResult:
+        log.info("PRONUNCIATION_PREPROCESS_START language=%s chars=%d fp=%s",
+                 language, len(text), _fingerprint(text))
         # 2b) Fachwort-Germanisierung (Phase 3 §20) – vor dem Wörterbuch,
         #     damit Benutzer-Einträge die finale Ersetzung dominieren
         tech_repls: list = []
         if self.tech_germanization and language.lower().startswith("ger"):
             text, tech_repls = apply_tech_germanization(
                 text, language, skip=set(self.dictionary.user_entries()))
+            for r in tech_repls:
+                term = r.get("from", "")
+                repl = r.get("to", "")
+                rule = r.get("rule", "tech_term")
+                log.info(
+                    "PRONUNCIATION_TERM_REPLACED original=%r tts=%r rule=DE_TECH_%s",
+                    term, repl, rule)
 
         # 2) explizite Fremdwort-/Anglizismusregeln (vor dem Wörterbuch,
         #    damit Benutzer-Einträge die finale Ersetzung dominieren)
         text, loanword_repls = apply_loanwords(text, language)
+        for r in loanword_repls:
+            log.info(
+                "PRONUNCIATION_TERM_REPLACED original=%r tts=%r rule=DE_LOAN_%s",
+                r.get("from"), r.get("to"), r.get("rule", "loanword"))
 
         # 1) Wörterbuch (Benutzer > Fachwort-Layer > Built-ins)
         text, repls = self.dictionary.apply_to_text(text, language)
+        for r in repls:
+            log.info(
+                "PRONUNCIATION_TERM_REPLACED original=%r tts=%r rule=DE_DICT_entry",
+                r.get("from"), r.get("to"))
         pre = tech_repls + loanword_repls
         repls = pre + [
             r for r in repls if r["from"].lower() not in
@@ -81,6 +114,10 @@ class PronunciationEngine:
             result.risky_uncovered_names = [
                 n for n in names if n.risk and not n.covered]
             result.foreign_decisions = analyze_foreign_words(text, language)
+            for d in result.foreign_decisions:
+                log.debug("PRONUNCIATION_TERM_DETECTED term=%r action=%s",
+                          getattr(d, "word", None),
+                          getattr(d, "action", None))
             if suggest_unknown:
                 uncovered = find_uncovered_tech_terms(
                     text, language, self.dictionary.active_terms(language))
@@ -103,4 +140,9 @@ class PronunciationEngine:
                      and u["term"] in known] +
                     [u for u in result.unknown_problem_words
                      if u["term"] not in known])
+        log.info(
+            "PRONUNCIATION_PREPROCESS_END replacements=%d "
+            "unknown_problem_terms=%d chars_in=%d chars_out=%d",
+            len(repls), len(result.unknown_problem_words),
+            len(text), len(result.text))
         return result
