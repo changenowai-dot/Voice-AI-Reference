@@ -378,18 +378,32 @@ def cmd_benchmark(args) -> int:
 
 def cmd_download_models(args) -> int:
     from huggingface_hub import snapshot_download
+    # Base ist PFLICHT: die Produktions-Clone-Stimmen (VoiceCloneEngine)
+    # laden Qwen/Qwen3-TTS-12Hz-1.7B-Base via QwenModelPool ("base").
+    # Ohne Base schlaegt jeder Clone-Job mit FileNotFoundError fehl.
     targets = ["Qwen/Qwen3-TTS-Tokenizer-12Hz",
-               "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice"]
+               "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+               "Qwen/Qwen3-TTS-12Hz-1.7B-Base"]
     if args.all_models:
         targets += ["Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice",
-                    "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
-                    "Qwen/Qwen3-TTS-12Hz-1.7B-Base"]
+                    "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign"]
+    failed = []
     for repo in targets:
-        print(f"Lade {repo} â€¦")
-        snapshot_download(repo_id=repo,
-                          local_dir=str(paths.MODELS_DIR / repo.split("/")[-1]))
-        print(f"  âœ“ {repo}")
-    print("Modelle liegen in models/ â€“ die App lÃ¤uft danach offline.")
+        print(f"Lade {repo} ...")
+        try:
+            snapshot_download(repo_id=repo,
+                              local_dir=str(paths.MODELS_DIR / repo.split("/")[-1]))
+        except Exception as e:                              # noqa: BLE001
+            print(f"  FEHLER bei {repo}: {e}")
+            failed.append(repo)
+            continue
+        print(f"  OK {repo}")
+    if failed:
+        print("Modell-Download unvollstaendig: " + ", ".join(failed))
+        print("Bitte erneut ausfuehren - vorhandene Teildownloads werden "
+              "automatisch fortgesetzt.")
+        return 1
+    print("Modelle liegen in models/ - die App laeuft danach offline.")
     return 0
 
 

@@ -199,13 +199,33 @@ if (-not $ff -and -not $ffLocal) {
 
 # ------------------------------------------------------ 6) Modelle ------
 if (-not $SkipModels) {
-    Log "Lade Qwen3-TTS-Modelle (1.7B CustomVoice + Tokenizer, ca. 4 GB) ..." "Yellow"
+    Log "Lade Qwen3-TTS-Modelle (Tokenizer + 1.7B CustomVoice + 1.7B Base, ca. 8 GB) ..." "Yellow"
     Log "(Fortschritt siehe Konsole; Abbruch jederzeit mit Strg+C, Resume beim naechsten Lauf)" "Gray"
     $appMain = Join-Path $Root "app\main.py"
     & $Vpy $appMain --download-models
     if ($LASTEXITCODE -ne 0) {
-        Log "Modell-Download fehlgeschlagen - Internetverbindung pruefen und erneut starten. (Exit $LASTEXITCODE)" "Red"
+        Log "Modell-Download fehlgeschlagen (Exit $LASTEXITCODE) - Installation wird abgebrochen." "Red"
+        Log "Internetverbindung pruefen und install.ps1 erneut ausfuehren (Teildownloads werden fortgesetzt)." "Red"
+        throw "Model download failed with exit code $LASTEXITCODE"
     }
+}
+
+# ------------------------------------------------ 6b) Modell-Check ------
+# Die Installation darf NIE Erfolg melden, wenn ein benoetigtes Qwen-Modell
+# fehlt oder unvollstaendig ist (Base + CustomVoice sind Pflicht).
+Log "Pruefe Modell-Vollstaendigkeit (Base + CustomVoice) ..." "Gray"
+$checkModels = Join-Path $Root "tools\check_models.py"
+if (Test-Path -LiteralPath $checkModels) {
+    & $Vpy $checkModels 2>&1 | ForEach-Object { Log $_ "Gray" }
+    if ($LASTEXITCODE -ne 0) {
+        Log "MODELL-CHECK FEHLGESCHLAGEN - benoetigtes Qwen-Modell fehlt oder ist unvollstaendig." "Red"
+        Log "Erneut ausfuehren: .venv\Scripts\python.exe app\main.py --download-models  (setzt Teildownloads fort)" "Red"
+        throw "Required Qwen model missing/incomplete (exit $LASTEXITCODE)"
+    }
+    Log "Modell-Check: PASS" "Green"
+} else {
+    Log "tools/check_models.py nicht gefunden - Installationspaket unvollstaendig." "Red"
+    throw "tools/check_models.py missing"
 }
 
 # ------------------------------------------------ 7) Abschluss-Checks --
