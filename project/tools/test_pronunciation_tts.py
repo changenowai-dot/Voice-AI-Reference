@@ -1,9 +1,9 @@
-"""Echter TTS-Aussprache-Regressionstest (läuft nur auf GPU-Host).
+"""Echter TTS-Aussprache-Regressionstest (läuft auf GPU-Host).
 
-Für die MATHEMATIK-Regressionssätze (Anforderung 8) und ausgewählte
-Kernbegriffe wird ECHTER Qwen-TTS mit zwei Stimmen durchgeführt:
+Für die MATHEMATIK-Regressionssätze (Anforderung 8) wird ECHTER Qwen-TTS
+über zwei auf dem Release vorhandene DE-Stimmen gefahren:
   - de_male_warm_storytelling_authoritative_01
-  - de_male_warm_storytelling_authoritative_02
+  - de_male_warm_calm_authoritative_02
 
 Erzeugt pro Stimme einen Ordner pronunciation_tts_regression/<voice>/
 mit:
@@ -12,9 +12,11 @@ mit:
     Audio vorhanden / nicht still.
   - summary.md: übersichtlicher Bericht
 
-Enthält KEINE Simulierung/WORKAROUND: nutzt die produktive Pipeline
-(Pipeline + VoiceCloneEngine + QwenModelPool). Die Ergebnisse sind
-also repräsentativ für die GUI-Ausgabe.
+Nutzt den produktiven Engine-Pfad (VoiceCloneEngine + QwenModelPool,
+gleiche Konstruktion wie in runner.build_engine) und engine.synthesize()
+mit der echten SynthesisRequest-API (ohne output_path – das WAV wird
+nach synthesize via soundfile aus dem zurückgegebenen numpy-Array
+geschrieben). KEINE Simulation, KEIN Workaround.
 
 Offline ohne GPU wird der Test sauber SKIP melden (nicht FAIL).
 """
@@ -30,10 +32,14 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-# Voices für den Regressionstest (Anforderung 8)
+
+# Voices für den Regressionstest. Es werden NUR Stimmen ausgewählt, für
+# die ein deutsches Referenz-Bundle im Release existiert (also
+# tatsächlich synthetisiert werden können, siehe
+# app/voices/bundles/).
 REGRESSION_VOICES = [
     "de_male_warm_storytelling_authoritative_01",
-    "de_male_warm_storytelling_authoritative_02",
+    "de_male_warm_calm_authoritative_02",
 ]
 
 REGRESSION_SENTENCES = [
@@ -43,17 +49,12 @@ REGRESSION_SENTENCES = [
     "Quantenphysik und Mathematik bilden eine wichtige Grundlage moderner Forschung.",
 ]
 
-# A/B-Tests: Original vs. Respelling für kritische Wörter (Anforderung 9).
-# Der Respelling wird aus dem Wörterbuch geholt, wenn die Regel aktiv ist.
-AB_TERMS = ["Mathematik", "Algorithmus", "Quantenphysik", "Artificial Intelligence"]
-
 
 @dataclass
 class SentenceAudioResult:
     sentence_index: int
     sentence: str
     voice_id: str
-    variant: str                 # "original" | "optimized"
     wav_path: str = ""
     ok: bool = False
     error: str = ""
@@ -67,7 +68,7 @@ class SentenceAudioResult:
 
 
 def _qc_check_wav(path: Path) -> tuple[bool, float, float, float, str]:
-    """Quick-QC: Datei existiert, >1KB, RMS > -50 dBFS (nicht still), Peak < 0dBFS."""
+    """Quick-QC: Datei existiert, >1KB, RMS > -50 dBFS (nicht still), Peak <= 1."""
     try:
         import numpy as np
         import soundfile as sf
@@ -96,12 +97,15 @@ def _qc_check_wav(path: Path) -> tuple[bool, float, float, float, str]:
 
 
 def _build_engine_for_voice(voice_id: str):
-    """Baut eine produktionskonforme VoiceCloneEngine wie im GUI-Pfad."""
+    """Baut eine produktionskonforme VoiceCloneEngine – nach dem gleichen
+    Muster wie jobs.runner.build_engine() für clone-Stimmen."""
     from app.hardware.detector import detect_hardware
     from app.jobs.runner import _resolve_voice_native_language, _resolve_voice_seed
     from app.security.identity_lock import load_production
     from app.tts.qwen_engine import VoiceCloneEngine
     from app.voices.registry import VoiceRegistry
+    from app.prosody.instruct import (ENGLISH_VOICEDESIGN_DESCRIPTIONS,
+                                      VOICEDESIGN_DESCRIPTIONS)
 
     hw = detect_hardware()
     if hw.mode == "cpu" and not hw.gpu_name:
@@ -111,6 +115,10 @@ def _build_engine_for_voice(voice_id: str):
     entry = registry.get(voice_id)
     if entry is None:
         raise RuntimeError(f"Stimme unbekannt: {voice_id}")
+    if not entry.available:
+        raise RuntimeError(
+            f"Stimme {voice_id} ist nicht verfügbar "
+            f"(Referenz-Bundle fehlt oder ungültig).")
     voice_lang = _resolve_voice_native_language(registry, entry)
     seed = _resolve_voice_seed(registry, entry)
     production = load_production()
@@ -120,8 +128,6 @@ def _build_engine_for_voice(voice_id: str):
         adv = cfgmod.load_config().get("advanced", {})
     except Exception:
         pass
-    from app.prosody.instruct import (ENGLISH_VOICEDESIGN_DESCRIPTIONS,
-                                      VOICEDESIGN_DESCRIPTIONS)
     desc_entry = (ENGLISH_VOICEDESIGN_DESCRIPTIONS.get(voice_id)
                   or VOICEDESIGN_DESCRIPTIONS.get(voice_id) or {})
     description = (desc_entry.get("description")
@@ -136,23 +142,44 @@ def _build_engine_for_voice(voice_id: str):
         attn_implementation=adv.get("attn_implementation") or None,
         allow_design=False,
         reference_path=None)
-    return eng, entry, voice_lang
+    # Speaker = voice_id für Clone-Stimmen (wie im Runner)
+    speaker = ("VD-E" if voice_id == "vd_e" else voice_id)
+    return eng, entry, voice_lang, speaker
 
 
-def _synth(engine, text: str, language: str, wav_path: Path) -> tuple[bool, float, str]:
+def _write_wav(path: Path, waveform, sr: int) -> None:
+    """Schreibt das von engine.synthesize zurückgegebene float32-mono-Array
+    als 24-bit PCM WAV (Produktionsstandard)."""
+    import numpy as np
+    import soundfile as sf
+    arr = np.asarray(waveform, dtype=np.float32)
+    if arr.ndim > 1:
+        arr = arr.mean(axis=1)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    sf.write(str(path), arr, int(sr), subtype="PCM_24")
+
+
+def _synth(engine, text: str, language: str, speaker: str,
+           wav_path: Path) -> tuple[bool, float, str, object, int]:
+    """Ruft engine.synthesize mit der echten SynthesisRequest-API auf und
+    schreibt das Ergebnis als WAV. Gibt (ok, elapsed_s, error, result, sr)."""
+    from app.tts.engine_base import SynthesisRequest
+    t0 = time.perf_counter()
     try:
-        from app.project.pipeline import SynthesisRequest
-        t0 = time.perf_counter()
         req = SynthesisRequest(
-            text=text, language=language,
-            output_path=wav_path,
-            speed=1.0, volume_db=0.0,
-            max_seconds_hint=120.0)
+            text=text,
+            language=language,
+            speaker=speaker,
+            max_seconds_hint=60.0,
+            speed=1.0,
+        )
         res = engine.synthesize(req)
         elapsed = time.perf_counter() - t0
-        return True, elapsed, ""
+        _write_wav(wav_path, res.waveform, res.sample_rate)
+        return True, elapsed, "", res, res.sample_rate
     except Exception as e:
-        return False, 0.0, f"{type(e).__name__}: {e}"
+        import traceback
+        return False, 0.0, f"{type(e).__name__}: {e}\n{traceback.format_exc()[-1200:]}", None, 0
 
 
 def _tts_preprocess(text: str) -> tuple[str, list]:
@@ -197,7 +224,7 @@ def main() -> int:
         vdir.mkdir(parents=True, exist_ok=True)
         print(f"\n=== Stimme: {voice_id} ===")
         try:
-            engine, entry, lang = _build_engine_for_voice(voice_id)
+            engine, entry, lang, speaker = _build_engine_for_voice(voice_id)
         except Exception as e:
             print(f"  FAIL engine build: {e}")
             overall_ok = False
@@ -205,41 +232,51 @@ def main() -> int:
         try:
             engine.load()
         except Exception as e:
+            import traceback
             print(f"  FAIL engine.load: {e}")
+            traceback.print_exc()
             overall_ok = False
             continue
         for i, sent in enumerate(REGRESSION_SENTENCES, 1):
             tts_text, repls = _tts_preprocess(sent)
             wav = vdir / f"sent_{i:02d}.wav"
-            ok, elapsed, err = _synth(engine, tts_text, "German", wav)
+            ok, elapsed, err, res, sr = _synth(
+                engine, tts_text, "German", speaker, wav)
             qc_ok, dur, peak, rms, qc_err = (False, 0.0, 0.0, 0.0, "")
             if ok:
                 qc_ok, dur, peak, rms, qc_err = _qc_check_wav(wav)
                 if not qc_ok:
                     err = qc_err
-            res = SentenceAudioResult(
+            res_obj = SentenceAudioResult(
                 sentence_index=i, sentence=sent, voice_id=voice_id,
-                variant="optimized", wav_path=str(wav),
+                wav_path=str(wav),
                 ok=ok and qc_ok, error=err or qc_err,
                 duration_s=dur, peak=peak, rms=rms, is_silent=(rms < 0.002),
                 tts_text=tts_text, replacements=repls, elapsed_s=elapsed)
-            all_results.append(res)
-            flag = "OK" if res.ok else "FAIL"
+            all_results.append(res_obj)
+            flag = "OK" if res_obj.ok else "FAIL"
             print(f"  [{flag}] Satz {i}: {sent}")
             print(f"         TTS: {tts_text[:120]}")
             print(f"         Dauer {elapsed:.1f}s, Audio {dur:.1f}s, "
-                  f"peak={peak:.3f}, rms={rms:.4f}")
-            if not res.ok:
-                print(f"         ! {res.error}")
+                  f"peak={peak:.3f}, rms={rms:.4f}, sr={sr}")
+            if not res_obj.ok:
+                print(f"         ! {res_obj.error}")
                 overall_ok = False
         try:
             engine.unload()
+        except Exception:
+            pass
+        # ggf. CUDA-Cache leeren, damit die zweite Stimme nicht OOM läuft
+        try:
+            import torch
+            torch.cuda.empty_cache()
         except Exception:
             pass
 
     summary = {
         "final": "PASS" if overall_ok else "FAIL",
         "voices": voices,
+        "sentences": REGRESSION_SENTENCES,
         "results": [asdict(r) for r in all_results],
     }
     (args.out / "audit.json").write_text(
@@ -247,13 +284,20 @@ def main() -> int:
     # Markdown-Bericht
     lines = ["# Aussprache-TTS-Regression", "",
              f"Ergebnis: **{summary['final']}**", "",
-             "| Stimme | Satz | OK | Dauer Audio | Peak | RMS | TTS-Text |",
-             "|---|---|---|---|---|---|---|"]
+             f"Getestete Stimmen: {', '.join(voices)}", "",
+             "| Stimme | Satz | OK | Synthese-Dauer | Audio-Dauer | Peak | RMS | TTS-Text |",
+             "|---|---|---|---|---|---|---|---|"]
     for r in all_results:
         lines.append(
             f"| {r.voice_id} | {r.sentence_index} | "
-            f"{'✅' if r.ok else '❌'} | {r.duration_s:.1f}s | "
+            f"{'✅' if r.ok else '❌'} | {r.elapsed_s:.1f}s | {r.duration_s:.1f}s | "
             f"{r.peak:.3f} | {r.rms:.4f} | {r.tts_text[:80]} |")
+    lines.append("")
+    lines.append("## Ersetzungen")
+    for r in all_results:
+        lines.append(f"- **{r.voice_id} Satz {r.sentence_index}**:")
+        for rep in r.replacements:
+            lines.append(f"  - `{rep['from']}` → `{rep['to']}` (*{rep['rule']}*)")
     (args.out / "summary.md").write_text("\n".join(lines), encoding="utf-8")
     print(f"\nFINAL_TTS_PRONUNCIATION_REGRESSION={summary['final']}")
     print(f"Reports in {args.out}")
