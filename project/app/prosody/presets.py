@@ -36,12 +36,14 @@ PRESETS = {
         "label": "English Documentary",
         "language": "English",
         "base_style": _EN_DOC_BASE,
-        "pause_style": "auto",
-        "pause_strategy": "classic",
+        "pause_style": "relaxed",
+        "pause_strategy": "narrative",
         "emotion": "AUTO",
         "intensity": "AUTO",
         "speed": 1.0,
-        "description": "Neutral English documentary baseline (semantic)."
+        "description": "Calm English long-form documentary with natural "
+                       "breath/thought pauses – the default English "
+                       "narration profile."
     },
     "en_narrative": {
         "label": "English Narrative Documentary",
@@ -61,12 +63,14 @@ PRESETS = {
         "label": "Deutsch Dokumentation",
         "language": "German",
         "base_style": _DE_DOC_BASE,
-        "pause_style": "auto",
-        "pause_strategy": "semantic",
+        "pause_style": "relaxed",
+        "pause_strategy": "narrative",
         "emotion": "AUTO",
         "intensity": "AUTO",
         "speed": 1.0,
-        "description": "Neutrale deutsche Dokumentar-Stimme (semantische Pausen)."
+        "description": "Ruhige deutsche Langform-Dokumentation mit "
+                       "hörbaren Atem-/Denkpausen – konsistent mit dem "
+                       "entspannten Erzählfluss."
     },
     "de_narrative": {
         "label": "Deutsch Erzaehl-Dokumentation",
@@ -83,15 +87,19 @@ PRESETS = {
     },
     # --- Legacy aliases (backwards compatibility) ---
     "deep_documentary": {
-        "label": "Deep Documentary (legacy, EN)",
+        "label": "Deep Documentary (EN, relaxed long-form)",
         "language": "English",
         "base_style": _EN_DOC_BASE,
-        "pause_style": "auto",
-        "pause_strategy": "classic",
+        "pause_style": "relaxed",
+        "pause_strategy": "narrative",
         "emotion": "AUTO",
         "intensity": "AUTO",
         "speed": 1.0,
-        "description": "Legacy alias for en_documentary."
+        "description": "Calm long-form English narration with natural "
+                       "breath/thought pauses at commas, semicolons, "
+                       "colons, dashes and paragraph transitions – "
+                       "not slower, just more breathing room between "
+                       "thoughts."
     },
     "narrative_documentary": {
         "label": "Narrative Documentary (legacy, EN)",
