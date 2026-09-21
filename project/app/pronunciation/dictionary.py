@@ -201,7 +201,8 @@ class PronunciationDictionary:
             return text, []
         replacements: list = []
 
-        def _repl_factory(repl: str, full_text: str, entry: dict | None = None):
+        def _repl_factory(repl: str, full_text: str, term: str,
+                          entry: dict | None = None):
             alts = {str(a).lower() for a in (entry or {}).get("alts", [])}
 
             def _r(m: re.Match) -> str:
@@ -217,18 +218,19 @@ class PronunciationDictionary:
                 else:
                     repl_c = repl
                 replacements.append({"from": out, "to": repl_c,
-                                     "rule": "dict_entry"})
+                                     "rule": f"DE_DICT_{term}"})
                 return repl_c
             return _r
 
         for term, entry in mapping.items():
             if entry["match"] == "exact":
                 pattern = re.compile(r"(?<![\wÄÖÜäöüß-])" + re.escape(term) +
-                                     r"(?![\wÄÖÜäöüß])")
+                                     r"(?=$|[\-.,;:!?)\]\s])")
             else:
                 pattern = re.compile(r"(?<![\wÄÖÜäöüß-])" + re.escape(term) +
-                                     r"(?![\wÄÖÜäöüß])", re.IGNORECASE)
-            text = pattern.sub(_repl_factory(entry["repl"], text, entry), text)
+                                     r"(?=$|[\-.,;:!?)\]\s])", re.IGNORECASE)
+            text = pattern.sub(_repl_factory(entry["repl"], text, term, entry),
+                               text)
         return text, replacements
 
     def find_unknown_problem_words(self, text: str, language: str,

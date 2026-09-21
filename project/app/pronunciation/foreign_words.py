@@ -312,11 +312,14 @@ def apply_loanwords(text: str, language: str = "German") -> tuple[str, list]:
     for decision in decisions:
         if decision.action == "loanword_de" and decision.replacement:
             w = decision.word
+            # Bindestrich als Folgebegrenzung erlauben (Komposita mit
+            # Bindestrich wie „Business-Mindset-Coaching“).
             pattern = re.compile(r"(?<![\wÄÖÜäöüß'])" + re.escape(w) +
-                                 r"(?![\wÄÖÜäöüß'])")
+                                 r"(?=$|[\-.,;:!?)\]\s])", re.IGNORECASE)
             repl = decision.replacement
+            _w = w  # Closure-Binding für den Rule-Namen
 
-            def _r(m, repl=repl, text=text, done_spans=done_spans):
+            def _r(m, repl=repl, text=text, done_spans=done_spans, _w=_w):
                 if any(s <= m.start() and m.end() <= e for s, e in done_spans):
                     return m.group(0)
                 before = text[max(0, m.start() - 2):m.start()]
@@ -324,7 +327,7 @@ def apply_loanwords(text: str, language: str = "German") -> tuple[str, list]:
                     (".", "!", "?", ":", ";", "\n"))
                 out = repl[0].upper() + repl[1:] if at_start else repl
                 replacements.append({"from": m.group(0), "to": out,
-                                     "rule": "loanword"})
+                                     "rule": f"DE_LOAN_{_w}"})
                 done_spans.append((m.start(), m.end()))
                 return out
             text = pattern.sub(_r, text)

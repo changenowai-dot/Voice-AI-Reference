@@ -57,9 +57,12 @@ ABBR_EN = {
 # Aussprechbare Akronyme (als Wort gesprochen) – alles andere wird buchiert.
 # AI/KI bewusst hier NICHT aufgeführt (→ SPELL_OUT), damit sie in
 # deutschem Kontext als „A I“ bzw. „K I“ buchstabiert werden.
+# Aussprechbare Akronyme (als Wort gesprochen) – alles andere wird buchiert.
+# RAM bewusst NICHT mehr hier: deutsche Aussprache „Räm" klingt verfremdlich;
+# stattdessen in SPELL_OUT als „R A M" buchstabieren (DE_NORM_ACRO).
 PRONOUNCEABLE_ACRONYMS = {
     "NASA", "UNO", "UNESCO", "NATO", "CERN", "WHO", "GAFAM", "OTAN",
-    "BÖRSE", "AIDS", "COVID", "LASER", "RADAR", "SIM", "PIN", "RAM",
+    "BÖRSE", "AIDS", "COVID", "LASER", "RADAR", "SIM", "PIN",
     "ROM", "WI-FI", "WLAN", "DAX", "TELEKOM",
 }
 # Fest definierte Buchier-Akronyme

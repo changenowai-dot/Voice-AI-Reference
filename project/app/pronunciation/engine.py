@@ -80,25 +80,33 @@ class PronunciationEngine:
             for r in tech_repls:
                 term = r.get("from", "")
                 repl = r.get("to", "")
-                rule = r.get("rule", "tech_term")
+                rule = r.get("rule", "DE_TECH_term")
+                log.info("PRONUNCIATION_TERM_DETECTED term=%r rule=%s",
+                         term, rule)
                 log.info(
-                    "PRONUNCIATION_TERM_REPLACED original=%r tts=%r rule=DE_TECH_%s",
+                    "PRONUNCIATION_TERM_REPLACED original=%r tts=%r rule=%s",
                     term, repl, rule)
 
         # 2) explizite Fremdwort-/Anglizismusregeln (vor dem Wörterbuch,
         #    damit Benutzer-Einträge die finale Ersetzung dominieren)
         text, loanword_repls = apply_loanwords(text, language)
         for r in loanword_repls:
+            rule = r.get("rule", "DE_LOAN_?")
+            log.info("PRONUNCIATION_TERM_DETECTED term=%r rule=%s",
+                     r.get("from"), rule)
             log.info(
-                "PRONUNCIATION_TERM_REPLACED original=%r tts=%r rule=DE_LOAN_%s",
-                r.get("from"), r.get("to"), r.get("rule", "loanword"))
+                "PRONUNCIATION_TERM_REPLACED original=%r tts=%r rule=%s",
+                r.get("from"), r.get("to"), rule)
 
         # 1) Wörterbuch (Benutzer > Fachwort-Layer > Built-ins)
         text, repls = self.dictionary.apply_to_text(text, language)
         for r in repls:
+            rule = r.get("rule", "DE_DICT_entry")
+            log.info("PRONUNCIATION_TERM_DETECTED term=%r rule=%s",
+                     r.get("from"), rule)
             log.info(
-                "PRONUNCIATION_TERM_REPLACED original=%r tts=%r rule=DE_DICT_entry",
-                r.get("from"), r.get("to"))
+                "PRONUNCIATION_TERM_REPLACED original=%r tts=%r rule=%s",
+                r.get("from"), r.get("to"), rule)
         pre = tech_repls + loanword_repls
         repls = pre + [
             r for r in repls if r["from"].lower() not in

@@ -149,7 +149,6 @@ TECH_TERMS_DE: dict[str, str] = {
     "Ableitung": "AP-lei-tung",
     "Algorithmen": "Al-go-RITH-men",
     "Algorithmus": "Al-go-RITH-mus",
-    "Algorithmen": "Al-go-RITH-men",
     "Variable": "Va-ri-A-ble",
     "Variablen": "Va-ri-A-blen",
     "Koeffizient": "Ko-ef-fi-tsi-ENT",
@@ -301,8 +300,33 @@ TECH_TERMS_DE: dict[str, str] = {
     "Parallelisierung": "Pa-ral-le-li-SIE-rung",
     "Vektorisierung": "Vek-to-ri-SIE-rung",
     "KI": "K I",
+    "K. I.": "K I",
+    "K.I.": "K I",
+    "Artificial Intelligence": "Ar-ti-fi-schel In-te-li-DSCHENZ",
+    "Artificial-Intelligence": "Ar-ti-fi-schel In-te-li-DSCHENZ",
     "Informationstheorie": "In-for-ma-tions-teo-RIE",
     "Informationstechnologie": "In-for-ma-tsi-ons-tech-no-lo-GIE",
+    # Zusätzliche Tech-/Informatik-Begriffe (Systematik-Erweiterung) -----
+    "Server": "SER-wer",
+    "Client": "KLEI-ent",
+    "Daten": "DA-ten",
+    "Datensatz": "DA-ten-satz",
+    "Datensätze": "DA-ten-sät-ze",
+    "Algorithmisierung": "Al-go-rith-mi-SIE-rung",
+    "Kompilierung": "Kom-pi-LIE-rung",
+    "Kompilieren": "Kom-pi-LIE-ren",
+    "Frame": "Freim",
+    "Framework": "Freim-wörk",
+    "Library": "Lei-bre-ri",
+    "Repository": "Re-po-si-to-ri",
+    "Open Source": "O-pen Sors",
+    "Open-Source": "O-pen-Sors",
+    "Kern": "KERN",
+    "Kernel": "KER-nel",
+    "Datenbank": "DA-ten-bank",
+    "Datenbanken": "DA-ten-ban-ken",
+    "Netzwerk": "NETZ-werk",
+    "Netzwerke": "NETZ-wer-ke",
     # --- Technik / Ingenieur ----------------------------------------------
     "Ingenieur": "In-ge-NIÖR",
     "Ingenieure": "In-ge-ni-Ö-re",
@@ -398,7 +422,7 @@ def apply_tech_germanization(text: str, language: str = "German",
     mapping = {k: v for k, v in TECH_TERMS_DE.items()
                if k.lower() not in skip_lower}
 
-    def _factory(repl: str, full: str):
+    def _factory(repl: str, full: str, rule_id: str = "DE_TECH_term"):
         def _r(m: re.Match) -> str:
             out = m.group(0)
             before = full[max(0, m.start() - 2):m.start()]
@@ -406,21 +430,28 @@ def apply_tech_germanization(text: str, language: str = "German",
                 (".", "!", "?", ":", ";", "\n"))
             repl_c = repl[0].upper() + repl[1:] if at_start else repl
             replacements.append({"from": out, "to": repl_c,
-                                 "rule": "tech_term"})
+                                 "rule": rule_id})
             return repl_c
         return _r
 
     for term in sorted(mapping, key=len, reverse=True):
         if term in _KEEP:
             continue
-        # Case-insensitive boundary match; case of the respelling is
-        # handled by _factory (capitalize at sentence start, else leave
-        # as defined in the dictionary). This ensures lowercase forms
-        # like "philosophisch" mid-sentence are caught too.
-        pattern = re.compile(r"(?<![\wÄÖÜäöüß-])" + re.escape(term) +
-                             r"(?![\wÄÖÜäöüß-])", re.IGNORECASE)
+        # Boundary: kein Buchstabe/Umlaut/Bindestrich direkt davor/dahinter
+        # (Bindestrich erlaubt, damit Begriffe in Komposita wie
+        # „Business-Mindset-Coaching“ erfasst werden – Bindestrich ist im
+        # Deutschen ein legitimer Komposita-Trenner). Akronyme wie „USB“
+        # werden bereits in normalize_text zu „U S B“ buchstabiert und
+        # sind dann keine Match-Kandidaten mehr für die Tech-Map.
+        # Bindestrich als Grenze erlauben, damit Begriffe in
+        # Bindestrich-Komposita (z.B. „Business-Mindset-Coaching“)
+        # erfasst werden – der Lookahead erlaubt einen folgenden
+        # Bindestrich (der selbst kein Wortzeichen ist).
+        pattern = re.compile(r"(?<![\wÄÖÜäöüß])" + re.escape(term) +
+                             r"(?=$|[\-.,;:!?)\]\s]|$)", re.IGNORECASE)
         if pattern.search(text):
-            text = pattern.sub(_factory(mapping[term], text), text)
+            text = pattern.sub(_factory(mapping[term], text,
+                                        f"DE_TECH_{term}"), text)
 
     # generische Komposita auf „…theorie“ (nicht kuratiert, >= 8 Zeichen)
     def _comp(m: re.Match) -> str:
@@ -429,7 +460,7 @@ def apply_tech_germanization(text: str, language: str = "German",
             stem = stem + "s" if stem[-1] not in "s" else stem
         repl = f"{stem}-teo-RIE"
         replacements.append({"from": m.group(0), "to": repl,
-                             "rule": "tech_suffix"})
+                             "rule": "DE_TECH_suffix_theorie"})
         return repl
     text = _THEORIE_SUFFIX.sub(_comp, text)
 
@@ -440,7 +471,7 @@ def apply_tech_germanization(text: str, language: str = "German",
         # Stamm sauber halten, Bindestrich für TTS-Betonung
         repl = f"{stem}-wis-sen-schaft"
         replacements.append({"from": m.group(0), "to": repl,
-                             "rule": "tech_suffix_wissenschaft"})
+                             "rule": "DE_TECH_suffix_wissenschaft"})
         return repl
     # Nur bei Wörtern >= 13 Zeichen (inkl. Suffix), um kurze Fehlmatches zu vermeiden
     text = _WISSENSCHAFT_SUFFIX.sub(lambda m: _wiss(m) if len(m.group(0)) >= 13 and m.group(0) not in mapping else m.group(0), text)
@@ -451,7 +482,7 @@ def apply_tech_germanization(text: str, language: str = "German",
         stem = m.group(1)
         repl = f"{stem}-geist"
         replacements.append({"from": m.group(0), "to": repl,
-                             "rule": "tech_suffix_geist"})
+                             "rule": "DE_TECH_suffix_geist"})
         return repl
     # Nur bei unbekannten Komposita (kuratierte wie Erdgeist selbst nicht in TECH_TERMS, also greift Suffix)
     # Schützt kurze Kernwörter „Geist“ allein nicht
@@ -462,7 +493,7 @@ def apply_tech_germanization(text: str, language: str = "German",
         stem = m.group(1)
         repl = f"{stem}-lo-GIE"
         replacements.append({"from": m.group(0), "to": repl,
-                             "rule": "tech_suffix_logie"})
+                             "rule": "DE_TECH_suffix_logie"})
         return repl
     # Nur wenn nicht kuratiert (TECH_TERMS deckt Psychologie etc. bereits ab)
     text = _LOGIE_SUFFIX.sub(lambda m: _logie(m) if m.group(0) not in mapping else m.group(0), text)
