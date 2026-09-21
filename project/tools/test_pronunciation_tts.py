@@ -202,17 +202,21 @@ def main() -> int:
                     help="Nur diese Stimme testen (kann mehrfach angegeben werden)")
     args = ap.parse_args()
 
-    # GPU-Check
+    # GPU-Check (nur Warnung – der Test darf auch auf CPU laufen, um die
+    # API/Schreib/QC-Pfade zu validieren; echte Qwen-Qualitätsprüfung
+    # braucht natürlich CUDA).
+    have_cuda = False
     try:
         import torch  # noqa
-        if not torch.cuda.is_available():
-            raise RuntimeError("torch.cuda.is_available() == False")
+        have_cuda = torch.cuda.is_available()
     except Exception as e:
         if args.skip_if_no_gpu:
-            print(f"SKIP (keine GPU): {e}")
+            print(f"SKIP (torch/CUDA nicht verfügbar): {e}")
             return 0
-        print(f"FAIL: {e}")
-        return 2
+        print(f"HINWEIS: torch/CUDA nicht verfügbar – versuche trotzdem: {e}")
+    if not have_cuda:
+        print("HINWEIS: Keine CUDA-GPU erkannt; Synthese läuft ggf. auf CPU "
+              "(sehr langsam) oder schlägt fehl.")
 
     voices = args.voice or REGRESSION_VOICES
     args.out.mkdir(parents=True, exist_ok=True)
