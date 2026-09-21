@@ -1,25 +1,37 @@
 """Backend-Launcher der GUI (§16): genau EIN Backend-Prozess.
 
 Startet ``<python> app/main.py --job <jobfile>`` als Subprocess, liest
-stdout (JSONL-Ereignisse) und stderr (Diagnose) threadsicher und
-meldet Ereignisse an die GUI zurück. Kein zweiter Prozess, solange
-einer läuft (GUI-seitig erzwungen + backendseitige Sperrdatei).
+stdout (JSONL-Ereignisse) UND stderr (Diagnose) in getrennten
+Threads threadsicher und meldet Ereignisse an die GUI zurück. Dies
+behebt den klassischen PIPE-Deadlock, bei dem der Kindprozess stecken
+blieb, sobald stderr voll war (insbesondere beim ersten
+torch/HF-Import mit vielen CUDA/Modell-Meldungen) und _pump() nur
+stdout las.
 
 Jeder Start erzeugt eine neue BackendLauncher-Instanz mit eigener
 Job-ID; Events werden an den Callback weitergereicht – die GUI ist
 dafür verantwortlich, Events mit veralteter job_id zu ignorieren.
 Cancel läuft auf einem eigenen Thread, damit der GUI-Thread nie
 blockiert.
+
+Diagnose-Marker für den Lifecycle (gefordert, keine still
+verschluckten Exceptions):
+  GUI_SUBMIT → JOB_CREATED → WORKER_START → RUNNER_START →
+  PIPELINE_START → TTS_ENGINE_START → MODEL_READY → REFERENCE_READY →
+  QWEN_GENERATE_START → QWEN_GENERATE_END → WAV_WRITE → JOB_SUCCESS
+  sowie JOB_FAIL / WORKER_EXCEPTION / RUNNER_EXCEPTION mit Traceback.
 """
 from __future__ import annotations
 
 import json
+import logging
 import os
 import subprocess
 import sys
 import threading
 import time
 import uuid
+from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
@@ -28,6 +40,30 @@ from .. import paths
 
 EventCb = Callable[[dict], None]
 StateCb = Callable[[str], None]
+
+log = logging.getLogger("voiceover.gui.backend")
+
+# Marker, die wir explizit an die GUI weiterreichen bzw. im Verlauf
+# tracken. Jede Phase bekommt einen eigenen Log-Eintrag, damit ein
+# Hänger exakt lokalisiert werden kann.
+_TRANSITION_MARKERS = {
+    "startup":       "RUNNER_START",
+    "text_ready":    "TEXT_READY",
+    "voice_load":    "TTS_ENGINE_START",
+    "model_load":    "MODEL_LOAD",
+    "model_ready":   "MODEL_READY",
+    "split":         "SPLIT",
+    "part":          "PART",
+    "tts":           "QWEN_GENERATE_START",
+    "qc":            "QC",
+    "assembling":    "ASSEMBLING",
+    "mastering":     "MASTERING",
+    "speed":         "SPEED",
+    "concat":        "CONCAT",
+    "concat_done":   "CONCAT_DONE",
+    "done":          "JOB_SUCCESS",
+    "error":         "JOB_FAIL",
+}
 
 
 BACKEND_EXE_NAME = "VoiceOverAppBackend.exe"
@@ -57,7 +93,18 @@ def backend_args(job_file: Path) -> list[str]:
     py = backend_python()
     if getattr(sys, "frozen", False):
         return [py, "--job", str(job_file)]
-    return [py, str(paths.APP_DIR / "main.py"), "--job", str(job_file)]
+    # -u = unbuffered stdout/stderr, damit JSONL-Events sofort bei der
+    # GUI ankommen (sonst kann Python bei PIPE block-puffern und wir
+    # warten ewig auf das erste Event).
+    return [py, "-u", str(paths.APP_DIR / "main.py"), "--job", str(job_file)]
+
+
+def _child_env() -> dict:
+    """Umgebung für den Kindprozess – PYTHONUNBUFFERED setzen,
+    damit selbst bei vergessenem flush=… Events sofort ankommen."""
+    env = dict(os.environ)
+    env["PYTHONUNBUFFERED"] = "1"
+    return env
 
 
 @dataclass
@@ -74,6 +121,11 @@ class JobResult:
 class BackendLauncher:
     """Genau eine Job-Instanz. Pro Job neu erstellen."""
 
+    # Maximal zu behaltende stderr-Zeichen für Diagnose (wird im Fehlerfall
+    # an die GUI gemeldet, damit ein stiller Absturz einen sichtbaren
+    # Grund hat).
+    STDERR_TAIL = 8000
+
     def __init__(self, on_event: EventCb, on_state: StateCb,
                  on_done: Callable[[JobResult], None]):
         self.job_id = uuid.uuid4().hex[:10]
@@ -82,9 +134,18 @@ class BackendLauncher:
         self._on_state = on_state
         self._on_done = on_done
         self._reader: threading.Thread | None = None
+        self._err_reader: threading.Thread | None = None
         self._cancelling = threading.Event()
         self._done_called = False
         self._lock = threading.Lock()
+        # stderr wird asynchron gesammelt (paralleler Thread → kein
+        # PIPE-Deadlock mehr).
+        self._stderr_buf: deque[str] = deque(maxlen=2000)
+        self._stderr_lock = threading.Lock()
+        self._last_marker: str = ""
+        self._started_at: float = 0.0
+        # Für Fehlerfälle: erste Exception (inkl. Traceback) aus stderr.
+        self._first_traceback: str = ""
 
     # ------------------------------------------------------------------
     @property
@@ -103,7 +164,13 @@ class BackendLauncher:
         job_file.write_text(json.dumps(spec, ensure_ascii=False),
                             encoding="utf-8")
         cmd = backend_args(job_file)
+        log.info("GUI_SUBMIT job_id=%s cmd=%r voice=%s lang=%s chars=%d",
+                 self.job_id, cmd, spec.get("voice_id"),
+                 spec.get("language"), len(spec.get("text", "")))
         self._on_state(f"Backend wird gestartet …")
+        self._started_at = time.perf_counter()
+        self._emit_marker_event("JOB_CREATED", job_id=self.job_id,
+                                voice_id=spec.get("voice_id"))
         # CREATE_NO_WINDOW on Windows to avoid popping up a console
         creationflags = 0
         if os.name == "nt":
@@ -112,10 +179,79 @@ class BackendLauncher:
             cmd, cwd=str(paths.ROOT),
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             text=True, encoding="utf-8", errors="replace",
-            bufsize=1, creationflags=creationflags)
+            bufsize=1, creationflags=creationflags,
+            env=_child_env())
+        # PIPE-Deadlock-Fix: stdout UND stderr in je einem Thread lesen.
+        # Vorher las _pump nur stdout; stderr.read() wurde erst nach
+        # proc.wait() aufgerufen. Sobald torch/HF beim ersten Import
+        # mehr als den OS-Pipe-Puffer (Windows ~4 KB) an Logs schrieb
+        # (CUDA, cuDNN, SafeTensors, Modell-Load), blockierte der
+        # Kindprozess beim write() auf stderr – der GUI-Status blieb
+        # für immer auf „Text vorbereitet“ stehen, weil _pump auf die
+        # nächste stdout-Zeile wartete und proc.wait() nie zurückkam.
         self._reader = threading.Thread(target=self._pump, daemon=True,
-                                        name=f"backend-reader-{self.job_id}")
+                                        name=f"backend-out-{self.job_id}")
+        self._err_reader = threading.Thread(target=self._pump_stderr, daemon=True,
+                                            name=f"backend-err-{self.job_id}")
+        self._emit_marker_event("WORKER_START", pid=self.proc.pid)
         self._reader.start()
+        self._err_reader.start()
+
+    # ------------------------------------------------------------------
+    def _emit_marker_event(self, marker: str, **extra) -> None:
+        """Internen Diagnose-Marker als GUI-Event weiterreichen."""
+        self._last_marker = marker
+        try:
+            self._on_event({
+                "event": "_marker",
+                "marker": marker,
+                "ts": time.time(),
+                "elapsed_s": round(time.perf_counter() - self._started_at, 3)
+                               if self._started_at else 0.0,
+                "job_id": self.job_id,
+                **extra,
+            })
+        except Exception:                              # noqa: BLE001
+            pass
+
+    def _pump_stderr(self) -> None:
+        """Liest stderr parallel – verhindert PIPE-Deadlock.
+
+        Geschriebene Zeilen werden an den Logger geschickt und in
+        einem Ringpuffer gehalten, damit im Fehlerfall ein brauchbarer
+        Traceback an die GUI gemeldet werden kann.
+        """
+        assert self.proc and self.proc.stderr
+        try:
+            for line in self.proc.stderr:
+                if not line:
+                    continue
+                line = line.rstrip("\n")
+                with self._stderr_lock:
+                    self._stderr_buf.append(line)
+                # Traceback-Zeilen als Fehlerquelle merken (für die
+                # Abschluss-Meldung an die GUI).
+                if ("Traceback" in line or "Error:" in line
+                        or "RuntimeError:" in line):
+                    if not self._first_traceback:
+                        self._first_traceback = line
+                # An den internen Logger weitergeben – nicht ins GUI
+                # (sonst würde jedes INFO-Log den Fortschrittsbalken
+                # überfluten).
+                try:
+                    log.debug("[backend:%s] %s", self.job_id[:6], line)
+                except Exception:                          # noqa: BLE001
+                    pass
+        except Exception as e:                            # noqa: BLE001
+            log.warning("_pump_stderr exception: %s", e)
+
+    def _stderr_tail(self, max_chars: int | None = None) -> str:
+        n = max_chars if max_chars is not None else self.STDERR_TAIL
+        with self._stderr_lock:
+            text = "\n".join(self._stderr_buf)
+        if len(text) > n:
+            text = "…" + text[-n:]
+        return text
 
     def cancel(self) -> None:
         """Cancel asynchron – blockiert GUI-Thread NICHT (P5)."""
@@ -128,6 +264,7 @@ class BackendLauncher:
 
     def _cancel_worker(self) -> None:
         """Führe terminate/wait/kill in einem Hintergrundthread aus."""
+        self._emit_marker_event("CANCEL")
         if not self.proc:
             self._finish_cancelled()
             return
@@ -144,10 +281,10 @@ class BackendLauncher:
                         pass
             except OSError:
                 pass
-        # reader thread wird durch stdout-EOF aufwachen und _finish_cancelled
-        # via _pump aufrufen; falls er schon tot ist, hier selbst aufrufen
-        if self._reader is not None:
-            self._reader.join(timeout=3)
+        # beide reader durch EOF aufwachen lassen
+        for t in (self._reader, self._err_reader):
+            if t is not None:
+                t.join(timeout=3)
         if not self._done_called:
             self._finish_cancelled()
 
@@ -173,6 +310,8 @@ class BackendLauncher:
         assert self.proc and self.proc.stdout
         result = JobResult(job_id=self.job_id)
         cancelled_by_user = False
+        pump_exc: str = ""
+        last_stage: str = ""
         try:
             for line in self.proc.stdout:
                 line = line.strip()
@@ -181,29 +320,64 @@ class BackendLauncher:
                 try:
                     evt = json.loads(line)
                 except json.JSONDecodeError:
+                    # Nicht-JSON-Zeilen auf stdout gehören nicht ins
+                    # Event-Protokoll (z. B. verirrte print-Ausgaben).
+                    with self._stderr_lock:
+                        self._stderr_buf.append("[stdout] " + line)
                     continue
                 # Tag event with our job_id
                 evt["_job_id"] = self.job_id
                 kind = evt.get("event")
+                stage = evt.get("stage") if kind == "stage" else None
+                if stage and stage != last_stage:
+                    last_stage = stage
+                    marker = _TRANSITION_MARKERS.get(stage)
+                    if marker:
+                        self._emit_marker_event(marker, stage=stage,
+                                                detail=evt.get("detail", ""))
                 if kind == "error":
+                    self._emit_marker_event("RUNNER_EXCEPTION",
+                                            message=evt.get("message", "")[:300])
                     if not self._cancelling.is_set():
                         result.error = str(evt.get("message", ""))
                         result.detail = str(evt.get("detail", ""))
-                    self._on_event(evt)
+                    try:
+                        self._on_event(evt)
+                    except Exception:                      # noqa: BLE001
+                        pass
                 elif kind == "done":
                     summ = evt.get("summary", {}) or {}
                     result.ok = bool(summ.get("ok", True))
                     if not result.ok:
                         result.error = (summ.get("status") or "INCOMPLETE")
                         result.detail = json.dumps(summ, ensure_ascii=False)[:2000]
+                        self._emit_marker_event("JOB_FAIL",
+                                                status=result.error)
+                    else:
+                        self._emit_marker_event("JOB_SUCCESS",
+                                                wav=bool(summ.get("wav")))
                     result.summary = summ
-                    self._on_event(evt)
+                    try:
+                        self._on_event(evt)
+                    except Exception:                      # noqa: BLE001
+                        pass
                 else:
-                    self._on_event(evt)
+                    try:
+                        self._on_event(evt)
+                    except Exception as e:                  # noqa: BLE001
+                        # Callback-Fehler NIE verschlucken – sonst hängt
+                        # die GUI ewig im LÄUFT…-Zustand.
+                        pump_exc = f"on_event exception: {e!r}"
+                        log.exception("on_event raised for %s", kind)
                 if self._cancelling.is_set() and not cancelled_by_user:
                     cancelled_by_user = True
-        except Exception:
-            pass
+        except Exception as e:                            # noqa: BLE001
+            pump_exc = f"_pump exception: {e!r}"
+            log.exception("_pump raised")
+            self._emit_marker_event("WORKER_EXCEPTION", detail=pump_exc)
+
+        # Prozess-Ende abwarten. stderr wird bereits parallel gelesen,
+        # also ist wait() jetzt DEADLOCK-FREI.
         rc = -1
         try:
             rc = self.proc.wait(timeout=30)
@@ -213,13 +387,14 @@ class BackendLauncher:
                 rc = self.proc.wait(timeout=5)
             except Exception:
                 rc = -1
-        err_out = ""
-        if self.proc.stderr:
-            try:
-                err_out = self.proc.stderr.read()[-4000:]
-            except Exception:
-                pass
+
+        # Sicherstellen, dass der stderr-Reader fertig ist (EOF).
+        if self._err_reader is not None:
+            self._err_reader.join(timeout=5)
+
+        err_out = self._stderr_tail()
         result.returncode = rc
+
         # Wenn explizit gecancelt wurde, immer cancelled=True
         if self._cancelling.is_set():
             result.cancelled = True
@@ -230,9 +405,26 @@ class BackendLauncher:
             result.summary["status"] = "CANCELLED"
             result.summary["ok"] = False
             result.summary["cancelled"] = True
-        elif not result.ok and not result.error:
-            result.error = f"Backend unerwartet beendet (Code {rc})."
+        elif pump_exc and not result.error:
+            result.ok = False
+            result.error = pump_exc
             result.detail = err_out
+        elif rc != 0 and not result.error:
+            # Kind ist mit Fehlercode abgestürzt (z. B. Import-Error
+            # oder nicht abgefangene Exception). Statt still auf
+            # „Text vorbereitet“ stehen zu bleiben, einen klaren
+            # Fehler mit stderr-Traceback an die GUI melden.
+            result.ok = False
+            tb_hint = self._first_traceback or err_out.strip().split("\n")[-1] if err_out else ""
+            result.error = (f"Backend-Prozess unerwartet beendet "
+                            f"(Exit-Code {rc}).")
+            if tb_hint:
+                result.error += f"  Letzte Fehlermeldung: {tb_hint[:300]}"
+            result.detail = err_out
+            self._emit_marker_event("JOB_FAIL", returncode=rc,
+                                    last_marker=self._last_marker,
+                                    traceback=tb_hint[:500])
+
         try:
             self._on_done(result)
         except Exception:

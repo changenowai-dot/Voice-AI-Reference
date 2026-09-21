@@ -847,7 +847,24 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
             else:
                 self.heartbeat_label.config(text="", foreground="#93a1b4")
         else:
-            self.heartbeat_label.config(text="")
+            # Auch in frühen Phasen (Startup/text_ready → voice_load)
+            # den Nutzer informieren, wenn ein Schritt ungewöhnlich
+            # lange dauert – insbesondere, damit wir nicht mehr
+            # fälschlicherweise „Text vorbereitet“ für immer stehen
+            # lassen bei einem PIPE-Deadlock/Prozessabsturz.
+            if self._current_stage in ("startup", "text_ready",
+                                       "voice_load", "split"):
+                if since_last > 15:
+                    self.heartbeat_label.config(
+                        text=(f"Stufe '{stage_label(self._current_stage)}' "
+                              f"läuft seit {seg_str} – erstes Modell kann "
+                              "beim ersten Start etwas länger dauern "
+                              "(CUDA/Treiber-Initialisierung)."),
+                        foreground="#c59a2f")
+                else:
+                    self.heartbeat_label.config(text="")
+            else:
+                self.heartbeat_label.config(text="")
 
     # ------------------------------------------------------------- Events
     def _on_event(self, evt: dict):
