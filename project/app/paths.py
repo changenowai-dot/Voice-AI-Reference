@@ -46,6 +46,11 @@ CACHE_SEGMENT_DIR = CACHE_DIR / "segments"
 CACHE_PROJECT_DIR = CACHE_DIR / "projects"
 VOICE_REFS_DIR = Path(os.environ.get("VOICEOVER_REFS_DIR") or str(CACHE_DIR / "voice_refs"))
 
+# Alias, damit Tools (Audit/Diagnose) einen verlässlichen Ausgabepfad
+# haben. Die produktive Pipeline schreibt nach OUTPUT_DIR – das ist
+# weiterhin der zentrale Pfad.
+VOICE_OUTPUT_DIR = OUTPUT_DIR
+
 # Versionierte Referenz-Bundles (werden mit dem Repo/Release ausgeliefert).
 # Diese Dateien werden NICHT zur Laufzeit geschrieben; sie werden einmalig
 # beim Release-Build/Import in das Repo gestellt. Die Laufzeit-Logik

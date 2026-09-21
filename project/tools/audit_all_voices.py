@@ -1,399 +1,408 @@
-"""Auditiere ALLE GUI-gezeigten Stimmen auf technische Verwendbarkeit.
+#!/usr/bin/env python3
+"""Auditiere ALLE im GUI gezeigten Stimmen.
 
-Für jede Stimme wird geprüft:
-1. Registry-Eintrag vorhanden
-2. (bei Clone-Stimmen) WAV in cache/voice_refs/ vorhanden
-3. WAV > 0 Bytes, lesbar (soundfile/librosa), Sample-Rate, Kanäle, Dauer
-4. Manifest-WAV.json vorhanden, JSON valide, voice_id/language korrekt
-5. Bundle-Validator (reference_bundle.load_bundle) läuft erfolgreich
-6. Optional (wenn --smoke gesetzt): 1-Wort-TTS ("Hallo." / "Hello.")
+OFFLINE (default): bundle_present / bundle_valid / selectable für jede Stimme.
+--smoke: ZUSÄTZLICH Echt-TTS-Smoke-Test (GPU + qwen_tts). Pro Stimme wird
+ein kurzer Satz in der/den unterstützten Sprachen synthetisiert.
 
-Der Test gibt eine Tabelle aus und schreibt alle Ergebnisse als JSON-
-Datei; Exit-Code ist !=0 wenn irgendeine Stimme als FEHLER markiert ist,
-die die GUI als selektierbar anbietet.
-
-ACHTUNG: Smoke-Synthese lädt das Qwen-Modell (benötigt GPU).
+FEHLER-PRINZIPIEN:
+  * soundfile ist ordentlich importiert (mit stdlib-wave-Fallback) – kein
+    "name 'sf' is not defined".
+  * Es wird die KORREKTE Sprach-Matrix aus dem Profil verwendet
+    (canonical_language / supported_languages / cross_language).
+  * VOICE_OUTPUT_DIR wird auf den echten Output-Pfad gesetzt.
+  * Wird ein Report nicht geschrieben → FAIL.
+  * FINAL_AUDIT=PASS wird NUR ausgegeben, wenn 0 selectable Stimmen
+    fehlschlagen.
 """
 from __future__ import annotations
 
 import argparse
+import gc
 import hashlib
 import json
-import os
 import sys
 import time
 import traceback
+import wave as _wave
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "project"))
 
+_DE = "German"
+_EN = "English"
 
-def sha256_file(p: Path) -> str:
+
+# ---------------------------------------------------------------------------
+# WAV-Helfer
+# ---------------------------------------------------------------------------
+@dataclass
+class WavMeta:
+    sr: int
+    ch: int
+    n: int
+    peak: float
+    rms: float
+    dur_s: float
+    silent: bool
+
+
+def _read_wav(path: Path) -> WavMeta:
+    """Lese WAV + Peak/RMS/Silence. Nutzt soundfile wenn verfügbar, sonst wave."""
+    try:
+        import soundfile as sf
+        import numpy as np
+        data, sr = sf.read(str(path), always_2d=False)
+        ch = 1 if data.ndim == 1 else data.shape[1]
+        n = int(data.shape[0])
+        peak = float(abs(data).max()) if n > 0 else 0.0
+        rms = float((data.astype("float64") ** 2).mean() ** 0.5) if n > 0 else 0.0
+        dur = n / float(max(1, sr))
+        return WavMeta(sr, ch, n, peak, rms, dur, (peak < 1e-4) or (rms < 1e-5))
+    except Exception:
+        with _wave.open(str(path), "rb") as w:
+            _nch, _sw, sr, n, _comptype, _compname = w.getparams()
+            dur = n / float(max(1, sr))
+            return WavMeta(sr, _nch, n, 0.0, 0.0, dur, False)
+
+
+def _sha256(p: Path) -> str:
     h = hashlib.sha256()
     with p.open("rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
+        for c in iter(lambda: f.read(1 << 20), b""):
+            h.update(c)
     return h.hexdigest()
 
 
-class _WavInfo:
-    def __init__(self, samplerate: int, channels: int, frames: int, duration: float):
-        self.samplerate = samplerate
-        self.channels = channels
-        self.frames = frames
-        self.duration = duration
+# ---------------------------------------------------------------------------
+# Sprach-Matrix
+# ---------------------------------------------------------------------------
+@dataclass
+class LangSpec:
+    canonical: str
+    supported: list[str]
 
 
-def _wav_info(path: Path):
-    """Lese WAV-Metadaten mit soundfile (falls verfügbar) oder stdlib wave."""
-    if sf is not None:
-        return sf.info(str(path))
-    with _wave.open(str(path), "rb") as w:
-        sr = w.getframerate()
-        ch = w.getnchannels()
-        nframes = w.getnframes()
-    dur = nframes / float(max(1, sr))
-    return _WavInfo(sr, ch, nframes, dur)
+def _lang_spec(vid: str, prof: dict) -> LangSpec:
+    if vid == "vd_e":
+        return LangSpec(_DE, [_DE])
+    if prof.get("backend_mode") == "customvoice":
+        return LangSpec(_DE, [_DE, _EN])
+    rs = prof.get("settings") or {}
+    vl = str(rs.get("language") or "").strip()
+    if vl not in (_DE, _EN):
+        vl = _EN if vid.startswith("en_") else _DE
+    ls = [l for l in (prof.get("language_support") or []) if l in (_DE, _EN)]
+    if not ls:
+        ls = [vl]
+    if vl not in ls:
+        ls.insert(0, vl)
+    return LangSpec(vl, ls)
 
 
+def _tier(p: dict) -> str:
+    from app.voices.registry import tier_for
+    return tier_for(p)
+
+
+# ---------------------------------------------------------------------------
+# Haupt
+# ---------------------------------------------------------------------------
 def main() -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--smoke", action="store_true",
-                    help="Zusätzlich Echt-TTS-Smoke-Test durchführen "
-                         "(benötigt GPU + qwen_tts).")
-    ap.add_argument("--limit", type=str, default="",
-                    help="Nur diese Voice-IDs testen (Komma-getrennt).")
-    ap.add_argument("--json-out", type=Path, default=None)
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--smoke", action="store_true")
+    ap.add_argument("--limit", default="")
     ap.add_argument("--lang", default="both", choices=("de", "en", "both"))
+    ap.add_argument("--json-out", type=Path, default=None)
+    ap.add_argument("--output-dir", type=Path, default=None)
+    ap.add_argument("--text-de", default="Hallo. Dies ist ein kurzer deutscher Test.")
+    ap.add_argument("--text-en", default="Hello. This is a short English test.")
     args = ap.parse_args()
 
-    from app.voices.registry import VoiceRegistry, tier_for
     from app import paths
-    try:
-        import soundfile as sf
-    except Exception:
-        sf = None   # Fallback: wave-Modul für reine WAV-Lesbarkeitsprüfung
-    import wave as _wave
-
+    paths.ensure_directories()
+    from app.voices.registry import VoiceRegistry
     reg = VoiceRegistry()
-    langs = ["German", "English"] if args.lang == "both" else \
-            ["German"] if args.lang == "de" else ["English"]
+    entries = {e.voice_id: e for e in reg.entries()}
+    limit = {v.strip() for v in args.limit.split(",") if v.strip()}
 
-    limit_set = set(v.strip() for v in args.limit.split(",") if v.strip())
+    # Output: der ECHTE zentrale Output-Pfad der Anwendung ist paths.OUTPUT_DIR.
+    smoke_out = args.output_dir or (paths.OUTPUT_DIR / "audit_smoke")
+    if args.smoke:
+        smoke_out.mkdir(parents=True, exist_ok=True)
+    json_out = args.json_out or (paths.CACHE_DIR / "audit_smoke_report.json")
 
-    # Baue alle Voice-IDs und ihre GUI-Eigenschaften nach, ohne tkinter zu
-    # importieren (damit das Audit auch auf Headless-Systemen / ohne GUI
-    # laufen kann). Die Selektierbarkeits-Logik ist identisch mit
-    # app/gui/voice_view.py (dort kommentiert).
-    all_vids = list(reg._profiles.keys())
+    want = []
+    if args.lang in ("de", "both"): want.append(_DE)
+    if args.lang in ("en", "both"): want.append(_EN)
 
-    def _voice_lang_for(vid: str, prof: dict) -> str:
-        rs = prof.get("settings") or {}
-        vl = str(rs.get("language") or "").strip()
-        if vl in ("English", "German"):
-            return vl
-        if vid.startswith("en_"):
-            return "English"
-        return "German"
+    # VD-E SHA-Prüfung (sofort fail bei mismatch)
+    vd_path = paths.VD_E_GOLDEN_REF_PATH
+    if not vd_path.exists():
+        leg = ROOT / "reference" / "VD-E_GOLDEN_REFERENCE" / "VD-E.wav"
+        if leg.exists(): vd_path = leg
+    if not vd_path.exists():
+        print(f"FATAL: VD-E Golden Reference fehlt: {paths.VD_E_GOLDEN_REF_PATH}", file=sys.stderr); return 3
+    vd_sha = _sha256(vd_path)
+    if vd_sha.lower() != paths.VD_E_EXPECTED_SHA256.lower():
+        print(f"FATAL: VD-E SHA mismatch: expected={paths.VD_E_EXPECTED_SHA256[:16]} actual={vd_sha[:16]}", file=sys.stderr); return 3
 
-    def _group_for(vid: str, prof: dict, lang: str, selectable: bool) -> str:
-        if vid == "vd_e":
-            return "locked"
-        if prof.get("backend_mode") == "customvoice":
-            return "custom"
-        t = tier_for(prof)
-        if t == "REJECTED":
-            return "candidates"
-        return "clone" if selectable else "candidates"
+    results: list[dict[str, Any]] = []
+    selectable_broken = 0
+    fatal = 0
+    engines: dict[str, Any] = {}
+    want_map = {"de": _DE, "en": _EN, "both": "both"}
 
-    # Einträge vorberechnen (registry.entries() löst Verfügbarkeit auf).
-    entries_by_id = {e.voice_id: e for e in reg.entries()}
+    # Spalten-Kopf
+    print(f"{'VOICE_ID':52s} {'LANG':7s} {'TYPE':11s} {'TIER':11s} "
+          f"{'SEL':3s} {'OK':3s} {'TTS':5s} {'LOC':10s} {'CAN':4s} {'SUP':8s} ERROR")
+    print("-" * 170)
 
-    results = []
-    exit_code = 0
-    engines: dict = {}
+    def _row(r: dict) -> None:
+        sel = "Y" if r["selectable_in_gui"] else "N"
+        ok = "Y" if r["ok"] else "N"
+        tts = r.get("tts_pass", "-") or "-"
+        loc = r.get("bundle_location", "") or ""
+        can = "Y" if r["canonical"] else "N"
+        sup = "+".join("de" if l == _DE else "en" for l in r["supported_languages"])
+        err = (r["error"] or "")[:50]
+        lshort = "de" if r["language"] == _DE else "en"
+        print(f"{r['voice_id']:52s} {lshort:7s} {r['voice_type'][:11]:11s} {r['tier'][:11]:11s} "
+              f"{sel:3s} {ok:3s} {tts:5s} {loc[:10]:10s} {can:4s} {sup:8s} {err}")
 
-    for lang in langs:
-        for vid in all_vids:
-            if limit_set and vid not in limit_set:
+    for vid in sorted(reg._profiles.keys()):
+        if limit and vid not in limit:
+            continue
+        prof = reg._profiles.get(vid, {})
+        entry = entries.get(vid)
+        backend = str(prof.get("backend_mode", "customvoice"))
+        tier = _tier(prof)
+        ls = _lang_spec(vid, prof)
+        for lang in want:
+            if lang not in ls.supported:
                 continue
-            prof = reg._profiles.get(vid, {})
-            vl = _voice_lang_for(vid, prof)
-            # Pro Sprach-Modus filtern: VD-E nur Deutsch; andere nur wenn
-            # language_support die Sprache enthält ODER es ihre native
-            # Sprache ist ODER sie CustomVoice sind.
-            if vid == "vd_e" and lang != "German":
-                continue
-            if prof.get("backend_mode") == "clone":
-                ls = prof.get("language_support") or []
-                if lang not in ls and vl != lang:
-                    continue
-            entry = entries_by_id.get(vid)
-            t = tier_for(prof)
-            if prof.get("backend_mode") == "customvoice":
-                tech_avail = True
-            elif t == "REJECTED":
-                tech_avail = False
-            else:
-                tech_avail = bool(entry.available) if entry else False
-            # Selectable = tier != REJECTED & (customvoice | (clone & tech_avail))
-            if vid == "vd_e":
-                selectable = (lang == "German") and tech_avail
-            elif t == "REJECTED":
-                selectable = False
-            elif prof.get("backend_mode") == "customvoice":
-                selectable = True
-            else:
-                selectable = tech_avail
-            group = _group_for(vid, prof, lang, selectable)
-            tier_label = {"ACTIVE": "PRODUKTION", "BACKUPS": "ARCHIV",
-                          "UNASSESSED": "KANDIDAT", "REJECTED": "ZURÜCKGEWIESEN"}.get(t, t)
-            r = {
-                "voice_id": vid,
-                "language": lang,
-                "group": group,
-                "voice_type": (prof.get("backend_mode", "?")),
-                "tier": t,
-                "status_label": tier_label,
-                "selectable_in_gui": selectable,
-                "technically_available_reported": tech_avail,
-                "reference_checks": {},
-                "runtime_load": "skipped",
-                "runtime_load_error": None,
-                "tts_pass": "skipped",     # "pass"/"fail"/"skipped"
-                "tts_error": None,
-                "output_wav": None,
-                "duration": None,
-                "ok": True,
-                "errors": [],
-                "bundle_present": False,
-                "bundle_valid": False,
-                "bundle_location": "none",
-                "audio_sha256": None,
+            r: dict[str, Any] = {
+                "voice_id": vid, "language": lang,
+                "canonical_language": ls.canonical,
+                "supported_languages": list(ls.supported),
+                "cross_language": (lang != ls.canonical),
+                "canonical": (lang == ls.canonical),
+                "voice_type": backend, "tier": tier,
+                "display_name": str(prof.get("display_name", vid)),
+                "selectable_in_gui": False,
+                "bundle_present": False, "bundle_valid": False,
+                "bundle_location": "", "audio_sha256": None,
+                "duration_s": None, "sample_rate": None, "channels": None,
+                "silent": None, "peak": None, "rms": None,
+                "runtime_load": "skipped", "runtime_load_error": None,
+                "runtime_load_s": None,
+                "tts_pass": "skipped", "tts_error": None,
+                "output_wav": None, "output_duration_s": None,
+                "tts_time_s": None, "ok": True, "error": "",
             }
+            # Selektierbarkeit
+            if backend == "customvoice":
+                r["selectable_in_gui"] = True
+            elif tier == "REJECTED":
+                r["selectable_in_gui"] = False
+            elif vid == "vd_e":
+                r["selectable_in_gui"] = (lang == _DE) and bool(entry.available if entry else True)
+            else:
+                r["selectable_in_gui"] = bool(entry.available) if entry else False
 
-            # --- Custom Voices / VD-E: ---
-            if entry and entry.backend_mode == "customvoice":
-                r["reference_checks"] = {"note": "customvoice – keine Referenz nötig"}
-            elif entry and vid == "vd_e":
-                vd_path = paths.VD_E_GOLDEN_REF_PATH
-                if not vd_path.exists():
-                    legacy = ROOT / "reference" / "VD-E_GOLDEN_REFERENCE" / "VD-E.wav"
-                    if legacy.exists():
-                        vd_path = legacy
-                if not vd_path.exists():
-                    r["ok"] = False
-                    r["errors"].append(f"VD-E Golden Reference FEHLT: {paths.VD_E_GOLDEN_REF_PATH}")
-                    exit_code = 2
-                else:
-                    sha = sha256_file(vd_path)
-                    expected = paths.VD_E_EXPECTED_SHA256
-                    if sha != expected:
-                        r["ok"] = False
-                        r["errors"].append(f"VD-E SHA mismatch! erwartet={expected[:16]}… erhalten={sha[:16]}…")
-                        exit_code = 2
-                    else:
-                        r["reference_checks"] = {"wav": str(vd_path), "sha256": "OK"}
-                        r["bundle_present"] = True
-                        r["bundle_valid"] = True
-                        r["bundle_location"] = "golden"
-            elif entry and entry.backend_mode == "clone":
-                # Suche das Bundle in der Reihenfolge der Release-Priorität:
-                #   (1) release-bundled  project/app/voices/bundles/
-                #   (2) runtime-cache    project/cache/voice_refs/
-                # Ein Fehlen in BEIDEN ist ein echter Fehler, wenn die
-                # Stimme als selectable angeboten wird.
-                from app.tts.reference_bundle import (
-                    bundled_bundle_path, default_bundle_path,
-                    load_bundle, resolve_bundle,
-                )
-                # ``lang`` enthält bereits die äussere Loop-Sprache
-                # ("German"/"English"); wir brauchen KEINE Neuzuweisung
-                # die die Loop-Variable überschreibt.
-                voice_lang = lang
-                candidates = [("bundled", bundled_bundle_path(vid)),
-                              ("cache", default_bundle_path(vid))]
-                found_loc = None
-                found_wav = None
-                for label, wp in candidates:
+            # Bundle-Check
+            if backend == "customvoice":
+                r.update(bundle_present=True, bundle_valid=True, bundle_location="builtin")
+            elif vid == "vd_e":
+                r.update(bundle_present=True, bundle_valid=True, bundle_location="golden",
+                         audio_sha256=vd_sha[:16])
+            elif backend == "clone":
+                from app.tts.reference_bundle import (bundled_bundle_path,
+                                                      default_bundle_path,
+                                                      load_bundle, resolve_bundle)
+                found = None; found_loc = ""
+                for lab, wp in (("bundled", bundled_bundle_path(vid)),
+                                ("cache", default_bundle_path(vid))):
                     if wp.exists() and wp.with_suffix(".wav.json").exists():
-                        found_loc, found_wav = label, wp; break
-                r["bundle_present"] = bool(found_wav)
-                r["bundle_location"] = found_loc or "none"
-                if found_wav is None:
-                    # VD-E-Ausnahme: Golden Reference
-                    if vid == "vd_e" and (ROOT / "VD-E_GOLDEN_REFERENCE" / "VD-E.wav").exists():
-                        found_loc, found_wav = "golden", ROOT / "VD-E_GOLDEN_REFERENCE" / "VD-E.wav"
-                if found_wav is None:
+                        found, found_loc = wp, lab; break
+                r["bundle_present"] = bool(found)
+                r["bundle_location"] = found_loc
+                if found is None:
                     r["ok"] = False
-                    r["errors"].append(
-                        f"WAV fehlt (weder gebündelt noch im Cache): "
-                        f"{bundled_bundle_path(vid)} / {default_bundle_path(vid)}")
-                    r["reference_checks"]["bundled_wav"] = str(bundled_bundle_path(vid))
-                    r["reference_checks"]["cache_wav"] = str(default_bundle_path(vid))
+                    r["error"] = "Bundle fehlt (bundled+cache)"
                 else:
-                    wav_path = found_wav
-                    manifest_path = wav_path.with_suffix(".wav.json")
-                    r["reference_checks"]["wav_path"] = str(wav_path)
-                    r["reference_checks"]["location"] = found_loc
                     try:
-                        info = _wav_info(wav_path)
-                        r["reference_checks"]["wav_bytes"] = wav_path.stat().st_size
-                        r["reference_checks"]["samplerate"] = info.samplerate
-                        r["reference_checks"]["channels"] = info.channels
-                        r["reference_checks"]["duration_s"] = round(float(info.duration), 2)
-                        r["duration"] = round(float(info.duration), 2)
-                        if info.frames == 0:
-                            r["ok"] = False
-                            r["errors"].append("WAV leer (0 Frames)")
-                        if info.samplerate < 16000 or info.samplerate > 48000:
-                            r["errors"].append(f"Unübliche Samplerate: {info.samplerate} Hz")
+                        b = resolve_bundle(vid, language=lang,
+                                           require_manifest=True, auto_materialize=True)
+                        r["bundle_valid"] = True
+                        r["audio_sha256"] = b.audio_sha256[:16]
+                        meta = _read_wav(b.audio_path)
+                        r.update(duration_s=round(meta.dur_s, 2), sample_rate=meta.sr,
+                                 channels=meta.ch, silent=meta.silent,
+                                 peak=round(meta.peak, 4), rms=round(meta.rms, 4))
+                        if meta.n == 0:
+                            r["ok"] = False; r["error"] = "WAV leer"
+                        elif meta.sr < 16000 or meta.sr > 48000:
+                            r["ok"] = False; r["error"] = f"Unübliche SR {meta.sr}"
+                        elif meta.silent:
+                            r["error"] = "WARNUNG: WAV scheint still"
                     except Exception as e:
                         r["ok"] = False
-                        r["errors"].append(f"WAV nicht lesbar: {e}")
-                    if manifest_path.exists():
-                        try:
-                            m = json.loads(manifest_path.read_text(encoding="utf-8"))
-                            r["reference_checks"]["manifest_voice_id"] = m.get("voice_id")
-                            r["reference_checks"]["manifest_language"] = m.get("language")
-                            if m.get("voice_id") and m["voice_id"] != vid:
-                                r["ok"] = False
-                                r["errors"].append(
-                                    f"Manifest voice_id={m['voice_id']} != {vid}")
-                        except Exception as e:
-                            r["ok"] = False
-                            r["errors"].append(f"Manifest ungültig: {e}")
-                # Bundle-Validator (ohne Cache-Materialisierung bei reinem
-                # Check) — nutzt resolve_bundle das zuerst im Bundled-Ordner
-                # sucht.
-                try:
-                    b = resolve_bundle(vid, language=voice_lang,
-                                       require_manifest=(vid != "vd_e"),
-                                       auto_materialize=(found_loc != "bundled"))
-                    r["reference_checks"]["bundle_valid"] = True
-                    r["bundle_valid"] = True
-                    r["audio_sha256"] = b.audio_sha256[:16] + "…"
-                except Exception as e:
-                    r["ok"] = False
-                    r["bundle_valid"] = False
-                    r["errors"].append(f"Bundle-Validator: {e}")
-            else:
-                r["ok"] = False
-                r["errors"].append(f"Unbekannter backend_mode: "
-                                    f"{entry.backend_mode if entry else 'kein Entry'}")
+                        r["error"] = f"Bundle ungültig: {type(e).__name__}: {str(e)[:120]}"
 
-            # Wenn GUI die Stimme als selectable anbietet, muss sie technisch
-            # auch funktionieren.
-            if selectable and not r["ok"]:
-                exit_code = max(exit_code, 3)
-                r["errors"].append(
-                    "!! GUI bietet Stimme als auswählbar an, aber "
-                    "technische Prüfung fehlgeschlagen.")
+            if r["selectable_in_gui"] and not r["ok"]:
+                selectable_broken += 1
 
-            # Optional: Runtime-Load + Smoke-Synthese (ECHTER TTS-TEST)
-            if args.smoke and entry and selectable:
-                out_dir = paths.VOICE_OUTPUT_DIR / "audit_smoke"
-                out_dir.mkdir(parents=True, exist_ok=True)
-                smoke_text = ("Hallo. Dies ist ein kurzer deutscher Test."
-                              if lang == "German"
-                              else "Hello. This is a short English test.")
-                try:
-                    if entry.backend_mode not in engines:
+            # --- Smoke-TTS ---
+            if args.smoke and r["selectable_in_gui"] and r["ok"]:
+                text = args.text_de if lang == _DE else args.text_en
+                eng_key = f"{backend}:{lang}"
+                # --- Runtime-Load ---
+                if eng_key not in engines:
+                    r_load = "skipped"; r_load_err = None; t0 = time.time()
+                    try:
                         from app.hardware.detector import detect_hardware
-                        from app.jobs.runner import build_engine, JobSpec
+                        from app.jobs.runner import JobSpec, build_engine
                         from app.security.identity_lock import load_production
                         hw = detect_hardware()
                         production = load_production()
-                        # Nur Engine bauen und laden (noch nicht synthetisieren).
                         spec = JobSpec(text="x", language=lang,
-                                       voice_id="vd_e" if entry.backend_mode == "voicedesign"
-                                                else (entry.speaker_name or vid),
-                                       speed=1.0)
-                        # Spezialfall: wir bauen pro backend_mode + sprache
-                        eng_key = f"{entry.backend_mode}:{lang}"
-                        if eng_key not in engines:
-                            eng, _ = build_engine(spec, production)
-                            eng.load()
-                            engines[eng_key] = eng
-                    r["runtime_load"] = "ok"
-                except Exception as e:
-                    r["runtime_load"] = "fail"
-                    r["runtime_load_error"] = f"{type(e).__name__}: {e}"
-                    r["tts_pass"] = "fail"
-                    r["tts_error"] = r["runtime_load_error"]
-                    r["errors"].append(r["runtime_load_error"])
-                    exit_code = max(exit_code, 4)
-                    results.append(r); continue
-                try:
-                    from app.jobs.runner import JobSpec
-                    import tempfile
-                    eng_key = f"{entry.backend_mode}:{lang}"
-                    eng = engines[eng_key]
-                    # Tatsächliche Kurzsynthese
-                    out_wav = out_dir / f"{vid}_{lang}.wav"
-                    spec = JobSpec(text=smoke_text, language=lang,
-                                   voice_id=vid, speed=1.0,
-                                   output_path=str(out_wav))
-                    t0 = time.time()
-                    eng.synthesize(spec, on_progress=lambda *a, **k: None)
-                    dt = time.time() - t0
-                    if out_wav.exists() and out_wav.stat().st_size > 1024:
-                        try:
-                            info = _wav_info(out_wav)
-                            r["duration"] = round(float(info.duration), 2)
-                        except Exception:
-                            pass
-                        r["tts_pass"] = "pass"
-                        r["output_wav"] = str(out_wav)
-                        r["tts_time_s"] = round(dt, 2)
-                    else:
+                                       voice_id=vid, speed=args.speed
+                                       if hasattr(args, "speed") else 1.0)
+                        eng, _meta = build_engine(spec, production)
+                        eng.load()
+                        engines[eng_key] = eng
+                        r["runtime_load"] = "ok"
+                        r["runtime_load_s"] = round(time.time() - t0, 2)
+                    except Exception as e:
+                        r["runtime_load"] = "fail"
+                        r["runtime_load_error"] = f"{type(e).__name__}: {e}"
+                        r["tts_pass"] = "fail"; r["tts_error"] = r["runtime_load_error"]
+                        r["ok"] = False; r["error"] = "Runtime-Load fehlgeschlagen"
+                        fatal += 1
+                        _row(r); results.append(r)
+                        _write_report(json_out, results, selectable_broken, fatal,
+                                      smoke_out, args.smoke)
+                        print(f"\nFATAL Runtime-Load-Fehler (model?): {e}", file=sys.stderr)
+                        return 3
+                eng = engines.get(eng_key)
+                # --- Synthese ---
+                if eng is not None:
+                    try:
+                        from app.jobs.runner import JobSpec
+                        out_wav = smoke_out / f"{vid}_{'de' if lang==_DE else 'en'}.wav"
+                        if out_wav.exists():
+                            try: out_wav.unlink()
+                            except Exception: pass
+                        spec = JobSpec(text=text, language=lang, voice_id=vid,
+                                       speed=1.0, output_dir=str(smoke_out),
+                                       output_name=f"{vid}_{'de' if lang==_DE else 'en'}",
+                                       formats=["wav"], output_format="wav")
+                        t0 = time.time()
+                        res = eng.synthesize(spec)
+                        dt = time.time() - t0
+                        # Finde Ausgabe
+                        final_wav = None
+                        if out_wav.exists():
+                            final_wav = out_wav
+                        elif hasattr(res, "output_path") and res.output_path:
+                            final_wav = Path(res.output_path)
+                        else:
+                            cands = sorted(smoke_out.glob(out_wav.stem + "*.wav"),
+                                           key=lambda p: p.stat().st_mtime, reverse=True)
+                            if cands: final_wav = cands[0]
+                        if final_wav and final_wav.exists() and final_wav.stat().st_size > 1024:
+                            m = _read_wav(final_wav)
+                            r.update(output_wav=str(final_wav), output_duration_s=round(m.dur_s,2),
+                                     tts_time_s=round(dt,2))
+                            if m.silent or m.n == 0:
+                                r["tts_pass"] = "fail"
+                                r["tts_error"] = "Ausgabe ist still/leer"
+                                r["ok"] = False; fatal += 1
+                            else:
+                                r["tts_pass"] = "pass"
+                        else:
+                            r["tts_pass"] = "fail"
+                            r["tts_error"] = f"Keine Output-WAV: {out_wav}"
+                            r["ok"] = False; fatal += 1
+                    except Exception as e:
                         r["tts_pass"] = "fail"
-                        r["tts_error"] = f"Keine Output-WAV erzeugt ({out_wav})"
-                        r["errors"].append(r["tts_error"])
-                        exit_code = max(exit_code, 5)
-                except Exception as e:
-                    r["tts_pass"] = "fail"
-                    r["tts_error"] = f"{type(e).__name__}: {e}"
-                    r["errors"].append(r["tts_error"])
-                    exit_code = max(exit_code, 5)
+                        r["tts_error"] = f"{type(e).__name__}: {e}"
+                        r["ok"] = False; fatal += 1
+                if r["selectable_in_gui"] and not r["ok"]:
+                    selectable_broken += 1
+            _row(r)
             results.append(r)
+        if fatal:
+            break
 
-    # Ausgabe
-    print(f"{'VOICE_ID':52s} {'LANG':7s} {'TYPE':12s} {'TIER':11s} "
-          f"{'SEL':4s} {'OK':3s} {'LOC':10s}  FEHLER")
-    print("-" * 150)
-    for r in results:
-        err = "; ".join(r["errors"]) if r["errors"] else ""
-        lang_short = "de" if r["language"] == "German" else (
-            "en" if r["language"] == "English" else r["language"])
-        print(f"{r['voice_id']:52s} {lang_short:7s} {r['voice_type']:12s} "
-              f"{r['tier']:11s} {'Y' if r['selectable_in_gui'] else 'N':4s} "
-              f"{'Y' if r['ok'] else 'N':3s} "
-              f"{r.get('bundle_location',''):10s}  {err[:70]}")
-
+    # Report schreiben
     summary = {
         "total": len(results),
         "ok": sum(1 for r in results if r["ok"]),
         "failed": sum(1 for r in results if not r["ok"]),
         "selectable": sum(1 for r in results if r["selectable_in_gui"]),
-        "selectable_but_broken": sum(1 for r in results
-                                      if r["selectable_in_gui"] and not r["ok"]),
+        "selectable_but_broken": selectable_broken,
+        "tts_smoke": args.smoke,
+        "tts_passed": sum(1 for r in results if r.get("tts_pass") == "pass"),
+        "tts_failed": sum(1 for r in results if r.get("tts_pass") == "fail"),
+        "fatal_issues": fatal,
+        "output_dir": str(smoke_out),
+        "vd_e_sha_ok": True,
     }
     print()
     print(f"Zusammenfassung: {summary['ok']}/{summary['total']} OK, "
           f"{summary['failed']} fehlerhaft, "
-          f"{summary['selectable']} auswählbar in GUI, "
+          f"{summary['selectable']} auswählbar, "
           f"{summary['selectable_but_broken']} auswählbar aber defekt.")
+    if args.smoke:
+        print(f"  TTS: {summary['tts_passed']} pass, {summary['tts_failed']} fail "
+              f"(output_dir={smoke_out})")
 
-    if args.json_out:
-        args.json_out.parent.mkdir(parents=True, exist_ok=True)
-        args.json_out.write_text(
-            json.dumps({"summary": summary, "voices": results}, indent=2,
-                       ensure_ascii=False, default=str),
-            encoding="utf-8")
-        print(f"JSON-Report: {args.json_out}")
-    return exit_code
+    code = _write_report(json_out, results, selectable_broken, fatal, smoke_out, args.smoke)
+    if code != 0:
+        print("\nFINAL_AUDIT=FAIL (Report-Fehler)")
+        return code
+    if fatal:
+        print("\nFINAL_AUDIT=FAIL (fatale Fehler)")
+        return 2
+    if selectable_broken > 0:
+        print(f"\nFINAL_AUDIT=FAIL ({selectable_broken} selectable Stimmen defekt)")
+        return 2
+    print("\nFINAL_AUDIT=PASS")
+    return 0
+
+
+def _write_report(path: Path, results: list, broken: int, fatal: int,
+                  out_dir: Path, smoke: bool) -> int:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "summary": {
+                "total": len(results),
+                "ok": sum(1 for r in results if r["ok"]),
+                "failed": sum(1 for r in results if not r["ok"]),
+                "selectable": sum(1 for r in results if r["selectable_in_gui"]),
+                "selectable_but_broken": broken,
+                "tts_smoke": smoke,
+                "tts_passed": sum(1 for r in results if r.get("tts_pass") == "pass"),
+                "tts_failed": sum(1 for r in results if r.get("tts_pass") == "fail"),
+                "fatal_issues": fatal,
+                "output_dir": str(out_dir),
+            },
+            "voices": results,
+        }
+        path.write_text(json.dumps(payload, indent=2, ensure_ascii=False, default=str),
+                        encoding="utf-8")
+        print(f"JSON-Report: {path}")
+        return 0
+    except Exception as e:
+        print(f"FATAL: Report-Schreiben fehlgeschlagen: {e}", file=sys.stderr)
+        traceback.print_exc()
+        return 2
 
 
 if __name__ == "__main__":

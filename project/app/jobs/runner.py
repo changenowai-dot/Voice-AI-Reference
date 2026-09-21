@@ -276,76 +276,54 @@ def build_engine(spec: JobSpec, production: dict):
                        or entry.description
                        or (f"{voice_language} narrator"))
         from .. import paths as _p
-        # HARD DEFAULT: allow_design=False. Niemals stumm VoiceDesign
-        # anwerfen, nur weil eine Referenz fehlt. Das würde (a) das
-        # nicht-installierte VoiceDesign-Modell anfordern und (b) eine
-        # beliebige / korrumpierte Prompt-Erzeugung auslösen.
-        # Explizite Materialisierung (z. B. tools/materialize_references.py)
-        # muss VOICEOVER_ALLOW_VOICEDESIGN_MATERIALIZE=1 setzen.
+        from ..tts.reference_bundle import (bundled_bundle_path,
+                                            default_bundle_path,
+                                            resolve_bundle)
         import os as _os
         allow_design = bool(_os.environ.get(
             "VOICEOVER_ALLOW_VOICEDESIGN_MATERIALIZE"))
         candidate_id = entry.voice_id
-        canonical_wav = _p.VOICE_REFS_DIR / f"{candidate_id}.wav"
-        # ref_text_for_engine:
-        #   * None when the canonical WAV exists -> VoiceCloneEngine will
-        #     load the atomic reference bundle sidecar (WAV + .wav.json
-        #     manifest) and refuse to synthesize if it is missing/invalid.
-        #     We deliberately DO NOT pass entry.reference_text here because
-        #     the registry's fallback value ("VOICEDESIGN_REF_TEXT_EN"
-        #     = "There is a book…") is ONLY valid if the WAV was actually
-        #     generated from that exact text; if someone materialized the
-        #     voice with a different script the bundle manifest is the
-        #     single source of truth. Passing the fallback silently would
-        #     reintroduce the gibberish bug.
-        #   * recipe text when we are about to materialize (allow_design).
         ref_text_for_engine = None
-        if entry.reference_path:
-            rp = _p.ROOT / entry.reference_path
-            if rp.exists() and rp.resolve() == canonical_wav.resolve():
-                # Canonical reference present: rely on bundle manifest.
-                emit("stage", stage="voice_load", voice=entry.display_name,
-                     detail=f"Produktions-Referenz vorhanden ({voice_language}): {rp.name}")
-                allow_design = False
-            elif rp.exists():
-                # Non-canonical reference path configured — should not
-                # happen in production, but refuse rather than guess.
-                raise RuntimeError(
-                    f"NICHT-KANONISCHE REFERENZ für Stimme "
-                    f"‚{entry.display_name}‘ ({entry.voice_id}):\n"
-                    f"  konfiguriert: {rp}\n"
-                    f"  erwartet:     {canonical_wav}\n"
-                    "Mehrdeutige Referenzdateien führen zu Text/Audio-"
-                    "Mismatch → Murks. Bitte die Referenz unter den "
-                    "kanonischen Pfad legen oder das Voice-JSON korrigieren.")
-            else:
-                if not allow_design:
-                    raise RuntimeError(
-                        f"Produktions-Referenz fehlt für Stimme "
-                        f"‚{entry.display_name}‘ ({entry.voice_id}): {rp}\n\n"
-                        f"Die kanonische Referenz muss zuerst über die "
-                        f"VoiceDesign->Clone-Pipeline erzeugt werden "
-                        f"(cache/voice_refs/{entry.voice_id}.wav + "
-                        f"dazugehöriges .wav.json Manifest).\n"
-                        f"Auf dem Host mit GPU + Qwen3-TTS-12Hz-1.7B-"
-                        f"VoiceDesign:\n"
-                        f"    python project/tools/materialize_references.py "
-                        f"--voice-id {entry.voice_id} --language {voice_language}\n"
-                        f"Bis dahin ist die Stimme im GUI deaktiviert.")
+
+        # Anstatt auf den alten Hardcoded-Pfad in entry.reference_path
+        # zu vertrauen, lösen wir das Bundle über resolve_bundle() auf.
+        # Das sucht mit der Release-Priorität:
+        #   (1) runtime cache (VOICE_REFS_DIR)
+        #   (2) release-bundle (BUNDLED_REF_DIR)  ← wird nach frischem
+        #                                            Checkout ohne Cache
+        #                                            automatisch gefunden
+        #   (3) VD-E Golden Reference (für vd_e)
+        # und materialisiert automatisch in den Cache. Damit funktioniert
+        # der erste Lauf auf einem frischen Checkout ohne GPU.
+        try:
+            bundle = resolve_bundle(candidate_id, language=voice_language,
+                                    require_manifest=(candidate_id != "vd_e"),
+                                    auto_materialize=True)
+            emit("stage", stage="voice_load", voice=entry.display_name,
+                 detail=f"Referenz-Bundle OK ({voice_language}, "
+                        f"pfad={bundle.audio_path.name}, "
+                        f"sha={bundle.audio_sha256[:12]}…)")
+            allow_design = False
+        except Exception as _be:
+            if allow_design and entry.reference_text:
                 emit("stage", stage="voice_load", voice=entry.display_name,
                      detail=f"Referenz fehlt – wird via VoiceDesign "
                             f"materialisiert ({voice_language})")
-                allow_design = True
-                ref_text_for_engine = entry.reference_text   # recipe text
-        else:
-            # Kein reference_path: kein clone-Betrieb möglich ohne Design.
-            if not allow_design:
+                ref_text_for_engine = entry.reference_text
+            else:
+                bundled = bundled_bundle_path(candidate_id)
+                cached = default_bundle_path(candidate_id)
                 raise RuntimeError(
-                    f"Clone-Stimme ‚{entry.display_name}‘ hat keine "
-                    f"Referenz konfiguriert und Auto-Design ist deaktiviert.")
-            emit("stage", stage="voice_load", voice=entry.display_name,
-                 detail=f"VoiceDesign-Modus ({voice_language}, seed={voice_seed})")
-            ref_text_for_engine = entry.reference_text
+                    f"Produktions-Referenz fehlt oder ist ungültig für "
+                    f"Stimme ‚{entry.display_name}‘ ({candidate_id}):\n"
+                    f"  {_be}\n\n"
+                    f"Geprüfte Orte:\n"
+                    f"  • Release-Bundle: {bundled}\n"
+                    f"  • Runtime-Cache:  {cached}\n"
+                    f"Die Stimme kann im Release nicht geladen werden. "
+                    f"Führe auf dem GPU-Host aus:\n"
+                    f"    python project/tools/import_voice_bundles.py --from-cache --all\n"
+                    f"und committe/pushe die Bundles.") from _be
         # reference_path=None -> engine uses canonical location + bundle
         # manifest (we do not bypass the resolver with an explicit Path).
         return VoiceCloneEngine(

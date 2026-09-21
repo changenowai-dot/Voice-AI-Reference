@@ -137,41 +137,90 @@ def run_preflight() -> PreflightReport:
                             f"Datei fehlt: {vd_e}", fatal=True))
 
     # --- Modelle ---------------------------------------------------------
-    # Nur prüfen, wenn wir qwen_tts+torch haben; sonst würden Import-
-    # fehler die Prüfung nutzlos machen.
+    # Der Preflight muss DENSELBEN Pfad verwenden wie die Runtime UND bei
+    # CUDA-Verfügbarkeit auch wirklich Initialisierung + .load() des
+    # BASE-Modells durchführen (ein reiner Pfad-Check lässt Fälle wie
+    # FINAL_MODEL_NOT_READY durch).
     model_status: dict[str, Any] = {}
     if not isinstance(torch, Exception) and not isinstance(qwen_tts, Exception):
         try:
             from .tts.model_pool import QwenModelPool
-            # leerer hw dummy für reine Pfadprüfung
-            class _HW:
-                mode = "gpu" if rpt.cuda_available else "cpu"
-                device_capability = (8, 9)
-            pool = QwenModelPool(_HW(), dtype_hint="bfloat16",
+            from .hardware.detector import detect_hardware
+            hw = detect_hardware()
+            pool = QwenModelPool(hw,
+                                 dtype_hint=("bfloat16" if rpt.cuda_available else "float32"),
                                  attn_implementation="sdpa")
-            for name in ("customvoice", "base", "voicedesign"):
+            # (1) Pfade auflösen
+            for name in ("base", "customvoice", "voicedesign"):
                 try:
                     p = pool._resolve_model_path(pool.MODEL_REPOS[name])
+                    from pathlib import Path as _P
+                    pp = _P(p)
+                    has_model = ((pp/"model.safetensors").is_file()
+                                 or any(pp.glob("*.safetensors")))
+                    has_cfg = (pp/"config.json").is_file()
+                    has_tok = ((pp/"tokenizer.json").is_file()
+                               or (pp/"tokenizer_config.json").is_file())
+                    if not has_model:
+                        raise FileNotFoundError(f"Keine Modelldatei in {p}")
+                    if not has_cfg:
+                        raise FileNotFoundError(f"Keine config.json in {p}")
+                    if not has_tok:
+                        raise FileNotFoundError(f"Keine Tokenizer-Datei in {p}")
                     model_status[name] = {"path": p, "found": True}
-                    rpt.add(CheckResult(
-                        f"Modell {name}", True, p))
+                    rpt.add(CheckResult(f"Modell {name} (Pfad)", True,
+                                        f"{Path(p).name}"))
                 except FileNotFoundError as fnf:
-                    # Extrahiere die vom Loader erwarteten Pfade
-                    msg = str(fnf)
                     model_status[name] = {"path": None, "found": False,
-                                          "detail": msg}
+                                          "detail": str(fnf)}
+                    fatal = (name == "base")
+                    rpt.add(CheckResult(f"Modell {name}", False, str(fnf),
+                                        fatal=fatal))
+            # (2) Echter Modell-Lade-Test wenn CUDA + Base-Pfad OK
+            if rpt.cuda_available and model_status.get("base", {}).get("found"):
+                import threading, time as _t
+                load_err: list = []
+                def _do_load():
+                    try:
+                        pool.get("base")
+                    except Exception as e:                  # noqa: BLE001
+                        load_err.append(e)
+                th = threading.Thread(target=_do_load, daemon=True)
+                t0 = _t.time()
+                th.start()
+                th.join(180)     # max. 180s für Modell-Lade-Test
+                dt = _t.time() - t0
+                if th.is_alive():
                     rpt.add(CheckResult(
-                        f"Modell {name}", False, msg,
-                        fatal=(name in ("customvoice",)) and not rpt.fatal_missing))
+                        "Modell base (Load-Test)", False,
+                        f"Timeout nach 180s beim Laden – Modell hängt.",
+                        fatal=True))
+                    model_status["base_load_test"] = {"ok": False,
+                        "error": "timeout after 180s"}
+                elif load_err:
+                    rpt.add(CheckResult(
+                        "Modell base (Load-Test)", False,
+                        f"Fehler bei Initialisierung: "
+                        f"{type(load_err[0]).__name__}: {load_err[0]}",
+                        fatal=True))
+                    model_status["base_load_test"] = {"ok": False,
+                        "error": str(load_err[0])}
+                else:
+                    rpt.add(CheckResult(
+                        "Modell base (Load-Test)", True,
+                        f"OK ({dt:.1f}s) – Tokenizer + Modell geladen"))
+                    model_status["base_load_test"] = {"ok": True,
+                        "time_s": round(dt, 2)}
+                    try:
+                        pool.unload()
+                    except Exception:
+                        pass
         except Exception as e:                          # noqa: BLE001
-            rpt.add(CheckResult("Modellprüfung", False, str(e),
-                                fatal=False))
+            rpt.add(CheckResult("Modellprüfung", False, str(e), fatal=False))
     else:
-        # Falls qwen_tts fehlt, überspringen (haben wir schon als fatal
-        # markiert).
-        for name in ("customvoice", "base", "voicedesign"):
+        for name in ("base", "customvoice", "voicedesign"):
             model_status[name] = {"path": None, "found": False,
-                                  "detail": "qwen_tts nicht installiert"}
+                                  "detail": "qwen_tts oder torch nicht installiert"}
     rpt.models = model_status
 
     # --- Reference-Bundles (Bundled + Cache + VD-E Golden) ----------------
