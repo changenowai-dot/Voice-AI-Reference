@@ -293,26 +293,24 @@ print("JSON_OK")
 New-Item -ItemType File -Path (Join-Path $Root ".installed") -Force | Out-Null
 
 # --- Bundle-Validierung (Referenz-Bundles + VD-E Golden Reference) ---
-# Dieser Schritt prüft, dass alle ACTIVE Production-Clone-Stimmen im
-# Release gebündelt und valide sind, und dass die VD-E Golden Reference
-# SHA-unverändert ist. Fehlt etwas, wird eine WARNUNG angezeigt aber die
+# Dieser Schritt prueft, dass alle ACTIVE Production-Clone-Stimmen im
+# Release gebuendelt und valide sind, und dass die VD-E Golden Reference
+# SHA-unveraendert ist. Fehlt etwas, wird eine WARNUNG angezeigt aber die
 # Installation nicht abgebrochen (auf dem GPU-Host sind Bundles ggf.
 # noch nicht importiert); auf einem frischen Client-Release MUSS dieser
 # Check aber 0 Probleme melden.
 Log "" "Cyan"
 Log "=== Reference-Bundle-Validierung ===" "Cyan"
-$validateBundles = Join-Path $Root "tools\\validate_reference_bundles.py"
+$validateBundles = Join-Path $Root "tools\validate_reference_bundles.py"
 if (Test-Path -LiteralPath $validateBundles) {
     & $Vpy $validateBundles 2>&1 | ForEach-Object { Log $_ "Gray" }
     $bexit = $LASTEXITCODE
     if ($bexit -eq 0) {
         Log "Reference-Bundles: OK" "Green"
     } elseif ($bexit -eq 2) {
-        Log "Reference-Bundles: VD-E Golden Reference FEHLER – IDENTITY LOCK!" "Red"
+        Log "Reference-Bundles: VD-E Golden Reference FEHLER - IDENTITY LOCK!" "Red"
     } else {
-        Log "Reference-Bundles: Einige Production-Stimmen fehlen oder sind " `
-            "ungültig. Auf dem GPU-Host führe nach dem Materialisieren " `
-            "`python project/tools/import_voice_bundles.py --from-cache --all` aus." "Yellow"
+        Log 'Reference-Bundles: Einige Production-Stimmen fehlen oder sind ungueltig. Auf dem GPU-Host nach dem Materialisieren "python project/tools/import_voice_bundles.py --from-cache --all" ausfuehren.' "Yellow"
     }
 } else {
     Log "validate_reference_bundles.py nicht gefunden: $validateBundles" "Yellow"
