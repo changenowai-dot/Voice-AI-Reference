@@ -152,8 +152,17 @@ def assemble(segments_audio: list[tuple[np.ndarray, int, Segment]],
 
 
 def apply_speed(wav: np.ndarray, sr: int, speed: float) -> tuple[np.ndarray, int]:
-    """Tempo-Änderung 0.8–1.2, pitch-erhaltend (ffmpeg atempo);
-    Fallback: lineare Interpolation (leichte Tonhöhenänderung)."""
+    """Tempo-Änderung 0.8–1.2, immer pitch-erhaltend.
+
+    B-Kette: TTS (speed=1.0) → Segment-Assembly → explizite Pausen →
+    gesamtes Audio → pitch-erhaltendes apply_speed() → Final Audio.
+    Hauptpfad: ffmpeg atempo (Pitch unverändert). Fallback ohne ffmpeg:
+    deterministische WSOLA-Zeitdehnung (Pitch ebenfalls unverändert;
+    ersetzt die frueher tonhoeenaendernde Linear-Interpolation).
+    Pausen werden gekoppelt behandelt (assemble/assemble_to_file skalieren
+    die expliziten Pausen mit 1/speed), damit die Pausenproportionen bei
+    Geschwindigkeitsaenderungen natuerlich bleiben.
+    """
     if abs(speed - 1.0) < 0.02:
         return wav, sr
     from pathlib import Path
@@ -173,16 +182,71 @@ def apply_speed(wav: np.ndarray, sr: int, speed: float) -> tuple[np.ndarray, int
             if ok and dst.exists():
                 out, sr2 = read_wav(dst)
                 return out.astype(np.float32), sr2
-    return _speed_fallback(wav, sr, speed)
+    return _speed_wsola(wav, sr, speed)
 
 
-def _speed_fallback(wav: np.ndarray, sr: int, speed: float) -> tuple[np.ndarray, int]:
-    """Einfacher Fallback: lineare Interpolation (ändert die Tonhöhe leicht).
-    Für 0.8–1.2 akzeptabel; ffmpeg-Pfad wird bevorzugt."""
-    n_out = int(len(wav) / speed)
-    x = np.linspace(0, len(wav) - 1, n_out)
-    out = np.interp(x, np.arange(len(wav)), wav).astype(np.float32)
-    return out, sr
+def _speed_wsola(wav: np.ndarray, sr: int, speed: float) -> np.ndarray:
+    """Deterministische WSOLA-Zeitdehnung (pitch-erhaltend, ohne ffmpeg).
+
+    Overlap-Add mit Hann-Fenster; die Frame-Position im Eingang wird je
+    Schritt per Kreuzkorrelation mit der natuerlichen Fortsetzung im
+    +/-12-ms-Fenster gesucht (WSOLA-Similarity). Kein Zufall: identische
+    Eingaben liefern bit-identische Ausgaben. Gueltig fuer 0.8–1.2.
+    """
+    wav = np.asarray(wav, dtype=np.float32)
+    n = len(wav)
+    if n < 8 * sr // 50:                      # sehr kurze Eingaben: unveraendert
+        return wav
+    frame = max(256, int(0.040 * sr))         # 40 ms Rahmen
+    hop_out = frame // 2
+    tol = max(64, int(0.012 * sr))            # +/-12 ms Suchfenster
+    step = max(1, tol // 32)                  # feines Suchraster (Determinismus)
+    win = np.hanning(frame).astype(np.float32)
+    hop_in = hop_out * float(speed)
+    out_len = int(n / speed) + 2 * frame
+    out = np.zeros(out_len, dtype=np.float32)
+    norm = np.zeros(out_len, dtype=np.float32)
+    pos_out = 0
+    k = 0
+    ref = None                                # natuerliche Fortsetzung (Tail)
+    from numpy.lib.stride_tricks import sliding_window_view
+    while True:
+        ideal = int(round(k * hop_in))
+        lo = max(0, ideal - tol)
+        hi = min(n - frame, ideal + tol)
+        if hi < lo:
+            break
+        if ref is None or hi == lo:
+            s = min(max(ideal, 0), hi)
+        else:
+            ol = min(hop_out, n - lo)
+            cand = np.arange(lo, hi + 1, step)
+            cand = cand[cand + ol <= n]
+            if cand.size == 0:
+                s = min(max(ideal, 0), hi)
+            else:
+                # vektorisierte Kreuzkorrelation: Kandidaten-Anfaenge gegen
+                # die natuerliche Fortsetzung (Output-Tail)
+                windows = sliding_window_view(wav, ol)[cand]
+                scores = windows @ ref[:ol]
+                s = int(cand[int(np.argmax(scores))])
+        seg = wav[s:s + frame]
+        if len(seg) < frame:
+            seg = np.pad(seg, (0, frame - len(seg)))
+        end = pos_out + frame
+        if end > out_len:
+            break
+        out[pos_out:end] += seg * win
+        norm[pos_out:end] += win
+        nxt = pos_out + hop_out
+        if nxt + hop_out > out_len:
+            break
+        ref = out[nxt:nxt + hop_out]
+        pos_out = nxt
+        k += 1
+    good = norm > 1e-6
+    out[good] /= norm[good]
+    return out[:int(n / speed) + hop_out]
 
 
 # ===========================================================================

@@ -217,3 +217,44 @@ def assign_pauses(segments: list[Segment], style: str = "auto",
                     min(max(pause_profile[role], lo), hi), 3)
         seg.pause_type = pause_type(seg, nxt, language=language)
     return segments
+
+
+def diagnose_pause_plan(segments: list[Segment], language: str | None = None,
+                        strategy: str = "classic") -> dict:
+    """Pausen-Plan-Diagnostik (B-QC-Mechanik, rein DIAGNOSTISCH, kein Gate).
+
+    Erkennt im berechneten Pausenplan (vor der Synthese):
+      - sehr lange innere Pausen (an/vor der Strategie-Obergrenze)
+      - mechanisch nahezu identische Pausenfolgen
+        (>= 4 aufeinanderfolgende Werte innerhalb +/-30 ms)
+      - Qualitaetsmetrik ``mechanical_pauses`` (Anzahl solcher Werte)
+      - Verteilung der Pausenzeit je Pausentyp (Transparenz)
+    Beeinflusst KEINEN Score und KEIN Gate – Auswertung zuerst.
+    """
+    knobs = _pause_knobs(language)
+    _lo, hi = knobs["limits"].get(strategy, (0.18, 2.40))
+    values = [float(s.pause_after_s or 0.0) for s in segments[:-1]]
+    long_pauses = [round(v, 3) for v in values if v >= hi - 1e-9]
+    runs: list[list[float]] = []
+    run: list[float] = []
+    for v in values:
+        if run and abs(v - run[-1]) <= 0.03:
+            run.append(v)
+        else:
+            if len(run) >= 4:
+                runs.append([round(x, 3) for x in run])
+            run = [v]
+    if len(run) >= 4:
+        runs.append([round(x, 3) for x in run])
+    dist: dict[str, float] = {}
+    for s in segments:
+        t = s.pause_type or "unset"
+        dist[t] = round(dist.get(t, 0.0) + float(s.pause_after_s or 0.0), 3)
+    return {
+        "internal_pauses": len(values),
+        "internal_pause_total_s": round(sum(values), 3),
+        "long_internal_pauses": long_pauses,
+        "mechanical_runs": runs,
+        "mechanical_pauses": sum(len(r) for r in runs),
+        "distribution_by_type": dist,
+    }

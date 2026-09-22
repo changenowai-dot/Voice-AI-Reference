@@ -198,11 +198,27 @@ class Pipeline:
         de_modifier = getattr(profile, "de_modifier", "")
         speed = float(self.cfg.get("speed", preset.get("speed", 1.0)) or 1.0)
         pause_style = self.cfg.get("pause_style", preset.get("pause_style", "auto"))
+        # B-Standard (dokumentiert): pause_style="auto", pause_strategy=
+        # "classic" – Presets koennen abweichen (z. B. deep_documentary ->
+        # narrative/relaxed), der Fallback-Default bleibt classic/auto.
         log.info("Pausen: preset=%s lang=%s style=%s strategy=%s speed=%.2f "
                  "segs=%d", self.cfg.get("preset", "deep_documentary"),
                  language, pause_style, pause_strategy, speed, len(segments))
         assign_pauses(segments, style=pause_style, speed=speed,
                       strategy=pause_strategy, language=language)
+        # B-QC-Diagnostik am Pausenplan (KEIN Gate, nur Transparenz):
+        # sehr lange innere Pausen, mechanisch identische Folgen,
+        # mechanical_pauses-Metrik + Verteilung je Pausentyp.
+        from ..prosody.pauses import diagnose_pause_plan
+        pdiag = diagnose_pause_plan(segments, language=language,
+                                    strategy=pause_strategy)
+        log.info(
+            "PAUSE_PLAN_DIAGNOSTIC lang=%s strategy=%s internal=%d "
+            "total=%.2fs long=%d mechanical=%d dist=%s",
+            language, pause_strategy, pdiag["internal_pauses"],
+            pdiag["internal_pause_total_s"],
+            len(pdiag["long_internal_pauses"]),
+            pdiag["mechanical_pauses"], pdiag["distribution_by_type"])
 
         # Sampling-Parameter (Anforderung 49)
         sampling = params_for_set("balanced", {
@@ -734,7 +750,7 @@ class Pipeline:
                     last_high_idx = seg.index
             if pacing:
                 instr = instr + " " + pacing
-            sp = speed_instruct(speed)
+            sp = speed_instruct(speed, language=language)
             if sp:
                 instr = instr + " " + sp
             instructs.append(instr)
@@ -761,7 +777,7 @@ class Pipeline:
         _preset = get_preset(self.cfg.get("preset", "deep_documentary"))
         if _preset.get("pacing_hint"):
             instr = instr + " " + pacing_hint(language)
-        sp = speed_instruct(speed)
+        sp = speed_instruct(speed, language=language)
         if sp:
             instr = instr + " " + sp
         return instr

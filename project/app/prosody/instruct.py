@@ -460,11 +460,35 @@ def pacing_hint(language: str) -> str:
             else PACING_HINT_EN)
 
 
-def speed_instruct(speed: float, effective_speed: float | None = None) -> str:
-    """Sanfte Tempo-Steuerung über Instruct."""
+def speed_profile(language: str | None) -> dict:
+    """Sprachgetrennte Speed-Regler (B-Mechanik, STRIKT DE vs. EN).
+
+    Liest DEADBAND/Hint-Formulierungen aus dem sprachzugehoerigen Modul
+    (german.py bzw. english.py). None/Unbekannt -> DE (Kompatibilitaet).
+    """
+    from . import english as _en
+    if language and language.lower().startswith("en"):
+        return {"deadband": getattr(_en, "SPEED_DEADBAND_EN", 0.03),
+                "hint_slow": getattr(_en, "SPEED_HINT_SLOW_EN", ""),
+                "hint_fast": getattr(_en, "SPEED_HINT_FAST_EN", "")}
+    from . import german as _de
+    return {"deadband": getattr(_de, "SPEED_DEADBAND_DE", 0.03),
+            "hint_slow": getattr(_de, "SPEED_HINT_SLOW_DE", ""),
+            "hint_fast": getattr(_de, "SPEED_HINT_FAST_DE", "")}
+
+
+def speed_instruct(speed: float, effective_speed: float | None = None,
+                   language: str | None = None) -> str:
+    """Sanfte Tempo-Steuerung über Instruct.
+
+    Nur bei relevanter Abweichung von 1.0 (sprachgetrenntes Deadband);
+    nahe 1.0 wird KEIN unnötiger Instruct erzwungen. Die Formulierungen
+    kommen aus dem sprachzugehörigen Profil (DE/EN komplett getrennt).
+    """
+    prof = speed_profile(language)
     eff = effective_speed if effective_speed is not None else speed
-    if abs(eff - 1.0) < 0.03:
+    if abs(eff - 1.0) < prof["deadband"]:
         return ""
     if eff < 1.0:
-        return "Speak a bit slower than usual, measured and clear."
-    return "Speak a bit faster than usual, still calm and clear."
+        return prof["hint_slow"]
+    return prof["hint_fast"]

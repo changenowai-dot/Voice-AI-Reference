@@ -207,6 +207,16 @@ def rotate_anchor(idx: int) -> str:
 # ---------------------------------------------------------------------------
 # Pausenstrategien (§10)
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# B-Basistabelle (dokumentierter Ausgangspunkt, uebernommen aus der bewaehrten
+# B-Prosodie-Architektur): statement 0.42 / question 0.58 / rhetorical 0.74 /
+# list 0.50 / contrast 0.56 / emphasis 0.62 / explanation 0.46 / transition
+# 0.62 / calm 0.50 / dramatic 0.88 / emotional 0.66 / heading 1.05 /
+# heading_after 0.70 / paragraph 0.86 / chapter 1.35 / list_item 0.58 /
+# quote_end 0.76 / text_end (end_of_text) 1.05.
+# Nicht blind als endgultig betrachtet: Strategie-Tabellen (PAUSE_STRATEGIES)
+# und die EN-eigenen Werte (PAUSE_BASE_EN) bleiben die feinere Steuerung.
+# ---------------------------------------------------------------------------
 PAUSE_BASE_DE = {
     "statement": 0.42,
     "question": 0.58,
@@ -244,6 +254,19 @@ PAUSE_LIMITS_DE = {
     "narrative": (0.22, 2.80),
 }
 PAUSE_JITTER_DE = 0.10
+
+# ---------------------------------------------------------------------------
+# DE-spezifische Speed-Regler (STRIKT getrennt von EN – Aenderungen hier
+# betreffen NUR die deutsche Geschwindigkeitsbehandlung):
+#   SPEED_DEADBAND_DE   Band um 1.0, in dem KEIN speed_instruct gesetzt wird
+#                       (nahe 1.0 kein unnoetiger Instruct)
+#   SPEED_HINT_SLOW/_FAST_DE  sanfte Instruct-Formulierungen nur bei
+#                       relevanter Abweichung (Startwerte = bisheriges
+#                       globales Verhalten, kein Verhaltenswechsel)
+# ---------------------------------------------------------------------------
+SPEED_DEADBAND_DE = 0.03
+SPEED_HINT_SLOW_DE = "Speak a bit slower than usual, measured and clear."
+SPEED_HINT_FAST_DE = "Speak a bit faster than usual, still calm and clear."
 
 # ---------------------------------------------------------------------------
 # Terminologie-Marker (narrative Pausenstrategie)

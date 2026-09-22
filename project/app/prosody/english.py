@@ -193,10 +193,13 @@ def terminator_role(text: str) -> str | None:
 # ---------------------------------------------------------------------------
 # English pause bases and strategies (per-language profiles).
 #
-# English naturally runs slightly tighter between sentences than German,
-# but needs air at structural boundaries. Commas in English are lighter
-# than in German; semicolons/colons/dashes carry more weight. Paragraph
+# B-Basis (dokumentierter Ausgangspunkt aus der bewaehrten B-Prosodie-
+# Architektur, identisch zu PAUSE_BASE_DE), abgeleitet fuer EN: English
+# naturally runs slightly tighter between sentences than German, but needs
+# air at structural boundaries. Commas in English are lighter than in
+# German; semicolons/colons/dashes carry more weight. Paragraph
 # transitions are clearly marked, and headings/chapters land longer.
+# STRIKT getrennt von DE – Aenderungen an PAUSE_BASE_EN beruehren nie DE.
 # ---------------------------------------------------------------------------
 # EN-spezifische Pausen-Regler (STRIKT getrennt von DE – aenderungen hier
 # betreffen NUR die englische Pausenberechnung):
@@ -213,6 +216,19 @@ PAUSE_LIMITS_EN = {
     "narrative": (0.22, 2.80),
 }
 PAUSE_JITTER_EN = 0.10
+
+# ---------------------------------------------------------------------------
+# EN-spezifische Speed-Regler (STRIKT getrennt von DE – Aenderungen hier
+# betreffen NUR die englische Geschwindigkeitsbehandlung):
+#   SPEED_DEADBAND_EN   Band um 1.0 ohne speed_instruct (nahe 1.0 kein
+#                       unnoetiger Instruct)
+#   SPEED_HINT_SLOW/_FAST_EN  sanfte Instruct-Formulierungen nur bei
+#                       relevanter Abweichung (Startwerte = bisheriges
+#                       globales Verhalten, kein Verhaltenswechsel)
+# ---------------------------------------------------------------------------
+SPEED_DEADBAND_EN = 0.03
+SPEED_HINT_SLOW_EN = "Speak a bit slower than usual, measured and clear."
+SPEED_HINT_FAST_EN = "Speak a bit faster than usual, still calm and clear."
 
 # ---------------------------------------------------------------------------
 PAUSE_BASE_EN = {
