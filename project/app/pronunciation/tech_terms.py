@@ -116,17 +116,21 @@ TECH_TERMS_DE: dict[str, str] = {
     "Verhaltensforschung": "Ver-HAL-tens-for-schung",
     # --- Mathematik / Logik -------------------------------------------------
     # Regel-ID: DE_MATH_001 .. DE_MATH_0xx
-    # Respelling-Konvention: Silben mit „-“ trennen, betonte Silbe
-    # GROSS; "ph"/"th" wo nötig an deutsche Aussprache anpassen.
-    # Mathematik bewahrt semantisch den Originalbegriff – nur die
-    # Silbenbetonung wird Qwen-hinweisend notiert.
-    "Mathematik": "Ma-te-MA-tik",
-    "mathematisch": "ma-te-MA-tisch",
-    "Mathematische": "Ma-te-MA-ti-sche",
-    "mathematische": "ma-te-MA-ti-sche",
-    "mathematischen": "ma-te-MA-ti-schen",
-    "mathematischer": "ma-te-MA-ti-scher",
-    "mathematischem": "ma-te-MA-ti-schem",
+    # Identity-Mapping (bewusst): Die frueheren Bindestrich-Respellings
+    # ("Ma-te-MA-tik") fuehrten zu segmentierter, "buchstabierender"
+    # Aussprache in Qwen (Bindestrich = Sprechbremse, GROSS-Silben
+    # kippen in Buchstabier-Modus). "Mathematik" ist ein normales
+    # deutsche Wort und wird ohne kuenstliche Silbentrennung fluessig
+    # gesprochen. Die Regel bleibt aktiv (Replacement-Buchhaltung/
+    # Audit/Corpus), setzt aber die NATUERLICHE Orthographie ein.
+    # A/B-Nachweis: tools/test_pacing_math_ab_tts.py (Host, GPU).
+    "Mathematik": "Mathematik",
+    "mathematisch": "mathematisch",
+    "Mathematische": "Mathematische",
+    "mathematische": "mathematische",
+    "mathematischen": "mathematischen",
+    "mathematischer": "mathematischer",
+    "mathematischem": "mathematischem",
     "Geometrie": "Ge-o-me-TRIE",
     "geometrisch": "ge-o-ME-trisch",
     "Algebra": "AL-ge-bra",

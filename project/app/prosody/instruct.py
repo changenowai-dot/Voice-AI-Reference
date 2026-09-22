@@ -438,6 +438,28 @@ def build_instruct(base_style: str, text: str, language: str, *,
     return instruct
 
 
+# Pacing-Hints (generationsseitig, NICHT zeitgestreckt): Der TTS soll
+# bei der Erzeugung entspannter formulieren - mit natuerlichen Atem-
+# und Gedankenraeumen - ohne dass Pitch/Formanten/Artikulation
+# veraendert werden. Formulierung bewusst "without slowing down",
+# damit das Modell NICHT in eine gedehnte Sprechweise faellt.
+PACING_HINT_EN = (
+    "Breathe naturally between sentences and phrases; let ideas land; "
+    "keep an unhurried, steady storytelling rhythm without slowing down."
+)
+PACING_HINT_DE = (
+    "Atme natuerlich zwischen Saetzen und Gedanken; lass Gedanken landen; "
+    "halte einen ruhigen, gleichmaessigen Erzaehlrhythmus, ohne langsamer "
+    "zu werden."
+)
+
+
+def pacing_hint(language: str) -> str:
+    """Sprachabhaengiger Pacing-Hint fuer Presets mit pacing_hint=True."""
+    return (PACING_HINT_DE if language.lower().startswith("ger")
+            else PACING_HINT_EN)
+
+
 def speed_instruct(speed: float, effective_speed: float | None = None) -> str:
     """Sanfte Tempo-Steuerung über Instruct."""
     eff = effective_speed if effective_speed is not None else speed

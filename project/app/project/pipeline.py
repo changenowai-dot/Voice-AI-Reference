@@ -25,7 +25,7 @@ from ..cache.manager import CacheManager, segment_cache_key
 from ..hardware.monitor import VRAMGuard
 from ..logging_setup import get_logger, plog, qlog, safe_preview
 from ..pronunciation import PronunciationEngine
-from ..prosody import build_instruct, speed_instruct
+from ..prosody import build_instruct, pacing_hint, speed_instruct
 from ..prosody.german import (detect_short_sentence_run, dominant_role,
                               hint_allowed, _HIGH_AROUSAL)
 from ..prosody.variation import (apply_sampling_offsets, detect_subtle_emotion,
@@ -220,9 +220,14 @@ class Pipeline:
         state = ProjectState(project_id)
         from ..utils import sha256_str
         seg_metas = []
+        # Generationseitiger Pacing-Hint (nur wenn das Preset ihn
+        # anfordert): entspannter Erzaehlrhythmus BEI DER ERZEUGUNG -
+        # keine Zeitdehnung, keine Pitch-/Formant-Aenderung. Das fertige
+        # WAV bleibt bei speed=1.0 unangetastet (kein atempo).
+        pacing = pacing_hint(language) if preset.get("pacing_hint") else ""
         instructs = self._build_all_instructs(
             segments, base_style, language, speed, german_variant,
-            de_modifier, short_run_idx, run_bounds)
+            de_modifier, short_run_idx, run_bounds, pacing=pacing)
         for pos, seg in enumerate(segments):
             instruct = instructs[pos]
             key = segment_cache_key(
@@ -690,7 +695,7 @@ class Pipeline:
     def _build_all_instructs(segments, base_style: str, language: str,
                              speed: float, german_variant: str | None,
                              de_modifier: str, short_run_idx: set,
-                             run_bounds: dict) -> list[str]:
+                             run_bounds: dict, pacing: str = "") -> list[str]:
         """Baut alle Segment-Instructs mit Budget-Tracking (§7) und
         Short-Run-Positionen (§12) – deterministisch, einmal pro Lauf."""
         instructs = []
@@ -727,6 +732,8 @@ class Pipeline:
                 if role in _HIGH_AROUSAL and hint_allowed(
                         seg.index, role, last_high_idx):
                     last_high_idx = seg.index
+            if pacing:
+                instr = instr + " " + pacing
             sp = speed_instruct(speed)
             if sp:
                 instr = instr + " " + sp
@@ -751,6 +758,9 @@ class Pipeline:
             profile_modifier=profile_modifier,
             german_variant=german_variant if language.lower().startswith("ger")
             else None)
+        _preset = get_preset(self.cfg.get("preset", "deep_documentary"))
+        if _preset.get("pacing_hint"):
+            instr = instr + " " + pacing_hint(language)
         sp = speed_instruct(speed)
         if sp:
             instr = instr + " " + sp

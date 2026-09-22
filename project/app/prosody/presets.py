@@ -38,6 +38,9 @@ PRESETS = {
         "base_style": _EN_DOC_BASE,
         "pause_style": "relaxed",
         "pause_strategy": "narrative",
+        # Generationseitiger Pacing-Hint (siehe instruct.pacing_hint):
+        # entspannter Rhythmus bei der Erzeugung, KEINE Zeitdehnung.
+        "pacing_hint": True,
         "emotion": "AUTO",
         "intensity": "AUTO",
         "speed": 1.0,
@@ -65,6 +68,9 @@ PRESETS = {
         "base_style": _DE_DOC_BASE,
         "pause_style": "relaxed",
         "pause_strategy": "narrative",
+        # Generationseitiger Pacing-Hint (siehe instruct.pacing_hint):
+        # entspannter Rhythmus bei der Erzeugung, KEINE Zeitdehnung.
+        "pacing_hint": True,
         "emotion": "AUTO",
         "intensity": "AUTO",
         "speed": 1.0,
@@ -92,6 +98,9 @@ PRESETS = {
         "base_style": _EN_DOC_BASE,
         "pause_style": "relaxed",
         "pause_strategy": "narrative",
+        # Generationseitiger Pacing-Hint (siehe instruct.pacing_hint):
+        # entspannter Rhythmus bei der Erzeugung, KEINE Zeitdehnung.
+        "pacing_hint": True,
         "emotion": "AUTO",
         "intensity": "AUTO",
         "speed": 1.0,
