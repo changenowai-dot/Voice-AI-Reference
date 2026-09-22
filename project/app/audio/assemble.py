@@ -91,16 +91,39 @@ def _match_to_lufs(wav: np.ndarray, current_lufs: float, target_lufs: float,
 
 def _do_crossfade(processed: list[np.ndarray], sr_out: int,
                   crossfade_ms: float) -> list[np.ndarray]:
-    """Apply short equal-power crossfades between adjacent segments to
-    suppress boundary clicks. Pauses are inserted AFTER crossfading so
-    long natural pauses are preserved."""
+    """Apply short equal-power crossfades at each segment boundary to
+    suppress boundary clicks. The segment list stays INTACT (one entry
+    per segment) so pauses are inserted AFTER crossfading and long
+    natural pauses are preserved between the entries.
+
+    INTEGRATIONS-FIX: Die fruehere Implementierung verschmolz
+    (`out[-1] = merged`) alle Segmente zu EINEM Waveform – der
+    Schreib-Loop in assemble/assemble_to_file lief danach nur noch
+    ueber 1 Element und schrieb ausschliesslich die Pause des ersten
+    Segments; alle weiteren pause_after_s gingen im Audio verloren
+    (Plan im Log korrekt, Audio ohne innere Pausen). Der Crossfade
+    selbst ist mathematisch identisch, wird aber nur noch an der
+    Grenze der beiden jeweiligen Nachbarn angewendet.
+    """
     if crossfade_ms <= 0 or len(processed) <= 1:
         return processed
+    ol = max(1, int(sr_out * crossfade_ms / 1000.0))
     out: list[np.ndarray] = [processed[0]]
     for nxt in processed[1:]:
         prev = out[-1]
-        merged, _ = _crossfade_pair(prev, nxt, sr_out, crossfade_ms)
-        out[-1] = merged
+        if len(prev) < ol or len(nxt) < ol:
+            ol_i = min(len(prev), len(nxt))
+            if ol_i < 8:
+                out.append(nxt)
+                continue
+        else:
+            ol_i = ol
+        ramp = np.linspace(0.0, 1.0, ol_i, dtype=np.float32)
+        eqp = np.sqrt(ramp)
+        overlap = (prev[-ol_i:] * (1.0 - eqp)
+                   + nxt[:ol_i] * eqp).astype(np.float32)
+        out[-1] = np.concatenate([prev[:-ol_i], overlap]).astype(np.float32)
+        out.append(nxt[ol_i:])
     return out
 
 
@@ -337,6 +360,12 @@ def assemble_to_file(segments_audio, out_path, project_median_lufs=None,
                 processed[i] = None
     log.info("Streaming-Assembly: %d Segmente -> %s (%.1f s)",
              len(segments_audio), out_path, total / sr_out)
+    # Speed-Nachweis: bei |speed-1| < 0.02 (inkl. 1.00) ist apply_speed
+    # BY DESIGN inaktiv (keine kuenstliche Verlangsamung/Beschleunigung);
+    # die geplanten Pausen wurden mit 1/speed gekoppelt uebernommen.
+    log.info("ASSEMBLY_SPEED speed=%.2f apply_speed_aktiv=%s "
+             "pausen_gesamt=%.2fs",
+             float(speed), abs(float(speed) - 1.0) >= 0.02, pause_total)
     return sr_out, total / sr_out, pause_total
 
 

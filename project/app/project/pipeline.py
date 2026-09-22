@@ -77,6 +77,36 @@ class PipelineCancelled(RuntimeError):
     """Kooperativer Abbruch (Resume bleibt möglich)."""
 
 
+def _resolve_pause_settings(cfg: dict, adv: dict, preset: dict) -> tuple[str, str]:
+    """Präzedenz für Pausen-Stil/Strategie (INTEGRATIONS-FIX).
+
+    Reihenfolge: advanced > explizite cfg > Preset > eingebauter Fallback.
+
+    WICHTIG: Die aus DEFAULT_CONFIG gemergten Werte ("auto"/"classic")
+    zählen NICHT als explizite Nutzerwahl. Vor dem Fix verschatteten
+    diese Defaults die Preset-Profile dauerhaft – GUI-Läufe (kein
+    preset/keine Pause-Keys im Job) liefen dadurch IMMER classic/auto,
+    obwohl deep_documentary dokumentiert relaxed/narrative vorgibt
+    (Log-Beweis: "Pausen: preset=deep_documentary style=auto
+    strategy=classic"). Der Preset-Kommentar ("damit
+    narrative_documentary automatisch strategy=narrative aktiviert")
+    belegt die ursprüngliche Intention.
+    """
+    from ..config import DEFAULT_CONFIG
+    cfg_style = cfg.get("pause_style")
+    style_explicit = (cfg_style is not None
+                      and cfg_style != DEFAULT_CONFIG.get("pause_style"))
+    cfg_strategy = cfg.get("pause_strategy")
+    strategy_explicit = (cfg_strategy is not None
+                         and cfg_strategy != DEFAULT_CONFIG.get("pause_strategy"))
+    pause_style = (adv.get("pause_style") or (cfg_style if style_explicit else None)
+                   or preset.get("pause_style", "auto"))
+    pause_strategy = (adv.get("pause_strategy")
+                      or (cfg_strategy if strategy_explicit else None)
+                      or preset.get("pause_strategy", "classic"))
+    return pause_style, pause_strategy
+
+
 class Pipeline:
     def __init__(self, cfg: dict, engine, progress=None,
                  vram_guard: VRAMGuard | None = None,
@@ -189,18 +219,15 @@ class Pipeline:
             "instruct_variant", GERMAN_CFG_DEFAULTS["instruct_variant"])
         min_german_score = float(german_cfg.get(
             "min_german_score", GERMAN_CFG_DEFAULTS["min_german_score"]))
-        # Pausenstrategie/Stil: explizite cfg-Einträge haben Vorrang,
-        # sonst Preset-Standard (damit narrative_documentary automatisch
-        # strategy=narrative aktiviert).
-        pause_strategy = adv.get(
-            "pause_strategy",
-            self.cfg.get("pause_strategy", preset.get("pause_strategy", "classic")))
+        # Pausen-Stil/Strategie: advanced > explizite cfg > Preset >
+        # eingebauter Fallback (siehe _resolve_pause_settings – die
+        # DEFAULT_CONFIG-Werte verschatten den Preset nicht mehr).
+        pause_style, pause_strategy = _resolve_pause_settings(
+            self.cfg, adv, preset)
         de_modifier = getattr(profile, "de_modifier", "")
         speed = float(self.cfg.get("speed", preset.get("speed", 1.0)) or 1.0)
-        pause_style = self.cfg.get("pause_style", preset.get("pause_style", "auto"))
-        # B-Standard (dokumentiert): pause_style="auto", pause_strategy=
-        # "classic" – Presets koennen abweichen (z. B. deep_documentary ->
-        # narrative/relaxed), der Fallback-Default bleibt classic/auto.
+        # Fallback-Basis (wenn weder Preset noch cfg/advanced setzen):
+        # auto/classic; deep_documentary selbst gibt relaxed/narrative vor.
         log.info("Pausen: preset=%s lang=%s style=%s strategy=%s speed=%.2f "
                  "segs=%d", self.cfg.get("preset", "deep_documentary"),
                  language, pause_style, pause_strategy, speed, len(segments))
@@ -219,6 +246,14 @@ class Pipeline:
             pdiag["internal_pause_total_s"],
             len(pdiag["long_internal_pauses"]),
             pdiag["mechanical_pauses"], pdiag["distribution_by_type"])
+        # Per-Segment-Pauseplan (Forensik/Transparenz): Typ + Sekunden je
+        # Segment, inkl. Sprache und Speed (bei 1.00 kein apply_speed).
+        _plan = " ".join(f"{s.index}:{s.pause_type}={s.pause_after_s:.3f}"
+                         for s in segments[:120])
+        log.info(
+            "PAUSE_PLAN_SEGMENTS lang=%s n=%d speed=%.2f strategy=%s %s%s",
+            language, len(segments), speed, pause_strategy, _plan,
+            " ...(gekuerzt)" if len(segments) > 120 else "")
 
         # Sampling-Parameter (Anforderung 49)
         sampling = params_for_set("balanced", {
