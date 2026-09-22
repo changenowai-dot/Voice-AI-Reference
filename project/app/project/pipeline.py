@@ -198,9 +198,9 @@ class Pipeline:
         de_modifier = getattr(profile, "de_modifier", "")
         speed = float(self.cfg.get("speed", preset.get("speed", 1.0)) or 1.0)
         pause_style = self.cfg.get("pause_style", preset.get("pause_style", "auto"))
-        log.info("Pausen: preset=%s style=%s strategy=%s speed=%.2f segs=%d",
-                 self.cfg.get("preset", "deep_documentary"), pause_style,
-                 pause_strategy, speed, len(segments))
+        log.info("Pausen: preset=%s lang=%s style=%s strategy=%s speed=%.2f "
+                 "segs=%d", self.cfg.get("preset", "deep_documentary"),
+                 language, pause_style, pause_strategy, speed, len(segments))
         assign_pauses(segments, style=pause_style, speed=speed,
                       strategy=pause_strategy, language=language)
 

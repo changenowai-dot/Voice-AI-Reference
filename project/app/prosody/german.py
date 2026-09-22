@@ -229,6 +229,23 @@ PAUSE_BASE_DE = {
 }
 
 # ---------------------------------------------------------------------------
+# DE-spezifische Pausen-Regler (STRIKT getrennt von EN – aenderungen hier
+# betreffen NUR die deutsche Pausenberechnung):
+#   STYLE_FACTOR_DE    Multiplikatoren je pause_style (tight/auto/relaxed)
+#   PAUSE_LIMITS_DE    (min, max)-Klemmen je Strategie in Sekunden
+#   PAUSE_JITTER_DE    deterministische Mikrovariation (+/- Anteil)
+# Startwerte identisch zum bisher globalen Verhalten (kein Verhaltenswechsel).
+# ---------------------------------------------------------------------------
+STYLE_FACTOR_DE = {"tight": 0.72, "auto": 1.0, "relaxed": 1.3}
+PAUSE_LIMITS_DE = {
+    "classic": (0.18, 2.40),
+    "semantic": (0.20, 2.60),
+    "flow": (0.18, 2.40),
+    "narrative": (0.22, 2.80),
+}
+PAUSE_JITTER_DE = 0.10
+
+# ---------------------------------------------------------------------------
 # Terminologie-Marker (narrative Pausenstrategie)
 # ---------------------------------------------------------------------------
 # Satz-Endzeichen, bestimmt die stärkste Pause nach einem Segment.

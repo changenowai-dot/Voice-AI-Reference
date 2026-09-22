@@ -198,6 +198,23 @@ def terminator_role(text: str) -> str | None:
 # than in German; semicolons/colons/dashes carry more weight. Paragraph
 # transitions are clearly marked, and headings/chapters land longer.
 # ---------------------------------------------------------------------------
+# EN-spezifische Pausen-Regler (STRIKT getrennt von DE – aenderungen hier
+# betreffen NUR die englische Pausenberechnung):
+#   STYLE_FACTOR_EN    Multiplikatoren je pause_style (tight/auto/relaxed)
+#   PAUSE_LIMITS_EN    (min, max)-Klemmen je Strategie in Sekunden
+#   PAUSE_JITTER_EN    deterministische Mikrovariation (+/- Anteil)
+# Startwerte identisch zum bisher globalen Verhalten (kein Verhaltenswechsel).
+# ---------------------------------------------------------------------------
+STYLE_FACTOR_EN = {"tight": 0.72, "auto": 1.0, "relaxed": 1.3}
+PAUSE_LIMITS_EN = {
+    "classic": (0.18, 2.40),
+    "semantic": (0.20, 2.60),
+    "flow": (0.18, 2.40),
+    "narrative": (0.22, 2.80),
+}
+PAUSE_JITTER_EN = 0.10
+
+# ---------------------------------------------------------------------------
 PAUSE_BASE_EN = {
     "statement": 0.38,
     "question": 0.52,

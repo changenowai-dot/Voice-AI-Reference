@@ -91,7 +91,16 @@ TECH_TERMS_DE: dict[str, str] = {
     "Subjektivität": "Sub-jek-ti-VI-tät",
     "Kognition": "Kog-NI-tion",
     "kognitiv": "kog-NI-tiv",
-    "Bewusstsein": "be-WUSST-sein",
+    # Identity-Mapping (bewusst, Muster wie Mathematik-Familie):
+    # Das Bindestrich-Respelling "be-WUSST-sein" fuehrte im echten Qwen-
+    # Produktionspfad zu ueberartikulierter Betonung ("Be-WUUStsein").
+    # Bindestrich = Sprechbremse, GROSS-Silbe kippt in Buchstabier-Modus
+    # (A/B-Nachweis des Fehlerbilds: tools/test_pacing_math_ab_tts.py).
+    # "Bewusstsein" ist ein normales deutsches Wort; die Regel bleibt
+    # aktiv (Replacement-Buchhaltung/Audit/Corpus), setzt aber die
+    # NATUERLICHE Orthographie ein. Genitiv "Bewusstseins" matcht per
+    # Wortgrenze bewusst nicht und wird natuerlich gesprochen.
+    "Bewusstsein": "Bewusstsein",
     "Intentionalität": "In-ten-tio-na-LI-tät",
     "Kategorie": "Ka-te-GO-rie",
     "Paradigma": "Pa-ra-DIG-ma",

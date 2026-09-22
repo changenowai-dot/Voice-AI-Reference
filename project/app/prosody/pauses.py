@@ -21,6 +21,9 @@ use separate base tables and separate strategy tables via
 from __future__ import annotations
 
 import hashlib
+import logging
+
+log = logging.getLogger("voiceover.prosody.pauses")
 
 from . import german as _de
 from . import english as _en
@@ -28,9 +31,38 @@ from ..segmentation import Segment
 
 
 def _lang_module(language: str | None):
+    """Explizite Sprachwahl der Pausen-Profile.
+
+    DE -> german.py (PAUSE_BASE_DE / PAUSE_STRATEGIES / *_DE-Regler)
+    EN -> english.py (PAUSE_BASE_EN / PAUSE_STRATEGIES_EN / *_EN-Regler)
+    Unbekannt/leer -> DE (dokumentierter Rueckwaertskompatibilitaets-Fall).
+    DE- und EN-Werte teilen sich KEINE Regler: Aenderungen an EN betreffen
+    nie DE und umgekehrt.
+    """
     if language and language.lower().startswith("en"):
         return _en
-    return _de   # default German / backwards-compatible
+    return _de
+
+
+def _pause_knobs(language: str | None) -> dict:
+    """Sprachspezifische Pausen-Regler (STRIKT getrennt DE vs. EN).
+
+    Liest STYLE_FACTOR_*/PAUSE_LIMITS_*/PAUSE_JITTER_* aus dem
+    sprachzugehoerigen Modul. Fallback auf die historischen Globalwerte,
+    falls ein Modul die Konstanten nicht definiert (z. B. aeltere
+    Sprachmodule) – Verhalten damit identisch zum Stand vor der Trennung.
+    """
+    modu = _lang_module(language)
+    return {
+        "style_factor": getattr(modu, "STYLE_FACTOR_DE", None)
+        or getattr(modu, "STYLE_FACTOR_EN", None) or STYLE_FACTOR,
+        "limits": (getattr(modu, "PAUSE_LIMITS_DE", None)
+                   or getattr(modu, "PAUSE_LIMITS_EN", None)
+                   or {k: (_MIN_PAUSE[k], _MAX_PAUSE[k]) for k in _MIN_PAUSE}),
+        "jitter": getattr(modu, "PAUSE_JITTER_DE", None)
+        if hasattr(modu, "PAUSE_JITTER_DE")
+        else getattr(modu, "PAUSE_JITTER_EN", 0.10),
+    }
 
 
 STYLE_FACTOR = {"tight": 0.72, "auto": 1.0, "relaxed": 1.3}
@@ -151,12 +183,12 @@ def pause_after(seg: Segment, next_seg: Segment | None, style: str = "auto",
                 speed: float = 1.0, strategy: str = "classic",
                 pause_profile: dict | None = None,
                 language: str | None = None) -> float:
-    factor = STYLE_FACTOR.get(style, 1.0)
+    knobs = _pause_knobs(language)
+    factor = knobs["style_factor"].get(style, 1.0)
     speed_adj = 1.0 / max(speed, 0.5) ** 0.5 if speed else 1.0
     base = base_pause_for(seg, next_seg, strategy=strategy, language=language)
-    value = base * factor * speed_adj * _jitter(seg)
-    lo = _MIN_PAUSE.get(strategy, 0.18)
-    hi = _MAX_PAUSE.get(strategy, 2.4)
+    value = base * factor * speed_adj * _jitter(seg, knobs["jitter"])
+    lo, hi = knobs["limits"].get(strategy, (0.18, 2.40))
     return round(min(max(value, lo), hi), 3)
 
 
@@ -164,9 +196,16 @@ def assign_pauses(segments: list[Segment], style: str = "auto",
                   speed: float = 1.0, strategy: str = "classic",
                   pause_profile: dict | None = None,
                   language: str | None = None) -> list[Segment]:
-    lo = _MIN_PAUSE.get(strategy, 0.18)
-    hi = _MAX_PAUSE.get(strategy, 2.4)
+    knobs = _pause_knobs(language)
+    lo, hi = knobs["limits"].get(strategy, (0.18, 2.40))
     modu = _lang_module(language)
+    log.info(
+        "PAUSE_PROFILE_SELECT language=%s tables=%s strategy=%s style=%s "
+        "style_factor=%.2f limits=(%.2f, %.2f) jitter=%.2f segments=%d",
+        language or "German(default)",
+        "EN" if modu is _en else "DE",
+        strategy, style, knobs["style_factor"].get(style, 1.0), lo, hi,
+        knobs["jitter"], len(segments))
     for i, seg in enumerate(segments):
         nxt = segments[i + 1] if i + 1 < len(segments) else None
         seg.pause_after_s = pause_after(seg, nxt, style=style, speed=speed,
