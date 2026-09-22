@@ -121,9 +121,13 @@ class TestDoubleCloneEngine(TestDoubleEngine):
     ENGINE_VERSION = "td-clone-v1"
 
     def __init__(self, sample_rate: int = 24000, allow_design: bool = True,
-                 voice_id: str | None = None, candidate_id: str | None = None):
+                 voice_id: str | None = None, candidate_id: str | None = None,
+                 language: str | None = None):
         super().__init__(sample_rate)
         self.allow_design = allow_design
+        # Muttersprache der Stimme (runner.build_engine uebergibt sie
+        # fuer Clone-Stimmen; nur informativ fuer den Pruefstand).
+        self.language = language
         # voice_id bzw. candidate_id steuert die deterministische „Stimme“
         self.voice_id = voice_id or candidate_id or "VD-E"
         # legacy _speaker_key für Kompatibilität
