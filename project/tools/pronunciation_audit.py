@@ -108,11 +108,116 @@ CORPUS: dict[str, list[str]] = {
         "Neurowissenschaft", "Quantencomputer", "Mikroprozessor",
         "Rechenleistung", "Datenverarbeitung",
     ],
+    # Ab hier: Grosser Fachbegriff-Katalog (Forensik 2026-09, Phase 2/9).
+    # Ziel: moeglichst viele allgemeine Fachbegriffe systematisch offline
+    # klassifizieren (no rule / identity / respell+Kaskadenrisiko), damit
+    # der Host-Qwen-Lauf gezielt die Verdaechtigen hoert. TESTMENGE gross,
+    # PRODUKTIONSREGELN klein.
+    "I_Physik_Teilchen": [
+        "Proton", "Protonen", "Neutron", "Neutronen", "Elektron",
+        "Elektronen", "Elektronenhülle", "Molekül", "Moleküle",
+        "Molekülstruktur", "Photon", "Photonen", "Quant", "Quanten",
+        "Wellenlänge", "Frequenz", "Magnetismus", "elektromagnetisch",
+        "Strahlung", "Radioaktivität", "Teilchenphysik", "Kernphysik",
+        "Thermodynamik", "Entropie", "Impuls", "Beschleunigung",
+        "Spannung", "Widerstand", "Magnetfeld", "Relativität",
+        "Relativitätstheorie", "Raumzeit", "Antimaterie",
+        "Elementarteilchen", "Gravitation", "Materie",
+    ],
+    "J_Chemie": [
+        "Element", "Elemente", "Sauerstoff", "Wasserstoff", "Stickstoff",
+        "Kohlenstoff", "Schwefel", "Phosphor", "Natrium", "Kalium",
+        "Calcium", "Katalysator", "Katalyse", "Oxidation", "Reduktion",
+        "Polymer", "Konzentration", "Reaktion", "Reaktionen",
+        "chemische Bindung", "Löslichkeit",
+    ],
+    "K_Biologie_Genetik": [
+        "Zellkern", "Zellmembran", "Zellteilung", "Gen", "Gene", "Genom",
+        "Genetik", "Chromosom", "Chromosomen", "Protein", "Proteine",
+        "Enzym", "Enzyme", "Mutation", "Mutationen", "Evolution",
+        "Organismus", "Organismen", "Bakterium", "Bakterien", "Virus",
+        "Viren", "Stoffwechsel", "Metabolismus", "Photosynthese",
+        "Synapse", "Synapsen", "Hormon", "Hormone", "Immunsystem",
+        "Nervenzelle", "Molekularbiologie", "Mikrobiologie",
+        "Neurobiologie", "Gewebe",
+    ],
+    "L_Astronomie_Kosmologie": [
+        "Astronomie", "astronomisch", "Kosmologie", "kosmologisch",
+        "Universum", "Galaxie", "Galaxien", "Planet", "Planeten",
+        "Exoplanet", "Exoplaneten", "Supernova", "Nebel", "Expansion",
+        "Dunkle Materie", "Dunkle Energie", "Schwarzes Loch",
+        "Schwarze Löcher", "Umlaufbahn", "Lichtjahr",
+    ],
+    "M_Mathematik_Statistik": [
+        "Geometrie", "Algebra", "Analysis", "statistisch",
+        "Wahrscheinlichkeitsrechnung", "Variablen", "Funktionen",
+        "Gleichung", "Gleichungen", "Integral", "Integrale",
+        "Differential", "Ableitung", "Vektor", "Vektoren", "Matrix",
+        "Matrizen", "Dimension", "numerisch", "logarithmisch",
+        "exponentiell", "Korrelation", "Regression",
+        "Standardabweichung", "Mittelwert", "Varianz", "Koeffizient",
+        "Logarithmus", "Exponentialfunktion",
+    ],
+    "N_Neurowissenschaft_Psychologie": [
+        "Nervensystem", "Neuron", "Neuronen", "neuronales Netzwerk",
+        "Dopamin", "Serotonin", "Adrenalin", "Cortisol", "Amygdala",
+        "Hippocampus", "Kognition", "kognitiv", "Wahrnehmung",
+        "Aufmerksamkeit", "Unterbewusstsein", "Gedächtnis",
+        "Neuroplastizität", "Psychologe", "Psychologin", "Verhalten",
+        "Emotion", "Emotionen", "Motivation", "Persönlichkeit",
+        "Kognitionswissenschaft", "Verhaltensforschung",
+    ],
+    "O_Medizin_Grundbegriffe": [
+        "Anatomie", "Physiologie", "Herzfrequenz", "Blutdruck",
+        "Blutkreislauf", "Organ", "Organe", "Immunität", "Infektion",
+        "Entzündung", "Stoffwechsel", "Schmerzrezeptor", "Impfstoff",
+    ],
+    "P_Geowissenschaft": [
+        "Geologie", "geologisch", "Mineral", "Mineralien", "Kristall",
+        "Kristalle", "Tektonik", "Plattentektonik", "Vulkan", "Vulkane",
+        "Vulkanismus", "Erdbeben", "Erosion", "Sediment", "Atmosphäre",
+        "Biosphäre", "Lithosphäre", "Hydrosphäre", "Klimatologie",
+        "Klima", "Kontinentaldrift",
+    ],
+    "Q_Informatik_Technik": [
+        "Informatik", "Computer", "Prozessor", "Speicher", "Datenbank",
+        "Datenstruktur", "Netzwerk", "Verschlüsselung", "Kryptografie",
+        "Kryptographie", "binär", "Byte", "Bytes", "Quellcode",
+        "Informationsverarbeitung", "Parameter", "Simulation",
+        "Mikrochip", "Halbleiter", "Transistor", "Algorithmik",
+    ],
+    "R_Philosophie_Geisteswissenschaften": [
+        "Metaphysik", "Ontologie", "Epistemologie", "Erkenntnistheorie",
+        "Existenz", "Realität", "Wirklichkeit", "Determinismus",
+        "Kausalität", "Ethik", "Moral", "Rationalismus", "Empirismus",
+        "Materialismus", "Idealismus", "Nihilismus", "Stoizismus",
+    ],
+    "S_Flexionen_Komposita": [
+        "Atomen", "atomar", "atomare", "atomaren", "Protonenstrahlung",
+        "Neutronenstrahlung", "Elektronenstrom", "neuronale Netze",
+        "Quantenfeldtheorie", "Zellteilung", "Zellkernuntersuchung",
+        "Molekularbiologie", "Kernspaltung", "Kernfusion",
+        "Teilchenbeschleuniger", "Wellenpartikeldualität",
+    ],
     "H_Regressionssaetze": [
         "Mathematik ist die Sprache der Zahlen.",
         "Die Mathematik beschreibt Muster, Mengen und Strukturen.",
         "Ein mathematischer Algorithmus kann komplexe Probleme lösen.",
         "Quantenphysik und Mathematik bilden eine wichtige Grundlage moderner Forschung.",
+        # Host-Qwen-Befund 2026-09: Protonen/Neutronen-Respells falsch.
+        "Protonen und Neutronen befinden sich im Atomkern.",
+        "Ein Proton trägt eine positive Ladung, ein Neutron ist neutral geladen.",
+        "Die Atome bestehen aus einem Atomkern und einer Elektronenhülle.",
+        "Elektronen bewegen sich in bestimmten Bahnen um den Kern.",
+        "Zellen enthalten genetische Informationen im Zellkern.",
+        "Die chemische Reaktion verändert die Moleküle.",
+        "Enzyme beschleunigen den Stoffwechsel jeder Zelle.",
+        "Die Galaxien entfernen sich mit wachsender Geschwindigkeit.",
+        "Photosynthese wandelt Licht in chemische Energie um.",
+        "Neuronen verschalten sich über Synapsen zu Netzwerken.",
+        "Die Plattentektonik verschiebt ganze Kontinente.",
+        "Algorithmen sortieren Daten in einer Datenbank.",
+        "Die Kausalität ist ein Grundbegriff der Philosophie.",
     ],
 }
 
@@ -162,6 +267,14 @@ def main() -> int:
             # im Originalwort selbst vorkommenden.
             if not is_sentence:
                 n_unknown += len(unknown)
+            # Kaskadenpruefung (Phase 6): Wird der bereits ersetzte TTS-
+            # Text von einer SPÄTEREN Regel erneut verändert (wie ehemals
+            # "A-TOM-kern" -> "A-TOM-KERN" durch Kern->KERN)? Dann ist
+            # der Respell instabil (Kaskadenrisiko).
+            res2 = eng.process(res.text, "German", suggest_unknown=False)
+            cascade = res2.text != res.text
+            hyphen_caps = bool(__import__("re").search(
+                r"[A-ZÄÖÜ]{2,}(?:-[A-Za-zäöüß]+)+", res.text))
             entry = {
                 "category": cat,
                 "original": term,
@@ -171,6 +284,9 @@ def main() -> int:
                 "rule": _rule_for(res.replacements, term),
                 "replacements": res.replacements,
                 "unknown_terms": unknown,
+                "cascade": cascade,
+                "cascade_text": res2.text if cascade else "",
+                "hyphen_caps_respell": hyphen_caps,
             }
             if is_sentence:
                 sent_reports.append(entry)
@@ -183,14 +299,23 @@ def main() -> int:
     md.append(f"Begriffe gesamt: **{n_total}**\n")
     md.append(f"- Begriffe mit Ersetzung: **{n_changed}**\n")
     md.append(f"- Unabgedeckte Problemwörter: **{n_unknown}**\n")
+    n_hyphen = sum(1 for r in reports if r.get("hyphen_caps_respell"))
+    n_cascade = sum(1 for r in reports if r.get("cascade"))
+    md.append(f"- Begriffe mit Bindestrich-/GROSS-Respell "
+              f"(Host-Fehlerklasse): **{n_hyphen}**\n")
+    md.append(f"- Kaskaden (Nachverarbeitung veraendert Respell): "
+              f"**{n_cascade}**\n")
     md.append("\n## A–G) Einzelbegriffe\n")
-    md.append("| Kategorie | Original | Normalisiert | TTS-Text | Regel | Geändert | Unbekannt |\n")
-    md.append("|---|---|---|---|---|---|---|\n")
+    md.append("| Kategorie | Original | TTS-Text | Regel | Respell-Typ | Kaskade |\n")
+    md.append("|---|---|---|---|---|---|\n")
     for r in reports:
+        typ = ("BINDESTRICH/GROSS" if r.get("hyphen_caps_respell")
+               else ("identity" if r["tts_text"] == r["original"]
+                     else ("regel" if r["changed"] else "no rule")))
         md.append(
-            f"| {r['category']} | `{r['original']}` | `{r['normalized']}` | "
-            f"`{r['tts_text']}` | {r['rule']} | {'✓' if r['changed'] else '–'} | "
-            f"{', '.join(r['unknown_terms']) or '–'} |\n")
+            f"| {r['category']} | `{r['original']}` | "
+            f"`{r['tts_text']}` | {r['rule']} | {typ} | "
+            f"{'JA: ' + r['cascade_text'] if r.get('cascade') else '–'} |\n")
     md.append("\n## H) Regressions-Sätze (echte GUI-TTS-Texte)\n")
     md.append("| Original | TTS-Text | Ersetzungen |\n|---|---|---|\n")
     for r in sent_reports:

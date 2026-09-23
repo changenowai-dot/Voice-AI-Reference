@@ -207,12 +207,19 @@ TECH_TERMS_DE: dict[str, str] = {
     "Biologe": "Bi-o-LO-ge",
     "Molekül": "Mo-le-KÜHL",
     "Moleküle": "Mo-le-KÜH-le",
-    "Proton": "PRO-ton",
-    "Protonen": "Pro-TO-nen",
-    "Elektron": "E-lek-TRON",
-    "Elektronen": "E-lek-tro-NEN",
-    "Neutron": "NOI-tron",
-    "Neutronen": "Noi-tro-NEN",
+    # Identity-Mappings (bewusst, Muster Mathematik/Atom/Zelle):
+    # Host-Qwen-Befund (echte GPU, 2026-09): "Der Atomkern besteht aus
+    # Pro-TO-nen und Noi-tro-NEN." - die Bindestrich-/GROSS-Respells
+    # loesen den nachweislichen Buchstabier-Modus aus. Identity-Mapping
+    # der gesamten Teilchenfamilie; Regeln bleiben aktiv (Buchhaltung/
+    # Audit/Corpus). Elektron/Elektronen teilen den Mechanismus und
+    # werden im naechsten Host-Satzlauf mitverifiziert.
+    "Proton": "Proton",
+    "Protonen": "Protonen",
+    "Elektron": "Elektron",
+    "Elektronen": "Elektronen",
+    "Neutron": "Neutron",
+    "Neutronen": "Neutronen",
     "Photon": "FO-ton",
     "Photonen": "Fo-TO-nen",
     "Energie": "E-NER-gie",

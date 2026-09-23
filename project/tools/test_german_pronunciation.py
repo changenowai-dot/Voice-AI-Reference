@@ -36,6 +36,27 @@ CHECKS = [
     # bleiben natürlich, kein A-TO-Respell mehr.
     ("Ein atomarer Reaktor, atomare Energie, bei Atomen.",
      "atomarer Reaktor, atomare", "A-TO-"),
+    # --- Teilchenfamilie (Host-Befund 2026-09: Pro-TO-nen/Noi-tro-NEN
+    # falsch -> Identity; Host bestaetigt Identity-Muster als gut) ---
+    ("Protonen und Neutronen befinden sich im Atomkern.",
+     "Protonen und Neutronen befinden sich im Atomkern.",
+     "Pro-TO-nen Noi-tro-NEN"),
+    ("Ein Proton ist positiv geladen, ein Neutron neutral, ein Elektron negativ.",
+     "Ein Proton ist positiv geladen, ein Neutron neutral, ein Elektron negativ.",
+     "PRO-ton NOI-tron E-lek-TRON"),
+    # --- Regressions-Anker (Phase 7, muessen unverändert bleiben) ---
+    ("Der Algorithmus und die Algorithmen sind die Basis der Informatik.",
+     "Algorithmus und die Algorithmen", None),
+    ("Quantenphysik und Quantenmechanik beschreiben das Quantenverhalten.",
+     "Quantenphysik und Quantenmechanik", None),
+    ("Statistik und Wahrscheinlichkeit erklären Zufall.",
+     "Statistik und Wahrscheinlichkeit", None),
+    ("Die Theorie der Mathematik ist mathematisch fundiert.",
+     "Theorie der Mathematik ist mathematisch", None),
+    ("Bewusstsein ist ein Prozess des Gehirns.",
+     "Bewusstsein ist ein Prozess", "be-WUSST-sein"),
+    ("Die Neurowissenschaft und die Psychologie arbeiten zusammen.",
+     "Neurowissenschaft und die Psychologie", None),
 ]
 
 

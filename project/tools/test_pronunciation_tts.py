@@ -51,6 +51,65 @@ REGRESSION_SENTENCES = [
     "Das Atom und die Atome bilden die Grundbausteine der Materie.",
     "Der Atomkern besteht aus Protonen und Neutronen.",
     "Die Zelle ist die kleinste Einheit des Lebens, und Zellen bilden Gewebe.",
+    # ------------------------------------------------------------------
+    # Grosser Fachbegriff-Katalog (Forensik 2026-09, Phase 4/8/9):
+    # Prioritaet Teilchenfamilie (Host-Befund: "Pro-TO-nen/Noi-tro-NEN"
+    # falsch) + Anker + Offline-Sweep-Verdaechtige (aktive Bindestrich/
+    # GROSS-Respells) in natuerlichen Saetzen. Gestaffelt testbar via
+    # --limit N.
+    # ------------------------------------------------------------------
+    "Protonen und Neutronen befinden sich im Atomkern, Elektronen in der Hülle.",
+    "Ein Proton trägt eine positive Ladung, ein Neutron ist neutral.",
+    "Photonen übertragen Lichtenergie, und die Wellenlänge bestimmt die Farbe.",
+    "Moleküle bestehen aus Atomen, die über Elektronen zusammengehalten werden.",
+    "Die Thermodynamik beschreibt Energie, Entropie und Temperatur.",
+    "Radioaktive Strahlung entsteht beim Zerfall instabiler Atomkerne.",
+    "Die Teilchenphysik erforscht Elementarteilchen und ihre Wechselwirkungen.",
+    "Ohne Spannung und Widerstand fliesst kein elektrischer Strom.",
+    "Die Kernphysik untersucht Kernspaltung und Kernfusion.",
+    "Ein Molekül Wasser besteht aus Wasserstoff und Sauerstoff.",
+    "Ein Katalysator beschleunigt die chemische Reaktion, ohne selbst verbraucht zu werden.",
+    "Oxidation und Reduktion sind gekoppelte chemische Prozesse.",
+    "Chromosomen tragen die Gene, und das Genom umfasst die volle Erbinformation.",
+    "Enzyme und Proteine steuern den Stoffwechsel jeder Zelle.",
+    "Die Photosynthese wandelt Licht in chemische Energie um.",
+    "Bakterien und Viren können das Immunsystem herausfordern.",
+    "Synapsen verbinden Neuronen zu grossen Netzwerken im Gehirn.",
+    "Dopamin und Serotonin sind wichtige Botenstoffe des Nervensystems.",
+    "Die Amygdala und der Hippocampus spielen eine zentrale Rolle im Gedächtnis.",
+    "Neuroplastizität erlaubt dem Gehirn lebenslanges Lernen.",
+    "Kognition umfasst Wahrnehmung, Aufmerksamkeit und Gedächtnis.",
+    "Ein neuronales Netzwerk lernt aus Beispielen statt aus Regeln.",
+    "Galaxien, Planeten und Sterne entstehen aus kosmischen Gaswolken.",
+    "Exoplaneten kreisen um ferne Sterne unserer Galaxis.",
+    "Ein Schwarzes Loch biegt selbst das Licht der Sterne.",
+    "Die Raumzeit krümmt sich um schwere Materie.",
+    "Supernovae streuen Elemente in das Universum hinaus.",
+    "Die Plattentektonik verschiebt Kontinente und erzeugt Erdbeben.",
+    "Vulkane fördern Magma aus dem Inneren der Erde an die Oberfläche.",
+    "Die Atmosphäre schützt das Leben auf dem Planeten.",
+    "Kristalle wachsen in regelmässigen, geometrischen Strukturen.",
+    "Algebra und Geometrie sind klassische Gebiete der Mathematik.",
+    "Die Analysis untersucht Grenzwerte, Ableitungen und Integrale.",
+    "Ein Vektor hat Richtung und Grösse, eine Matrix ordnet Zahlen.",
+    "Ohne Gleichung keine Beschreibung physikalischer Zusammenhänge.",
+    "Statistische Korrelation beweist noch keine Kausalität.",
+    "Mittelwert und Standardabweichung beschreiben eine Verteilung.",
+    "Der Logarithmus kehrt die Exponentialfunktion um.",
+    "Verschlüsselung schützt Daten in Netzwerken und Datenbanken.",
+    "Binärcode besteht nur aus Nullen und Einsen, aus Bits und Bytes.",
+    "Der Prozessor führt den Quellcode eines Programms aus.",
+    "Kryptografie beruht auf schwer umkehrbaren mathematischen Funktionen.",
+    "Die Simulation modelliert komplexe Systeme am Computer.",
+    "Metaphysik fragt nach dem Sein, Ontologie nach dem Seienden.",
+    "Erkenntnistheorie untersucht, was Wissen überhaupt ist.",
+    "Determinismus und Freiheit sind ein klassischer Konflikt der Ethik.",
+    "Rationalismus und Empirismus streiten über die Quelle der Erkenntnis.",
+    # Regressions-Anker (Phase 7) - muessen unverändert gut bleiben:
+    "Die Wahrscheinlichkeit eines Ergebnisses lässt sich berechnen.",
+    "Die Statistik stützt die Theorie der modernen Physik.",
+    "Bewusstsein ist aus Sicht der Neurowissenschaft ein Prozess des Gehirns.",
+    "Die Psychologie beschreibt Verhalten und Erleben wissenschaftlich.",
 ]
 
 
@@ -202,6 +261,8 @@ def main() -> int:
                     default=PROJECT_ROOT / "output" / "pronunciation_tts_regression")
     ap.add_argument("--skip-if-no-gpu", action="store_true",
                     help="Beende mit Code 0 (SKIP) wenn keine CUDA-GPU verfügbar.")
+    ap.add_argument("--limit", type=int, default=0,
+                    help="Nur die ersten N Saetze synthetisieren (0 = alle).")
     ap.add_argument("--voice", action="append",
                     help="Nur diese Stimme testen (kann mehrfach angegeben werden)")
     args = ap.parse_args()
