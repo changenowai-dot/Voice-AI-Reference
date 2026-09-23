@@ -14,14 +14,28 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app.pronunciation import PronunciationEngine
 
 # (input fragment, must-appear-respelling, must-NOT-appear-respelling)
+# Psychologie/Neurowissenschaft sind seit dem bestätigten R2/R3-Stand
+# Identity-Mappings (plain in Produktion); die alten Respell-Erwartungen
+# beschrieben den Vor-R2-Stand und schlugen zu Unrecht an.
+# Atom-/Atome-/Atomkern-/Zelle-/Zellen-Checks sichern die Identity-Regeln
+# (kein Bindestrich-/GROSS-Respell mehr, natürliche Orthographie bleibt).
 CHECKS = [
     ("Der Philosoph steht da.",        "FI-lo-sof",      "Phi-LO-sof"),
     ("Die Philosophie ist alt.",       "fi-lo-zo-FIE",   "Fi-lo-so-FIE"),
     ("Ein philosophischer Geist.",     "fi-lo-ZO-fi-scher", None),
-    ("Die Psychologie des Menschen.",  "Psy-cho-LO-gie", None),
-    ("Die Neurowissenschaft wächst.",  "Neu-ro-WIS-sen-schaft", None),
+    ("Die Psychologie des Menschen.",  "Psychologie",    "Psy-cho-LO-gie"),
+    ("Die Neurowissenschaft wächst.",  "Neurowissenschaft", "Neu-ro-WIS-sen-schaft"),
     ("Die Quantentheorie gilt.",       "Quan-ten-teo-RIE", None),
     ("Ein Physiker rechnet.",          "FY-si-ker",      None),
+    ("Das Atom, die Atome, der Atomkern.",
+     "Das Atom, die Atome, der Atomkern.", "A-TOM"),
+    ("Die Zelle und die Zellen.",
+     "Die Zelle und die Zellen.", "TSEL-"),
+    # "Energie" hat ein eigenes, von dieser Familie unabhängiges Respell
+    # (außerhalb des Umfangs) – geprüft wird nur: Flexionen + "Atomen"
+    # bleiben natürlich, kein A-TO-Respell mehr.
+    ("Ein atomarer Reaktor, atomare Energie, bei Atomen.",
+     "atomarer Reaktor, atomare", "A-TO-"),
 ]
 
 

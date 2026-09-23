@@ -47,6 +47,10 @@ REGRESSION_SENTENCES = [
     "Die Mathematik beschreibt Muster, Mengen und Strukturen.",
     "Ein mathematischer Algorithmus kann komplexe Probleme lösen.",
     "Quantenphysik und Mathematik bilden eine wichtige Grundlage moderner Forschung.",
+    # Atome-/Zellen-Familie (Identity-Regression, vorher Bindestrich-Respell):
+    "Das Atom und die Atome bilden die Grundbausteine der Materie.",
+    "Der Atomkern besteht aus Protonen und Neutronen.",
+    "Die Zelle ist die kleinste Einheit des Lebens, und Zellen bilden Gewebe.",
 ]
 
 

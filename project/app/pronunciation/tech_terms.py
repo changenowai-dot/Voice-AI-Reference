@@ -231,9 +231,19 @@ TECH_TERMS_DE: dict[str, str] = {
     "Astrophysik": "A-stro-fy-SIK",
     "Kernphysik": "Kern-fy-SIK",
     "Teilchenphysik": "TEIL-chen-fy-sik",
-    "Atom": "A-TOM",
-    "Atome": "A-TO-me",
-    "Atomkern": "A-TOM-kern",
+    # Identity-Mappings (bewusst, Muster wie Mathematik/Bewusstsein):
+    # Die Bindestrich-Respells "A-TOM"/"A-TO-me"/"A-TOM-kern" fuehrten im
+    # echten Qwen-Produktionspfad zu ueberartikulierter/falscher Aussprache
+    # (Nutzer-Hoerbefund; Bindestrich = Sprechbremse, GROSS-Silben kippen
+    # in Buchstabier-Modus, A/B-Nachweis des Mechanismus:
+    # tools/test_pacing_math_ab_tts.py + tools/test_pronunciation_tts.py).
+    # Die Regeln bleiben aktiv (Replacement-Buchhaltung/Audit/Corpus),
+    # setzen aber die NATUERLICHE Orthographie ein. Flexionen (atomar,
+    # atomare, ...) haben bewusst KEINE Regel und werden normal gelesen;
+    # englisch "Atoms" matcht per Wortgrenze nicht und bleibt unberuehrt.
+    "Atom": "Atom",
+    "Atome": "Atome",
+    "Atomkern": "Atomkern",
     "Elementarteilchen": "E-le-men-TAR-teil-chen",
     "Kraftfeld": "KRAFT-feld",
     "Magnetfeld": "Ma-gnet-FELD",
@@ -374,8 +384,13 @@ TECH_TERMS_DE: dict[str, str] = {
     "RNS": "R N S",
     "DNA": "D N A",
     "RNA": "R N A",
-    "Zelle": "TSEL-le",
-    "Zellen": "TSEL-len",
+    # Identity-Mappings (bewusst, Muster wie Mathematik/Bewusstsein):
+    # "TSEL-le"/"TSEL-len" sind kuenstliche Silben-Respells (Bindestrich +
+    # GROSS-Cluster) und fuehrten im echten Qwen-Pfad zu falscher
+    # Aussprache (Nutzer-Hoerbefund). NATUERLICHE Orthographie;
+    # Zell-Komposita haben bewusst keine Regel (Corpus relevanz: keine).
+    "Zelle": "Zelle",
+    "Zellen": "Zellen",
     "Organismus": "Or-ga-NIS-mus",
     # --- Weitere Wissenschaften --------------------------------------------
     "Astronomie": "A-stro-no-MIE",
