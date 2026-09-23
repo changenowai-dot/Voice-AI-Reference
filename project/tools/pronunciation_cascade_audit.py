@@ -359,7 +359,42 @@ DOCUMENTED_TEXT_FINDINGS: list[dict] = [
                    "\"MID-del-wär\" behalten den Konsonantencluster korrekt bei."),
         "alternative_c": "SOFT-wär",
     },
+    {
+        "term": "Wellenlänge",
+        "rule": "WEL-len-län-ge",
+        "class": "family_inconsistency",
+        "detail": ("Nur die Singularform wird umgeschrieben. \"Wellenlängen\" "
+                   "(Plural) und \"Lichtwellenlänge\" (Kompositum) tragen "
+                   "keine Regel und werden natuerlich gelesen - dasselbe Wort "
+                   "erscheint dem TTS also je nach Satz in zwei Formen. "
+                   "Nutzerbefund: A unzureichend, B allein ebenfalls noch "
+                   "nicht ausreichend gut. Deshalb hier bewusst OFFEN, "
+                   "Variante C liegt im A/B-Harness bereit."),
+        "alternative_c": "WEL-len-länge",
+    },
 ]
+
+
+def _finding_status(finding: dict) -> dict:
+    """Vergleicht jeden dokumentierten Befund mit der LIVE-Regel.
+
+    Ohne diesen Abgleich wuerde die Liste behobene Befunde weiter als offen
+    ausweisen (Batch 5: \"Software\" wurde nach Nutzer-Hoerbefund auf Identity
+    gesetzt). Ein Befund gilt als behoben, sobald der aktuelle Wert nicht mehr
+    dem dokumentierten Regelwert entspricht.
+    """
+    live = TECH_TERMS_DE.get(finding["term"])
+    out = dict(finding)
+    if live is None:
+        out["status"] = "regel_entfernt"
+        out["live_rule"] = None
+    elif live == finding["rule"]:
+        out["status"] = "offen"
+        out["live_rule"] = live
+    else:
+        out["status"] = "behoben"
+        out["live_rule"] = live
+    return out
 
 
 def no_stress_marker() -> list[dict]:
@@ -381,7 +416,10 @@ def no_stress_marker() -> list[dict]:
 
 
 def objective_worklist() -> dict:
-    return {"documented_findings": DOCUMENTED_TEXT_FINDINGS,
+    findings = [_finding_status(f) for f in DOCUMENTED_TEXT_FINDINGS]
+    return {"documented_findings": findings,
+            "open_findings": [f for f in findings if f["status"] == "offen"],
+            "resolved_findings": [f for f in findings if f["status"] != "offen"],
             "no_stress_marker": no_stress_marker()}
 
 
@@ -677,22 +715,35 @@ def main() -> int:
         lines.append("")
     wl = worklist
     lines += ["## Textbefunde fuer die Host-Priorisierung", "",
-              "KEIN akustisches Urteil, keine Produktionsaenderung "
-              "(Sec.33: Theorie ist kein Beleg).", "",
-              f"- manuell verifizierte Befunde: "
+              "Rein textliche Befunde. Orthoepische Theorie allein ist KEIN "
+              "Beleg (§33) – übernommen wird nur, was ein echter Qwen-Lauf "
+              "oder ein Nutzer-Hörbefund trägt.", "",
+              f"- manuell verifizierte Befunde gesamt: "
               f"**{len(wl['documented_findings'])}**",
+              f"- davon OFFEN (warten auf Host-Entscheid): "
+              f"**{len(wl['open_findings'])}**",
+              f"- davon BEHOBEN (live geprüft): "
+              f"**{len(wl['resolved_findings'])}**",
               f"- Respell ohne Betonungsmarkierung (Bestandsaufnahme): "
               f"**{len(wl['no_stress_marker'])}**", ""]
-    if wl["documented_findings"]:
-        lines += ["### Manuell verifizierte Befunde", "",
-                  "| Begriff | aktuelle Regel | Klasse | Variante C |",
+    if wl["open_findings"]:
+        lines += ["### Offene Befunde", "",
+                  "| Begriff | Live-Regel | Klasse | Variante C |",
                   "|---|---|---|---|"]
-        for d in wl["documented_findings"]:
-            lines.append(f"| {d['term']} | `{d['rule']}` | "
+        for d in wl["open_findings"]:
+            lines.append(f"| {d['term']} | `{d['live_rule']}` | "
                          f"{d['class']} | `{d['alternative_c']}` |")
         lines.append("")
-        for d in wl["documented_findings"]:
+        for d in wl["open_findings"]:
             lines.append(f"- **{d['term']}**: {d['detail']}")
+        lines.append("")
+    if wl["resolved_findings"]:
+        lines += ["### Behobene Befunde (Abgleich gegen die Live-Regel)", "",
+                  "| Begriff | dokumentierte Regel | Live-Regel jetzt | Status |",
+                  "|---|---|---|---|"]
+        for d in wl["resolved_findings"]:
+            lines.append(f"| {d['term']} | `{d['rule']}` | "
+                         f"`{d['live_rule']}` | {d['status']} |")
         lines.append("")
     lines += ["## Coverage", "",
               f"- Begriffe im Katalog: {cov['totals']['terms']}",

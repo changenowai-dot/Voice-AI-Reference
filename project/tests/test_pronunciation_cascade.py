@@ -386,6 +386,22 @@ FORBIDDEN_FORMS = [
     "MA-trix", "VEK-tor", "GLEI-chung", "Lo-ga-RITH-mus",
     "Me-ta-FY-sik", "On-to-LO-gie", "Erkenntnis-teo-RIE",
     "Ma-te-MA-tik",
+    # --- Batch 5 (2026-09-23): nach echtem Nutzer-Hörbefund am Qwen-A/B-Lauf
+    # auf Identity übernommen. Jede dieser Formen ist belegt ersetzt und darf
+    # nicht wieder aktiv werden:
+    #   TEIL-chen-fy-sik        „B ist bei Teilchenphysik besser als A"
+    #   Ther-mo-dy-NA-mik       „B ist bei Thermodynamik besser als A"
+    #   SORFT-wär               „B ist bei Software gut" + objektiver Defekt:
+    #                           das R hat im Quellwort keine Entsprechung
+    #   A-NA-ly-sis             §6/§7 vom Nutzer als offenes Problem benannt;
+    #                           Regel war intern inkonsistent zur übrigen
+    #                           Familie (analytisch/Analyse ohne Regel)
+    #   E-le-men-TAR-teil-chen  §6/§9 vom Nutzer als offenes Problem benannt;
+    #                           5 Bindestriche = stärkste Zerhackung im
+    #                           Katalog, Widerspruch zum dokumentierten
+    #                           Mechanismus „Bindestrich = Sprechbremse"
+    "TEIL-chen-fy-sik", "Ther-mo-dy-NA-mik", "SORFT-wär",
+    "A-NA-ly-sis", "E-le-men-TAR-teil-chen",
 ]
 
 
@@ -428,6 +444,15 @@ def test_no_confirmed_bad_form_ever_reaches_tts():
         "Bewusstsein ist aus Sicht der Neurowissenschaft ein Prozess.",
         "Mathematik ist die Sprache der Zahlen.",
         "Ein mathematischer Algorithmus löst komplexe Probleme.",
+        # Batch 5: Sätze, die die ersetzten Formen FRÜHER ausgelöst haben.
+        # Ohne sie wäre die Prüfung der neuen FORBIDDEN_FORMS zahnlos.
+        "Die Teilchenphysik untersucht Elementarteilchen.",
+        "Elementarteilchen bilden die Grundlage der modernen Teilchenphysik.",
+        "Die Teilchenphysik erforscht Elementarteilchen und ihre Wechselwirkungen.",
+        "Die Thermodynamik beschreibt Energie, Entropie und Temperatur.",
+        "Die Analysis untersucht Grenzwerte, Ableitungen und Integrale.",
+        "Software und Hardware brauchen einen gemeinsamen Parameter.",
+        "Die Software läuft stabil auf der vorhandenen Hardware.",
     ]
     for sent in sentences:
         out = _final(sent)
@@ -476,3 +501,142 @@ def test_user_dictionary_file_untouched_by_ab_tooling():
     after = DICT_PATH.read_text(encoding="utf-8") if DICT_PATH.exists() else ""
     assert before == after, "pronunciation.json wurde verändert"
     assert d.user_entries() == {"Philosoph": "Philosoph"}
+
+
+# ---------------------------------------------------------------------------
+# Batch 5 (2026-09-23): Übernahme belegter Varianten in die Produktion
+# ---------------------------------------------------------------------------
+# Belegklasse: NUTZER-HÖRBEFUND am echten Qwen-A/B-Lauf (§4) bzw. explizite
+# Nutzer-Nennung als offenes Problem (§6) plus objektive textliche
+# Inkonsistenz. Orthoepische Theorie allein ist weiterhin kein Beleg (§33).
+BATCH5_IDENTITY_TERMS = [
+    # (Begriff, alte Respell-Form, Beleg)
+    ("Teilchenphysik", "TEIL-chen-fy-sik", "§4 Hörbefund: B besser als A"),
+    ("Thermodynamik", "Ther-mo-dy-NA-mik", "§4 Hörbefund: B besser als A"),
+    ("Software", "SORFT-wär",
+     "§4 Hörbefund: B gut; objektiver Defekt (R ohne Quelle)"),
+    ("Analysis", "A-NA-ly-sis",
+     "§6/§7 Nutzer-Nennung; Familie intern inkonsistent"),
+    ("Elementarteilchen", "E-le-men-TAR-teil-chen",
+     "§6/§9 Nutzer-Nennung; 5 Bindestriche = Sprechbremse"),
+]
+
+BATCH5_CONTEXTS = {
+    "Teilchenphysik": ["Die Teilchenphysik untersucht Elementarteilchen.",
+                       "Teilchenphysik ist ein Teilgebiet der Physik."],
+    "Thermodynamik": ["Die Thermodynamik beschreibt Wärme und Arbeit.",
+                      "Thermodynamik gehört zur klassischen Physik."],
+    "Software": ["Die Software läuft auf der Hardware.",
+                 "Software und Hardware brauchen einen gemeinsamen Parameter."],
+    "Analysis": ["Die Analysis untersucht Grenzwerte und Funktionen.",
+                 "Analysis gehört zum ersten Studienjahr."],
+    "Elementarteilchen": [
+        "Die Teilchenphysik untersucht Elementarteilchen.",
+        "Elementarteilchen bilden die Grundlage der modernen Teilchenphysik."],
+}
+
+
+def test_batch5_identity_terms_are_live_in_production():
+    """§19/§21A: Die belegten Varianten müssen TATSÄCHLICHT im Produktionspfad
+    wirken – nicht nur dokumentiert oder vorbereitet sein."""
+    for term, old_form, evidence in BATCH5_IDENTITY_TERMS:
+        rule = TECH_TERMS_DE.get(term)
+        assert rule == term, (
+            f"{term}: Regel ist {rule!r}, erwartet Identity {term!r} "
+            f"(Beleg: {evidence})")
+        # Isolation
+        iso = _final(term)
+        assert term in iso, f"{term}: Isolation liefert {iso!r}"
+        assert old_form not in iso, (
+            f"{term}: alte Form {old_form!r} noch aktiv in {iso!r}")
+        # Satzkontexte
+        for sent in BATCH5_CONTEXTS[term]:
+            out = _final(sent)
+            assert term.lower() in out.lower(), (
+                f"{term}: in {sent!r} fehlt die natürliche Form -> {out!r}")
+            assert old_form not in out, (
+                f"{term}: alte Form {old_form!r} in {sent!r} -> {out!r}")
+
+
+def test_batch5_unjudged_siblings_stay_unchanged():
+    """§4/§13: „Nicht blind alles auf B setzen." Geschwister ohne Hörbefund
+    und ohne objektiven Defekt bleiben exakt, wie sie sind."""
+    pinned = {
+        "Hardware": "HARD-wär",          # buchstabentreu, kein Befund
+        "Firmware": "FIRM-wär",
+        "Middleware": "MID-del-wär",
+        "Kernphysik": "Kern-fy-SIK",     # Batch-3-Fix, host-verifiziert
+        "Astrophysik": "A-stro-fy-SIK",
+        "Elektrodynamik": "E-lek-tro-dy-NA-mik",
+        "Algebra": "AL-ge-bra",
+        "algebraisch": "al-ge-BRA-isch",
+        "Geometrie": "Ge-o-me-TRIE",
+        "geometrisch": "ge-o-ME-trisch",
+        "Physik": "FY-sik",
+        "physikalisch": "fy-SI-sch",
+        "Entropie": "En-tro-PIE",
+        "Temperatur": "Tem-pe-ra-TUR",
+        "Photonen": "Fo-TO-nen",
+    }
+    for term, want in pinned.items():
+        assert TECH_TERMS_DE.get(term) == want, (
+            f"{term} ohne Beleg geändert: {TECH_TERMS_DE.get(term)!r} statt "
+            f"{want!r}. Für diesen Begriff liegt weder ein Nutzer-Hörbefund "
+            f"noch ein objektiver textlicher Defekt vor.")
+
+
+def test_energie_family_state_is_pinned_until_host_verdict():
+    """§10: Energie ausdrücklich NICHT blind verändert.
+
+    Der Nutzer hat Energie als „nicht sicher als Fehler bestätigt" markiert
+    und verlangt, erst mehrere echte Qwen-Kontexte zu hören. Der objektiv
+    dokumentierte Befund – dasselbe Wort erscheint je nach Satz in zwei Formen,
+    weil die Regel nur an Wortgrenzen greift und deshalb in Komposita nie
+    wirkt – ist im A/B-Harness als Familie mit allen geforderten Kontexten
+    hinterlegt. Dieser Test pinnt den Ist-Zustand, bis der Host entscheidet.
+    """
+    pinned = {
+        "Energie": "E-NER-gie",
+        "Energien": "E-NER-gi-en",
+    }
+    for term, want in pinned.items():
+        assert TECH_TERMS_DE.get(term) == want, (
+            f"{term} ohne Host-Entscheid geändert: "
+            f"{TECH_TERMS_DE.get(term)!r} statt {want!r}. §10 verlangt: "
+            f"erst mehrere echte Qwen-Kontexte testen, nicht blind ändern.")
+    # Die regellosen Komposita müssen natürlich bleiben – genau das ist die
+    # vom Nutzer gehörte Inkonsistenz und der Grund, warum der Entscheid
+    # aussteht.
+    for compound in ("Lichtenergie", "Energiequelle", "Energieerhaltung",
+                     "Energieverbrauch"):
+        assert compound not in TECH_TERMS_DE, (
+            f"{compound} hat unerwartet eine Regel bekommen")
+        out = _final(f"Die {compound} ist hier entscheidend.")
+        assert compound in out, f"{compound}: {out!r}"
+
+
+def test_wellenlaenge_family_state_is_pinned_until_host_verdict():
+    """§8: Wellenlänge bleibt offen. Der Nutzer fand A (`WEL-len-län-ge`) und
+    auch B (natürliche Orthographie) allein noch nicht ausreichend, verlangt
+    also zwingend eine Variante C. Eine nicht gehörte C-Form in die Produktion
+    zu schreiben wäre ein Regelwechsel ohne Beleg (§13/§33), deshalb wird hier
+    nur der Ist-Zustand gepinnt und C im Harness bereitgestellt."""
+    assert TECH_TERMS_DE.get("Wellenlänge") == "WEL-len-län-ge", (
+        f"Wellenlänge ohne Host-Entscheid geändert: "
+        f"{TECH_TERMS_DE.get('Wellenlänge')!r}")
+    # C-Kandidat muss im Harness hinterlegt sein, damit der Host-Lauf ihn
+    # tatsächlich synthetisiert.
+    import importlib.util
+    from pathlib import Path
+    path = (Path(__file__).resolve().parents[1] / "tools"
+            / "test_pronunciation_ab.py")
+    spec = importlib.util.spec_from_file_location("_ab_probe", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    assert mod.ALTERNATIVES.get("Wellenlänge") == "WEL-len-länge", (
+        "Variante C für Wellenlänge fehlt im A/B-Harness (§8)")
+    assert "Wellenlänge" in mod.FAMILIES, (
+        "Wellenlänge braucht eine eigene Familie, sonst wird das Hörurteil "
+        "durch Photon/Frequenz vermischt (§8)")
+    assert len(mod.FAMILY_SENTENCES.get("Wellenlänge", [])) >= 4, (
+        "§8 verlangt mehrere natürliche Satzkontexte für Wellenlänge")

@@ -147,8 +147,15 @@ TECH_TERMS_DE: dict[str, str] = {
     "geometrisch": "ge-o-ME-trisch",
     "Algebra": "AL-ge-bra",
     "algebraisch": "al-ge-BRA-isch",
-    "Analysis": "A-NA-ly-sis",
-    "Analysis": "A-NA-ly-sis",
+    # Identity statt "A-NA-ly-sis" (Batch 5, 2026-09-23):
+    # Nutzerbefund (§6/§7) am echten Qwen-A/B-Lauf: „Analysis" als noch
+    # offenes Problem benannt. Die Regel war zudem intern inkonsistent – die
+    # gesamte übrige Familie (analytisch, analytische, analytischen, Analyse)
+    # trägt keine Regel und wird natürlich gelesen, nur der Nominalform wurde
+    # eine Betonung auf die 2. Silbe aufgezwungen. Der zweite, wertgleiche
+    # Doppel-Key entfällt mit der Änderung (Literaleinträge 336 -> 335;
+    # die eindeutige Dict-Größe bleibt 312).
+    "Analysis": "Analysis",
     "Statistik": "Statistik",
     "statistisch": "sta-TIS-tisch",
     "Wahrscheinlichkeit": "Wahrscheinlichkeit",
@@ -234,12 +241,22 @@ TECH_TERMS_DE: dict[str, str] = {
     "Gravitationskraft": "Gra-vi-ta-tsi-ONS-kraft",
     "Schwerkraft": "SCHWER-kraft",
     "Relativitätstheorie": "Re-la-ti-vi-täts-teo-RIE",
-    "Thermodynamik": "Ther-mo-dy-NA-mik",
+    # Identity statt "Ther-mo-dy-NA-mik" (Batch 5, 2026-09-23):
+    # NUTZER-HOERBEFUND am echten Qwen-A/B-Lauf: "B ist bei Thermodynamik
+    # besser als A." Deckt sich mit dem hier dokumentierten Mechanismus
+    # (Bindestrich = Sprechbremse, GROSS-Silben kippen in Buchstabier-Modus).
+    # 4 Bindestriche entfallen, die natuerliche Orthographie bleibt.
+    "Thermodynamik": "Thermodynamik",
     "Elektrodynamik": "E-lek-tro-dy-NA-mik",
     "Quantenchemie": "KUAN-ten-ce-mie",
     "Astrophysik": "A-stro-fy-SIK",
     "Kernphysik": "Kern-fy-SIK",
-    "Teilchenphysik": "TEIL-chen-fy-sik",
+    # Identity statt "TEIL-chen-fy-sik" (Batch 5, 2026-09-23):
+    # NUTZER-HOERBEFUND am echten Qwen-A/B-Lauf: "B ist bei Teilchenphysik
+    # besser als A." Ausserdem war die Regel intern inkonsistent: das
+    # einfache "Teilchen" hat laengst keine Regel mehr (natuerliche Lesart),
+    # nur das Kompositum wurde umgeschrieben. 3 Bindestriche entfallen.
+    "Teilchenphysik": "Teilchenphysik",
     # Identity-Mappings (bewusst, Muster wie Mathematik/Bewusstsein):
     # Die Bindestrich-Respells "A-TOM"/"A-TO-me"/"A-TOM-kern" fuehrten im
     # echten Qwen-Produktionspfad zu ueberartikulierter/falscher Aussprache
@@ -253,7 +270,17 @@ TECH_TERMS_DE: dict[str, str] = {
     "Atom": "Atom",
     "Atome": "Atome",
     "Atomkern": "Atomkern",
-    "Elementarteilchen": "E-le-men-TAR-teil-chen",
+    # Identity statt "E-le-men-TAR-teil-chen" (Batch 5, 2026-09-23):
+    # Nutzerbefund (§6/§9) am echten Qwen-A/B-Lauf: „Elementarteilchen" als
+    # noch offenes Problem benannt. Die Form war mit 5 Bindestrichen die am
+    # stärksten zerhackte im gesamten Katalog und stand damit im direkten
+    # Widerspruch zum unmittelbar vorangehenden Kommentarblock, der genau
+    # diesen Mechanismus als Ursache überartikulierter Aussprache benennt
+    # („Bindestrich = Sprechbremse"). Die Nachbarn in diesem Block (Atom,
+    # Atome, Atomkern, Teilchen) sind bereits Identity. Die Betonung auf
+    # „TAR" war korrekt, ist aber ohne Bindestriche nicht darstellbar und
+    # wird von der natürlichen Orthographie ohnehin richtig gelesen.
+    "Elementarteilchen": "Elementarteilchen",
     "Kraftfeld": "KRAFT-feld",
     "Magnetfeld": "Ma-gnet-FELD",
     "Elektrizität": "E-lek-tri-tsi-TÄT",
@@ -313,7 +340,16 @@ TECH_TERMS_DE: dict[str, str] = {
     "TPU": "T P U",
     "CUDA": "KUH-da",
     "Python": "PEI-ton",
-    "Software": "SORFT-wär",
+    # Identity statt "SORFT-wär" (Batch 5, 2026-09-23):
+    # NUTZER-HOERBEFUND am echten Qwen-A/B-Lauf: "B ist bei Software gut."
+    # Zusaetzlich lag hier ein objektiver Datendefekt vor: das "R" in
+    # "SORFT" kommt im Quellwort "Software" nicht vor und ist durch keine
+    # kuratierte Laut-Substitution erklaert - Qwen erhielt damit einen
+    # Konsonanten ohne Quelle. Die Geschwister "HARD-wär"/"FIRM-wär"/
+    # "MID-del-wär" sind buchstabentreu und bleiben unveraendert (kein
+    # Hoerbefund, kein Defekt). Die Variante C "SOFT-wär" wurde verworfen:
+    # Nutzerbefund "C ist insgesamt schlechter als B".
+    "Software": "Software",
     "Hardware": "HARD-wär",
     "Firmware": "FIRM-wär",
     "Middleware": "MID-del-wär",

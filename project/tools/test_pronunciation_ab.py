@@ -68,23 +68,35 @@ DICT_FILE = PROJECT_ROOT / "pronunciation" / "pronunciation.json"
 # Phase 1 + Phase 8 + Phase 9 aus der Uebergabe, plus die Katalog-Kandidaten.
 # Reihenfolge = Hoerprioritaet. Begriffe, die bereits Identity sind, stehen
 # bewusst NICHT hier (fuer sie gibt es nichts zu entscheiden).
+# Batch 5 (2026-09-23) aktualisiert: Begriffe, die nach echtem Nutzer-
+# Hoerbefund bereits auf Identity uebernommen wurden, sind herausgenommen –
+# fuer sie ist A == B, es gibt nichts mehr zu hoeren. Das betrifft
+#   Teilchenphysik, Thermodynamik, Software, Analysis, Elementarteilchen.
+# (Belege: PRONUNCIATION_BATCH5_REPORT.md §2.)
 PRIORITY_CANDIDATES: list[str] = [
-    # Phase 8: Familie Philosoph (einzige Phase-1-Familie mit aktiven Respells)
+    # §8: Wellenlänge – Hoechste Prioritaet. Nutzerbefund: A unzureichend,
+    # B allein ebenfalls noch nicht ausreichend gut -> Variante C noetig.
+    "Wellenlänge", "Wellenlängen", "Lichtwellenlänge",
+    # §10: Energie – ausdruecklich NICHT als Fehler bestaetigt, aber vom
+    # Nutzer als inkonsistent gehoert (E-NER-gie einzeln, Energie im
+    # Kompositum). Alle geforderten Formen in mehreren Kontexten.
+    "Energie", "Energien", "Lichtenergie", "Energiequelle",
+    "Energieerhaltung", "Energieverbrauch",
+    # §14: Familie Philosoph – gezielt pruefen, KEINE gemeinsame Regel
+    # erzwingen. Gegenrisiko beachtet: ohne Respell droht laut Code-
+    # Kommentar das englische /f aɪ/ ("fie") fuer „phie".
     "Philosoph", "Philosophen", "Philosophin", "Philosophinnen",
     "Philosophie", "philosophisch", "philosophische", "philosophischen",
     "philosophischer", "philosophischem",
-    # Phase 9: technische/physikalische Auffaelligkeiten
-    "Physik", "Physiker", "physikalisch", "Teilchenphysik", "Kernphysik",
-    "Astrophysik", "Thermodynamik", "Entropie", "Energie", "Temperatur",
-    "Photonen", "Photon", "Molekül", "Moleküle", "Elektrizität",
-    "Gravitation", "Relativitätstheorie", "Elementarteilchen",
-    "Wellenlänge", "Frequenz", "Spannung", "Widerstand",
-    # Phase 9: Mathematik / Informatik
-    "Algebra", "Geometrie", "Analysis", "Integrale", "Integral",
+    # §15: uebrige aktive Respell-Kandidaten (kein Hoerbefund -> erst hoeren)
+    "Physik", "Physiker", "physikalisch", "Kernphysik", "Astrophysik",
+    "Entropie", "Temperatur", "Photonen", "Photon", "Molekül", "Moleküle",
+    "Elektrizität", "Gravitation", "Relativitätstheorie",
+    "Frequenz", "Spannung", "Widerstand",
+    "Algebra", "Geometrie", "Integrale", "Integral",
     "Exponentialfunktion", "Funktion", "Funktionen", "Kognition", "kognitiv",
-    "Neurotransmitter", "Neuroplastizität", "Software", "Hardware",
+    "Neurotransmitter", "Neuroplastizität", "Hardware",
     "Netzwerk", "Netzwerke", "Kryptografie", "Mikrochip",
-    # Phase 3: uebrige Katalog-Kandidaten
     "Determinismus", "Epistemologie", "Astronomie", "astronomisch",
     "Genetik", "Organismus", "Chemie", "chemisch", "Ableitung",
     "Variable", "Variablen",
@@ -105,27 +117,45 @@ PRIORITY_CANDIDATES: list[str] = [
 # mit der dokumentierten Alternative.
 # ---------------------------------------------------------------------------
 FAMILIES: dict[str, list[str]] = {
+    # §8: EIGENE Familie, höchste Priorität. Bewusst nicht mit Photon/Frequenz
+    # gebündelt – Wellenlänge ist der einzige Begriff, für den der Nutzer
+    # weder A noch B als ausreichend bezeichnet hat. Eine Vermischung würde
+    # das Hörurteil unbrauchbar machen.
+    "Wellenlänge": ["Wellenlänge", "Wellenlängen", "Lichtwellenlänge",
+                    "Wellen"],
+    # §10: EIGENE Familie. Der Nutzer forderte explizit diese Formen
+    # (Energie, Energien, Lichtenergie, Energiequelle, Energieerhaltung,
+    # kinetische Energie, Dunkle Energie) in mehreren natürlichen Kontexten.
+    "Energie": ["Energie", "Energien", "Lichtenergie", "Energiequelle",
+                "Energieerhaltung", "Energieverbrauch"],
+    # §14: Philosophie-Familie. Keine gemeinsame Regel erzwingen.
     "Philosoph": [
         "Philosoph", "Philosophen", "Philosophin", "Philosophinnen",
         "Philosophie", "philosophisch", "Philosophisch", "philosophische",
         "philosophischen", "philosophischer", "philosophischem",
     ],
     "Physik": ["Physik", "Physiker", "physikalisch"],
-    "Physik_Komposita": ["Astrophysik", "Kernphysik", "Teilchenphysik"],
-    "Thermo": ["Thermodynamik", "Entropie", "Temperatur", "Energie", "Energien"],
-    "Teilchen_Welle": ["Photon", "Photonen", "Wellenlänge", "Frequenz",
-                       "Frequenzen", "Elementarteilchen"],
+    # Teilchenphysik entfernt: nach Nutzer-Hörbefund auf Identity übernommen.
+    "Physik_Komposita": ["Astrophysik", "Kernphysik"],
+    # Thermodynamik entfernt (Identity übernommen), Energie/Energien in die
+    # eigene Familie §10 ausgelagert.
+    "Thermo": ["Entropie", "Temperatur"],
+    # Wellenlänge in eigene Familie ausgelagert, Elementarteilchen entfernt
+    # (Identity übernommen).
+    "Teilchen_Welle": ["Photon", "Photonen", "Frequenz", "Frequenzen"],
     "Elektro": ["Elektrizität", "Spannung", "Widerstand", "Gravitation"],
     "Molekuel": ["Molekül", "Moleküle", "Chemie", "chemisch"],
     "Relativitaet": ["Relativitätstheorie"],
-    "Mathematik_Kern": ["Algebra", "Geometrie", "Analysis"],
+    # Analysis entfernt: nach Nutzerbefund auf Identity übernommen.
+    "Mathematik_Kern": ["Algebra", "Geometrie"],
     "Analysis_Kern": ["Integral", "Integrale", "Ableitung", "Variable",
                       "Variablen"],
     "Funktion": ["Funktion", "Funktionen", "Exponentialfunktion"],
     "Kognition": ["Kognition", "kognitiv", "Neurotransmitter",
                   "Neuroplastizität"],
-    "Rechner": ["Software", "Hardware", "Netzwerk", "Netzwerke",
-                "Kryptografie", "Mikrochip"],
+    # Software entfernt: nach Nutzer-Hörbefund auf Identity übernommen.
+    "Rechner": ["Hardware", "Netzwerk", "Netzwerke", "Kryptografie",
+                "Mikrochip"],
     "Wissenschaft_Allg": ["Astronomie", "astronomisch", "Genetik",
                           "Organismus", "Determinismus", "Epistemologie"],
 }
@@ -142,12 +172,60 @@ ALTERNATIVES: dict[str, str] = {
     # "Philosophin" die 3. (fi-lo-ZO-fin). C zieht den Plural auf das
     # Singular-Muster.
     "Philosophinnen": "fi-lo-ZO-fin-nen",
-    # "Software" -> "SORFT-wär" enthaelt ein R, das im Quellwort nicht
-    # vorkommt und durch keine der kuratierten Laut-Substitutionen
-    # (ph->f, th->t, qu->kw, x->ks) erklaert ist. Die Geschwisterregeln
-    # "Hardware" -> "HARD-wär" und "Firmware" -> "FIRM-wär" behalten den
-    # Konsonantencluster korrekt bei. C folgt diesem Muster.
-    "Software": "SOFT-wär",
+    # §8 Wellenlänge: C als MINIMALE Alternative. Der Nutzer fand A
+    # ("WEL-len-län-ge") und auch B (natürliche Orthographie) allein noch
+    # nicht ausreichend. C behält genau eine Silbengrenze und eine
+    # Betonungsmarkierung auf der korrekten Stammsilbe und überlässt
+    # „länge" der natürlichen Lesart – streng weniger eingreifend als A
+    # (3 Bindestriche + GROSS-Silbe mitten im Wort), streng informativer
+    # als B. Begründet über den in tech_terms.py dokumentierten Mechanismus
+    # („Bindestrich = Sprechbremse, GROSS-Silben kippen in Buchstabier-
+    # Modus"): je weniger Bindestriche, desto natürlicher.
+    "Wellenlänge": "WEL-len-länge",
+}
+
+# In Batch 5 (2026-09-23) ENTFERTE C-Alternativen, mit Begründung:
+#
+#   "Software": "SOFT-wär"
+#       Verworfen. Nutzer-Hörbefund am echten Qwen-Lauf: „B ist bei
+#       Software gut" und „C ist insgesamt schlechter als B". Software
+#       steht jetzt als Identity in der Produktion; ein weiteres Anbieten
+#       von C würde eine bereits verworfene Variante neu testen. Der
+#       objektive Defekt (R ohne Quelle in „SORFT") ist damit ebenfalls
+#       erledigt. Das Audit führt ihn unter „Behobene Befunde".
+
+# Vom Nutzer EXPLIZIT geforderte Satzkontexte (§8, §10). Diese Sätze tragen
+# die entscheidenden Formen, auch wenn einzelne davon keine Regel besitzen und
+# deshalb nicht als Familienmitglieder geführt werden können.
+FAMILY_SENTENCES: dict[str, list[str]] = {
+    # §10: Energie, Energien, Lichtenergie, Energiequelle,
+    # Energieerhaltung, kinetische Energie, Dunkle Energie
+    "Energie": [
+        "Die Energie bleibt in einem abgeschlossenen System erhalten.",
+        "Kinetische Energie und potenzielle Energie wandeln sich ineinander um.",
+        "Lichtenergie wird von den Pflanzen aufgenommen und gespeichert.",
+        "Die Energiequelle ist erneuerbar, die Energiemenge jedoch begrenzt.",
+        "Die Energieerhaltung gilt als fundamentales Prinzip der Physik.",
+        "Dunkle Energie treibt die Expansion des Universums an.",
+        "Mehrere Energien lassen sich in einem System bilanzieren.",
+    ],
+    # §8: mehrere natürliche Kontexte, Ziel „natürliches deutsches
+    # Wellenlänge" – Singular, Plural, Kompositum und attributiv
+    "Wellenlänge": [
+        "Die Wellenlänge des Lichts bestimmt seine Farbe.",
+        "Wellenlängen werden üblicherweise in Nanometern angegeben.",
+        "Eine längere Wellenlänge bedeutet eine geringere Frequenz.",
+        "Die Lichtwellenlänge ändert sich beim Übergang in ein anderes Medium.",
+        "Der Abstand zweier Wellen entspricht genau einer Wellenlänge.",
+    ],
+    # §9: die beiden vom Nutzer wörtlich genannten Kontexte. Elementarteilchen
+    # und Teilchenphysik sind inzwischen Identity, die Sätze bleiben aber als
+    # Vergleichsmaßstab und zur Kontrolle, dass der neue Zustand natürlich
+    # klingt.
+    "Elementarteilchen": [
+        "Die Teilchenphysik untersucht Elementarteilchen.",
+        "Elementarteilchen bilden die Grundlage der modernen Teilchenphysik.",
+    ],
 }
 
 # Natuerliche Traegersaetze fuer Begriffe, die im Host-Korpus
@@ -241,10 +319,16 @@ def build_plan(units: list[tuple[str, list[str]]], want: set[str],
     die ganze Familie, damit der Hoervergleich nicht vermischt wird."""
     plan = []
     for fam, members in units:
-        # Saetze sammeln: vorhandenes Host-Korpus zuerst, dann Templates.
-        # Ein Satz wird pro Familie nur EINMAL verwendet, auch wenn er mehrere
-        # Familienmitglieder enthaelt.
-        sents: list[str] = []
+        # Saetze sammeln. Vorrang:
+        #   1. FAMILY_SENTENCES – vom Nutzer explizit geforderte Kontexte.
+        #      Nötig, weil die relevanten Formen teilweise KEINE Regel tragen
+        #      (Lichtenergie, Energiequelle, Energieerhaltung, Dunkle Energie)
+        #      und deshalb nicht als Familienmitglieder auftauchen können –
+        #      sie gehören als SATZKONTEXT hinein, nicht als Variante.
+        #   2. vorhandenes Host-Korpus
+        #   3. Templates
+        # Ein Satz wird pro Familie nur EINMAL verwendet.
+        sents: list[str] = list(FAMILY_SENTENCES.get(fam, []))
         for m in members:
             for s in _tts.REGRESSION_SENTENCES:
                 if m.lower() in s.lower() and s not in sents:
@@ -253,7 +337,11 @@ def build_plan(units: list[tuple[str, list[str]]], want: set[str],
             head = members[0]
             sents = [tpl.format(term=head, term_cap=head[:1].upper() + head[1:])
                      for tpl in TEMPLATES]
-        sents = sents[:sentences_per_family]
+        # Vom Nutzer ausdrücklich geforderte Kontexte (§8/§10: „mehrere
+        # natürliche Sätze") werden NICHT auf --sentences gekürzt; die
+        # CLI-Angabe begrenzt nur die automatisch gewählten Sätze.
+        if fam not in FAMILY_SENTENCES:
+            sents = sents[:sentences_per_family]
 
         for variant in ("A", "B", "C"):
             if variant not in want:

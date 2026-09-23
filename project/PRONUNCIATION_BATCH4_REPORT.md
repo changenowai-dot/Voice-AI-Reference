@@ -381,3 +381,24 @@ Golden Reference, Stimmen-Bundles, `engine.py`, `dictionary.py`.
 4. Der Fugen-s-Fix (§2) ist textlich belegt und braucht keinen Host-Lauf;
    er ist mit dieser Runde übernommen. Ein Hören von `Feld-theo-RIE` vs.
    `Felds-teo-RIE` bleibt als Stichprobe möglich.
+
+---
+
+## 12. Folgerunde (Batch 5, 2026-09-23) — ABSCHLUSSRUNDE
+
+Mit echten Qwen-Hörbefunden des Nutzers (§4: „B ist bei Teilchenphysik und
+Thermodynamik besser als A", „B ist bei Software gut", „C ist insgesamt
+schlechter als B") lagen erstmals akustische Belege vor. Fünf Begriffe wurden
+daraufhin **produktiv** auf Identity übernommen:
+
+`Teilchenphysik`, `Thermodynamik`, `Software`, `Analysis`, `Elementarteilchen`
+
+Offen bleiben `Wellenlänge` (neue Variante C `WEL-len-länge` bereitgestellt),
+`Energie` (Ursache der gehörten Inkonsistenz objektiv geklärt: die Regel greift
+nur an Wortgrenzen, in Komposita nie) und die `Philosoph`-Familie
+(dokumentiertes Gegenrisiko: englisches /f aɪ/ „fie" ohne Respell).
+
+Suite 83/135 → **87/139**, Cascade-Suite 23 → **27 Tests**, Anker 26/26,
+Audit **PASS**, Golden Reference unverändert.
+
+Eigenständiger Bericht: **`PRONUNCIATION_BATCH5_REPORT.md`**

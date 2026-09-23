@@ -214,6 +214,36 @@ REGRESSION_SENTENCES = [
     "Materialismus und Idealismus deuten die Existenz unterschiedlich.",
     "Realität und Wirklichkeit sind Begriffe der Epistemologie.",
     "Die metaphysischen und ontologischen Grundfragen bleiben offen.",
+    # ------------------------------------------------------------------
+    # Batch 5 (2026-09-23): Kontrolle der neu auf Identity übernommenen
+    # Begriffe. Beleg = Nutzer-Hörbefund am echten Qwen-A/B-Lauf („B ist
+    # bei Teilchenphysik/Thermodynamik besser als A", „B ist bei Software
+    # gut") plus Nutzerbefund §6 für Analysis/Elementarteilchen. Diese
+    # Sätze prüfen, dass der neue Produktionszustand natürlich klingt.
+    # Die ersten beiden sind die vom Nutzer in §9 WÖRTLICH genannten
+    # Kontexte.
+    # ------------------------------------------------------------------
+    "Die Teilchenphysik untersucht Elementarteilchen.",
+    "Elementarteilchen bilden die Grundlage der modernen Teilchenphysik.",
+    "Die Analysis behandelt Grenzwerte, Folgen und Funktionen.",
+    "Eine analytische Lösung ist hier nicht immer möglich.",
+    "Die Thermodynamik beschreibt Wärme, Arbeit und Entropie.",
+    "Die Software läuft stabil auf der vorhandenen Hardware.",
+    # §8 Wellenlänge – weiterhin OFFEN (A und B vom Nutzer als
+    # unzureichend bewertet, Variante C wartet auf den Host-Entscheid).
+    "Die Wellenlänge des Lichts bestimmt seine Farbe.",
+    "Wellenlängen werden üblicherweise in Nanometern angegeben.",
+    "Eine längere Wellenlänge bedeutet eine geringere Frequenz.",
+    "Die Lichtwellenlänge ändert sich beim Übergang in ein anderes Medium.",
+    # §10 Energie – ausdrücklich NICHT blind geändert; die Sätze zeigen die
+    # vom Nutzer gehörte Inkonsistenz (E-NER-gie einzeln, Energie im
+    # Kompositum) und liefern die Entscheidungsgrundlage.
+    "Die Energie bleibt in einem abgeschlossenen System erhalten.",
+    "Kinetische Energie und potenzielle Energie wandeln sich ineinander um.",
+    "Lichtenergie wird von den Pflanzen aufgenommen und gespeichert.",
+    "Die Energiequelle ist erneuerbar, die Energiemenge jedoch begrenzt.",
+    "Die Energieerhaltung gilt als fundamentales Prinzip der Physik.",
+    "Dunkle Energie treibt die Expansion des Universums an.",
     # Regressions-Anker (Phase 7) - muessen unverändert gut bleiben:
     "Die Wahrscheinlichkeit eines Ergebnisses lässt sich berechnen.",
     "Die Statistik stützt die Theorie der modernen Physik.",
