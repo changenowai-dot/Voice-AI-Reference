@@ -42,6 +42,21 @@ class PronunciationDictionary:
         """Aktiviert die Fachwort-Germanisierungsebene (Phase 3 §20).
 
         Priorität bleibt: Benutzer > Fachwort-Layer > Built-ins.
+
+        BEFUND (2026-09, Kaskaden-Audit): Diese Ebene ist im Produktionspfad
+        faktisch INERT. `_effective_map._put()` liest bei Dict-Werten
+        `value.get("de")` bzw. `value.get("en")`, während hier das Format
+        `{"repl": ...}` erzeugt wird – damit wird jeder Tech-Eintrag
+        verworfen (0 von 301 tech-only Begriffen landen im effective map).
+        Die Fachwort-Germanisierung wirkt ausschließlich über
+        `apply_tech_germanization()` in PronunciationEngine.process().
+
+        Das wird hier bewusst NICHT „repariert": Ein Aktivieren würde 301
+        Begriffe zusätzlich in einem ZWEITEN Durchlauf ersetzen und damit
+        genau die Re-Durchlauf-Kaskaden öffnen, die der Kaskaden-Guard
+        in tech_terms.py ausschließt (Übergabe §5.2). Status quo = ein
+        Durchlauf, deterministisch, geprüft. Nachweis:
+        tools/pronunciation_cascade_audit.py (Check `tech_layer_inert`).
         """
         self._tech_layer = {k: {"repl": v, "match": "insensitive",
                                 "priority": 0, "alts": []}

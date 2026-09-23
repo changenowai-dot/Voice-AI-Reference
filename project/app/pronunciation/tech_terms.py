@@ -58,7 +58,6 @@ TECH_TERMS_DE: dict[str, str] = {
     "Determination": "De-ter-mi-NA-tion",
     "Determinismus": "De-ter-mi-NIS-mus",
     "Indeterminismus": "In-de-ter-mi-NIS-mus",
-    "Thermodynamik": "Thermo-dy-NA-mik",
     "Physik": "FY-sik",
     "Physiker": "FY-si-ker",
     "physikalisch": "fy-SI-sch",
@@ -140,7 +139,6 @@ TECH_TERMS_DE: dict[str, str] = {
     # A/B-Nachweis: tools/test_pacing_math_ab_tts.py (Host, GPU).
     "Mathematik": "Mathematik",
     "mathematisch": "mathematisch",
-    "Mathematische": "Mathematische",
     "mathematische": "mathematische",
     "mathematischen": "mathematischen",
     "mathematischer": "mathematischer",
@@ -174,7 +172,6 @@ TECH_TERMS_DE: dict[str, str] = {
     "Exponentialfunktion": "Eks-po-nen-zi-al-funk-tsi-ON",
     "Logarithmus": "Logarithmus",
     "Logarithmen": "Logarithmen",
-    "Logarithmisch": "Logarithmisch",
     "logarithmisch": "logarithmisch",
     "Vektor": "Vektor",
     "Vektoren": "Vektoren",
@@ -329,7 +326,11 @@ TECH_TERMS_DE: dict[str, str] = {
     "Datenbanken": "Datenbanken",
     "Datenverarbeitung": "Datenverarbeitung",
     "Rechenleistung": "RE-chen-leis-tung",
-    "Mikroprozessor": "Mi-kro-pro-TS-ess-sor",
+    # Identity (Begriffsfamilie Prozessor, Uebergabe Sec.19/Sec.24): der
+    # Cluster "pro-TS-ess-sor" ist derselbe, den der Nutzer fuer
+    # "Prozessor" als problematisch gemeldet hat und der dort bereits auf
+    # Identity steht. Family-Konsistenz, keine neue Aussprache erfunden.
+    "Mikroprozessor": "Mikroprozessor",
     "Prozessor": "Prozessor",
     "Mikrochip": "MI-kro-tschip",
     "Parallelisierung": "Pa-ral-le-li-SIE-rung",
@@ -454,6 +455,33 @@ def apply_tech_germanization(text: str, language: str = "German",
     Reihenfolge innerhalb des Textes: exakte Kuratierung zuerst, danach
     die generische …theorie-Suffixregel (nur für längere Komposita, die
     nicht bereits kuratiert sind).
+
+    KASKADEN-GUARD (Übergabe §5.2 / §21)
+    ------------------------------------
+    Künstliche Respellings erzeugen über ihre Bindestriche NEUE
+    Wortgrenzen. Läuft die Ersetzungsschleife – wie früher – über den
+    jeweils bereits umgeschriebenen Text, greifen kurze Teilwort-Regeln
+    in die Outputs längerer Regeln hinein und überschreiben sie still:
+
+        "Kernphysik"          -> "Kern-fy-SIK"          -> "KERN-fy-SIK"
+                                 (Regel Kern -> KERN)
+        "Regelungstechnik"    -> "RE-ge-lungs-technik"  -> "RE-ge-lungs-TECH-nik"
+                                 (Regel Technik -> TECH-nik)
+        "Kinematik"           -> "Ki-ne-MA-tik"         -> "K I-ne-MA-tik"
+                                 (Regel KI -> "K I")
+
+    Im letzten Fall landet ein buchstabiertes Akronym mitten im Wort –
+    der TTS-Text ist dann garantiert falsch, unabhängig von jeder
+    Akustik. Dieser Zustand ist rein textlich beweisbar und wird hier
+    strukturell ausgeschlossen: jede Ersetzung wird durch einen
+    Platzhalter maskiert, der von keinem Term-Pattern und keiner
+    Suffix-Regel matchbar ist, und erst NACH der Suffix-Stufe wieder
+    eingesetzt. Der kuratierte Wert aus TECH_TERMS_DE ist damit das
+    endgültige Ergebnis – keine Regel kann eine andere mehr umschreiben.
+
+    Aussprachen werden dadurch NICHT geändert; es entfällt ausschließlich
+    die unerwünschte Zweitüberschreibung. Nachweis und Regression:
+    tools/pronunciation_cascade_audit.py.
     """
     if not language.lower().startswith("ger"):
         return text, []
@@ -461,6 +489,16 @@ def apply_tech_germanization(text: str, language: str = "German",
     skip_lower = {s.lower() for s in (skip or set())}
     mapping = {k: v for k, v in TECH_TERMS_DE.items()
                if k.lower() not in skip_lower}
+
+    # Maskierung: \x00/\x01 sind Steuerzeichen, also weder \w noch in
+    # [A-Za-zäöüß-] enthalten. Kein Term-Pattern und keine Suffix-Regel
+    # kann einen Platzhalter matchen; Satzzeichen bleiben außerhalb der
+    # Platzhalter stehen, sodass die at_start-Erkennung unverändert
+    # funktioniert.
+    _masked: list[str] = []
+
+    def _mask_token(i: int) -> str:
+        return "\x00%05d\x01" % i
 
     def _factory(repl: str, full: str, rule_id: str = "DE_TECH_term"):
         def _r(m: re.Match) -> str:
@@ -471,10 +509,23 @@ def apply_tech_germanization(text: str, language: str = "German",
             repl_c = repl[0].upper() + repl[1:] if at_start else repl
             replacements.append({"from": out, "to": repl_c,
                                  "rule": rule_id})
-            return repl_c
+            # KASKADEN-GUARD: Ersetzung maskieren (siehe unten)
+            _masked.append(repl_c)
+            return _mask_token(len(_masked) - 1)
         return _r
 
-    for term in sorted(mapping, key=len, reverse=True):
+    # Reihenfolge: laengste Keys zuerst (Komposita vor ihren Bestandteilen).
+    # DETERMINISTISCHER TIE-BREAK fuer gleichlange Case-Varianten: Bei
+    # gleicher Laenge entscheidet sonst die Insertion-Reihenfolge im Dict,
+    # und seit dem Kaskaden-Guard gewinnt die zuerst gesetzte Regel
+    # endgueltig. Keys mit kleinem Anfangsbuchstaben werden vorgezogen -
+    # sie matchen case-insensitiv und capitalisieren am Satzanfang korrekt,
+    # waehrend ein Key mit grossem Anfangsbuchstaben mitten im Satz falsche
+    # Grossschreibung erzeugen wuerde (Befund: "die mathematische Analyse"
+    # -> "die Mathematische Analyse"). Kriterium ist t[:1].isupper() und
+    # NICHT t != t.lower(), weil Mehrwort-Keys wie "kuenstliche Intelligenz"
+    # innere Grossbuchstaben tragen und sonst beide als "GROSS" zaehlten.
+    for term in sorted(mapping, key=lambda t: (-len(t), t[:1].isupper())):
         if term in _KEEP:
             continue
         # Boundary: kein Buchstabe/Umlaut/Bindestrich direkt davor/dahinter
@@ -544,6 +595,15 @@ def apply_tech_germanization(text: str, language: str = "German",
         return repl
     # Nur wenn nicht kuratiert (TECH_TERMS deckt Psychologie etc. bereits ab)
     text = _LOGIE_SUFFIX.sub(lambda m: _logie(m) if m.group(0) not in mapping else m.group(0), text)
+
+    # KASKADEN-GUARD, Stufe 2: Platzhalter erst JETZT auflösen. Dadurch
+    # laufen auch die generischen Suffix-Regeln (…theorie/…wissenschaft/
+    # …geist/…logie) über den maskierten Text und können kuratierte
+    # Aussprachen nicht mehr nachträglich umschreiben. Unkuratierte
+    # Komposita sind nie maskiert und werden weiterhin normal erfasst.
+    if _masked:
+        text = re.sub(r"\x00(\d{5})\x01",
+                      lambda m: _masked[int(m.group(1))], text)
 
     return text, replacements
 

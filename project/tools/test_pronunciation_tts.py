@@ -123,6 +123,97 @@ REGRESSION_SENTENCES = [
     "Große Datenbanken sortieren Datensätze mit Algorithmen.",
     "Logarithmen und Exponentialfunktionen sind Umkehrfunktionen.",
     "Metaphysische und ontologische Fragen begleiten die Philosophie seit Jahrtausenden.",
+    # ------------------------------------------------------------------
+    # Batch 3 (2026-09, Kaskaden-Fix + Katalog-Luecken):
+    #
+    # 3a = die drei DETERMINISTISCH belegten Kaskaden-Opfer. Ihre
+    #      kuratierten Respellings wurden vorher von anderen Regeln still
+    #      ueberschrieben ("Kernphysik" -> "KERN-fy-SIK", "Kinematik" ->
+    #      "K I-ne-MA-tik", "Regelungstechnik" -> "RE-ge-lungs-TECH-nik").
+    #      Der Host-Lauf bestaetigt hier nur noch, dass die korrigierte
+    #      Form akustisch gut ist - der Textfehler selbst ist ohne Audio
+    #      bewiesen (tools/pronunciation_cascade_audit.py).
+    # 3b = Begriffsfamilien der User-Hoerbefunde (Uebergabe Sec.24).
+    # 3c = Katalog-Luecken (Sec.25-Sec.29), bisher ohne Satz-Coverage.
+    #      Diese Saetze sind bewusst NATUERLICH formuliert, kein
+    #      Keyword-Stuffing: nur was im echten Voiceover-Text vorkommt.
+    # ------------------------------------------------------------------
+    # 3a Kaskaden-Fixes
+    "Die Kinematik beschreibt, wie sich ein Körper bewegt.",
+    "Kinematik und Dynamik gehören zur klassischen Mechanik.",
+    "Die Regelungstechnik hält einen Prozess stabil im Sollbereich.",
+    "Der Mikroprozessor führt den Quellcode Schritt für Schritt aus.",
+    "Mikroprozessor und Mikrochip teilen sich eine Platine.",
+    # 3b Begriffsfamilien der User-Hoerbefunde
+    "Jeder Datensatz besitzt eine klar definierte Datenstruktur.",
+    "Datenstrukturen bestimmen, wie schnell die Datenverarbeitung läuft.",
+    "Mehrere Prozessoren teilen sich die Prozessorleistung.",
+    "Die Prozessorarchitektur legt den Takt der Prozessoren fest.",
+    "Philosophen und Philosophinnen lesen philosophische Texte.",
+    "Die Matrixrechnung ordnet Zahlen in einer Matrix an.",
+    "Erkenntnistheoretisch bleibt der Erkenntnisgewinn schwer messbar.",
+    "Logarithmisch skalierte Achsen zeigen logarithmische Verläufe; in "
+    "logarithmischen Diagrammen wird daraus eine Gerade.",
+    "Jeder Vektorraum besitzt eine Basis; Vektorräume lassen sich so "
+    "vergleichen.",
+    "Eine Differentialgleichung beschreibt, wie sich ein Zustand ändert.",
+    "Bewegungsgleichung und Wellengleichung sind Grundformen der Physik.",
+    "Quellcodes und Quelltexte werden versioniert abgelegt.",
+    # 3c Katalog-Luecken: Anker-Ergänzung
+    "Mit mathematischem Aufwand lässt sich die Aussage prüfen.",
+    "Die Quantenmechanik ergänzt die Quantenphysik.",
+    "Psychologisch wirkt Musik unmittelbar auf das Verhalten.",
+    # 3c Physik
+    "Die Frequenz einer Welle bestimmt ihre Energie.",
+    "Magnetismus und Elektromagnetismus wirken auf geladene Teilchen.",
+    "Ein elektromagnetisch erzeugtes Feld breitet sich im Raum aus.",
+    "Elektrizität entsteht durch bewegte Ladung.",
+    "Beschleunigung und Gravitation bestimmen die Bahn eines Körpers.",
+    "Die Relativitätstheorie beschreibt Raum, Zeit und Relativität.",
+    "Impuls und Antimaterie sind zentrale Größen der Forschung.",
+    "Radioaktivität entsteht beim Zerfall schwerer Atomkerne.",
+    "Die Wellenfunktion gehört zum Quantenfeld und zur Quantenfeldtheorie.",
+    # 3c Chemie
+    "Die Chemie untersucht Reaktionen und die Katalyse.",
+    "Eine Säure reagiert mit einer Base und bildet eine Lösung.",
+    "Konzentration und Löslichkeit bestimmen die Basen im Wasser.",
+    "Polymere bestehen aus langen Ketten, ein Polymer aus Wiederholungen.",
+    "Kohlenstoff, Stickstoff und Schwefel sind Bausteine des Lebens.",
+    "Phosphor, Natrium und Kalium sind wichtige Elemente.",
+    "Calcium und Kupfer finden sich in vielen Legierungen.",
+    "Die Elektronenhülle umgibt den Atomkern.",
+    # 3c Biologie
+    "Zellkern und Zellmembran steuern die Zellteilung.",
+    "DNA und RNA tragen die Information der Genetik.",
+    "Eine Mutation kann die Evolution verändern, viele Mutationen wirken "
+    "zusammen.",
+    "Jeder Organismus besteht aus Zellen, Organismen bilden Ökosysteme.",
+    "Ein Bakterium ist deutlich größer als ein Virus.",
+    "Mikrobiologie und Molekularbiologie erforschen den Metabolismus.",
+    "Eine Nervenzelle leitet Signale über lange Strecken weiter.",
+    # 3c Astronomie
+    "Die Astronomie misst astronomisch große Entfernungen.",
+    "Die Kosmologie denkt kosmologisch über das Universum nach.",
+    "Schwarze Löcher entstehen, wenn schwere Sterne kollabieren.",
+    "Expansion, Dunkle Materie und Dunkle Energie prägen das Universum.",
+    # 3c Mathematik
+    "Eine Variable steht in Gleichungen für viele Variablen.",
+    "Die Dimension eines Raums beschreibt seine Dimensionen.",
+    "Exponentiell wachsende Daten erhöhen Varianz und Regression.",
+    "Ein numerisch gelöstes Integral braucht Rechenzeit.",
+    # 3c Informatik
+    "Software und Hardware brauchen einen gemeinsamen Parameter.",
+    "Kryptographie und Kryptografie schützen jede Datenstruktur.",
+    "Neuronale Netzwerke verbinden sehr viele Parameter.",
+    # 3c Neuro / Psychologie
+    "Neurotransmitter wie Adrenalin und Cortisol steuern den Körper.",
+    "Kognition wirkt kognitiv auf Aufmerksamkeit und Motivation.",
+    "Persönlichkeit und Motivation prägen das Verhalten.",
+    "Emotion und Emotionen entstehen auch im Unterbewusstsein.",
+    # 3c Philosophie
+    "Materialismus und Idealismus deuten die Existenz unterschiedlich.",
+    "Realität und Wirklichkeit sind Begriffe der Epistemologie.",
+    "Die metaphysischen und ontologischen Grundfragen bleiben offen.",
     # Regressions-Anker (Phase 7) - muessen unverändert gut bleiben:
     "Die Wahrscheinlichkeit eines Ergebnisses lässt sich berechnen.",
     "Die Statistik stützt die Theorie der modernen Physik.",
