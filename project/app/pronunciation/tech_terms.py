@@ -30,6 +30,11 @@ TECH_TERMS_DE: dict[str, str] = {
     "Kybalion": "Kü-BA-li-on",
     "Kybalions": "Kü-BA-li-ons",
     "Theorie": "Theorie",
+    # Identity (User-Hoerbefund 2026-09, Host): Erkenntnistheorie lief
+    # vorher ueber die generische …theorie-Suffixregel als
+    # "Erkenntnis-teo-RIE". Expliziter Eintrag gewinnt gegen die
+    # Suffixregel (kuratiert zuerst) und ist Kaskaden-frei.
+    "Erkenntnistheorie": "Erkenntnistheorie",
     "Theorien": "teo-RI-en",
     "theoretisch": "teo-RI-sch",
     "Theoretiker": "teo-RI-ti-ker",
@@ -57,9 +62,9 @@ TECH_TERMS_DE: dict[str, str] = {
     "Physik": "FY-sik",
     "Physiker": "FY-si-ker",
     "physikalisch": "fy-SI-sch",
-    "Metaphysik": "Me-ta-FY-sik",
+    "Metaphysik": "Metaphysik",
     "Epistemologie": "E-pis-te-mo-LO-gie",
-    "Ontologie": "On-to-LO-gie",
+    "Ontologie": "Ontologie",
     "Phänomen": "Fä-NO-men",
     "Phänomene": "Fä-NO-me-ne",
     "Phänomenologie": "Fä-no-me-no-LO-gie",
@@ -150,8 +155,8 @@ TECH_TERMS_DE: dict[str, str] = {
     "statistisch": "sta-TIS-tisch",
     "Wahrscheinlichkeit": "Wahrscheinlichkeit",
     "Wahrscheinlichkeitstheorie": "WAHR-schein-lich-keits-teo-RIE",
-    "Gleichung": "GLEI-chung",
-    "Gleichungen": "GLEi-chun-gen",
+    "Gleichung": "Gleichung",
+    "Gleichungen": "Gleichungen",
     "Funktion": "Funk-zi-ON",
     "Funktionen": "Funk-tzi-O-nen",
     "Integral": "In-te-GRAL",
@@ -167,15 +172,15 @@ TECH_TERMS_DE: dict[str, str] = {
     "Koeffizient": "Ko-ef-fi-tsi-ENT",
     "Koeffizienten": "Ko-ef-fi-tsi-EN-ten",
     "Exponentialfunktion": "Eks-po-nen-zi-al-funk-tsi-ON",
-    "Logarithmus": "Lo-ga-RITH-mus",
-    "Logarithmen": "Lo-ga-RITH-men",
-    "Logarithmisch": "Lo-ga-RITH-misch",
-    "logarithmisch": "lo-ga-RITH-misch",
-    "Vektor": "VEK-tor",
-    "Vektoren": "VEK-to-ren",
-    "Matrix": "MA-trix",
-    "Matrizen": "Ma-TRI-tsen",
-    "Vektorraum": "VEK-tor-raum",
+    "Logarithmus": "Logarithmus",
+    "Logarithmen": "Logarithmen",
+    "Logarithmisch": "Logarithmisch",
+    "logarithmisch": "logarithmisch",
+    "Vektor": "Vektor",
+    "Vektoren": "Vektoren",
+    "Matrix": "Matrix",
+    "Matrizen": "Matrizen",
+    "Vektorraum": "Vektorraum",
     "Topologie": "To-po-lo-GIE",
     "topologisch": "to-po-LO-gisch",
     "Mengenlehre": "MEN-gen-leh-re",
@@ -317,15 +322,15 @@ TECH_TERMS_DE: dict[str, str] = {
     "Middleware": "MID-del-wär",
     "Betriebssystem": "Be-TRIEBS-sys-tem",
     "Programmiersprache": "Pro-gram-MIER-spra-che",
-    "Quellcode": "KWELL-kod",
+    "Quellcode": "Quellcode",
     "Algorithmus": "Algorithmus",
     "Algorithmen": "Algorithmen",
-    "Datenbank": "DA-ten-bank",
-    "Datenbanken": "DA-ten-ban-ken",
-    "Datenverarbeitung": "DA-ten-ver-ar-bei-tung",
+    "Datenbank": "Datenbank",
+    "Datenbanken": "Datenbanken",
+    "Datenverarbeitung": "Datenverarbeitung",
     "Rechenleistung": "RE-chen-leis-tung",
     "Mikroprozessor": "Mi-kro-pro-TS-ess-sor",
-    "Prozessor": "Pro-TS-ess-sor",
+    "Prozessor": "Prozessor",
     "Mikrochip": "MI-kro-tschip",
     "Parallelisierung": "Pa-ral-le-li-SIE-rung",
     "Vektorisierung": "Vek-to-ri-SIE-rung",
@@ -339,9 +344,9 @@ TECH_TERMS_DE: dict[str, str] = {
     # Zusätzliche Tech-/Informatik-Begriffe (Systematik-Erweiterung) -----
     "Server": "SER-wer",
     "Client": "KLEI-ent",
-    "Daten": "DA-ten",
-    "Datensatz": "DA-ten-satz",
-    "Datensätze": "DA-ten-sät-ze",
+    "Daten": "Daten",
+    "Datensatz": "Datensatz",
+    "Datensätze": "Datensätze",
     "Algorithmisierung": "Al-go-rith-mi-SIE-rung",
     "Kompilierung": "Kom-pi-LIE-rung",
     "Kompilieren": "Kom-pi-LIE-ren",
@@ -353,8 +358,8 @@ TECH_TERMS_DE: dict[str, str] = {
     "Open-Source": "O-pen-Sors",
     "Kern": "KERN",
     "Kernel": "KER-nel",
-    "Datenbank": "DA-ten-bank",
-    "Datenbanken": "DA-ten-ban-ken",
+    "Datenbank": "Datenbank",
+    "Datenbanken": "Datenbanken",
     "Netzwerk": "NETZ-werk",
     "Netzwerke": "NETZ-wer-ke",
     # --- Technik / Ingenieur ----------------------------------------------
@@ -497,7 +502,14 @@ def apply_tech_germanization(text: str, language: str = "German",
         replacements.append({"from": m.group(0), "to": repl,
                              "rule": "DE_TECH_suffix_theorie"})
         return repl
-    text = _THEORIE_SUFFIX.sub(_comp, text)
+    # KASKADEN-GUARD (Muster der …wissenschaft-Regel): kuratierte Eintraege
+    # (inkl. Identity-Mappings wie "Erkenntnistheorie") duerfen von der
+    # Suffixregel NICHT nachtraeglich ueberschrieben werden – Identity
+    # laesst den Originaltext intakt, ohne Guard griffe die Suffixregel
+    # erneut (Befund 2026-09: "Erkenntnistheorie" -> "Erkenntnis-teo-RIE").
+    text = _THEORIE_SUFFIX.sub(
+        lambda m: _comp(m) if m.group(0) not in mapping else m.group(0),
+        text)
 
     # generische Komposita auf „…wissenschaft“ (lang, z. B. Kognitionswissenschaft)
     # Beispiel: „Kognitionswissenschaft“ → „Kognitions-wis-sen-schaft“ – nur wenn nicht kuratiert

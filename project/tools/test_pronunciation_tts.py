@@ -105,6 +105,24 @@ REGRESSION_SENTENCES = [
     "Erkenntnistheorie untersucht, was Wissen überhaupt ist.",
     "Determinismus und Freiheit sind ein klassischer Konflikt der Ethik.",
     "Rationalismus und Empirismus streiten über die Quelle der Erkenntnis.",
+    # Batch 2 (User-Hoerbefunde 2026-09 #2): Daten/Prozessor/Matrix/
+    # Erkenntnistheorie/Logarithmus/Vektor/Gleichung/Quellcode/Metaphysik/
+    # Ontologie -> Identity; Philosoph bewusst UNVERAENDERT (Hörbefund
+    # unsicher -> dieser Satz verifiziert die aktuelle Regel am Host).
+    "Die Daten werden vom Prozessor verarbeitet.",
+    "Eine Matrix kann viele Zahlen gleichzeitig darstellen.",
+    "Ein Vektor besitzt Richtung und Betrag.",
+    "Eine Gleichung beschreibt einen Zusammenhang zwischen Größen.",
+    "Der Quellcode eines Programms wird vom Prozessor ausgeführt.",
+    "Die Erkenntnistheorie untersucht die Bedingungen von Wissen.",
+    "Der Logarithmus ist die Umkehrung einer Exponentialfunktion.",
+    "Die Metaphysik beschäftigt sich mit grundlegenden Fragen der Wirklichkeit.",
+    "Die Ontologie untersucht, was überhaupt existiert.",
+    "Der Philosoph stellt grundlegende Fragen nach Erkenntnis und Wirklichkeit.",
+    "Matrizen und Vektoren bilden die Grundlage der linearen Algebra.",
+    "Große Datenbanken sortieren Datensätze mit Algorithmen.",
+    "Logarithmen und Exponentialfunktionen sind Umkehrfunktionen.",
+    "Metaphysische und ontologische Fragen begleiten die Philosophie seit Jahrtausenden.",
     # Regressions-Anker (Phase 7) - muessen unverändert gut bleiben:
     "Die Wahrscheinlichkeit eines Ergebnisses lässt sich berechnen.",
     "Die Statistik stützt die Theorie der modernen Physik.",

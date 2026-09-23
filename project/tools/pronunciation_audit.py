@@ -123,6 +123,7 @@ CORPUS: dict[str, list[str]] = {
         "Spannung", "Widerstand", "Magnetfeld", "Relativität",
         "Relativitätstheorie", "Raumzeit", "Antimaterie",
         "Elementarteilchen", "Gravitation", "Materie",
+        "Elektromagnetismus", "Elektrizität", "Kernfusion", "Kernspaltung", "Wellen", "Wellenfunktion", "Quantenfeld", "Temperatur", "Frequenzen", "Energien", "Ladung", "Teilchen",
     ],
     "J_Chemie": [
         "Element", "Elemente", "Sauerstoff", "Wasserstoff", "Stickstoff",
@@ -130,6 +131,7 @@ CORPUS: dict[str, list[str]] = {
         "Calcium", "Katalysator", "Katalyse", "Oxidation", "Reduktion",
         "Polymer", "Konzentration", "Reaktion", "Reaktionen",
         "chemische Bindung", "Löslichkeit",
+        "Säure", "Base", "Basen", "Polymere", "Eisen", "Kupfer", "pH-Wert",
     ],
     "K_Biologie_Genetik": [
         "Zellkern", "Zellmembran", "Zellteilung", "Gen", "Gene", "Genom",
@@ -157,6 +159,7 @@ CORPUS: dict[str, list[str]] = {
         "exponentiell", "Korrelation", "Regression",
         "Standardabweichung", "Mittelwert", "Varianz", "Koeffizient",
         "Logarithmus", "Exponentialfunktion",
+        "Ableitungen", "Dimensionen",
     ],
     "N_Neurowissenschaft_Psychologie": [
         "Nervensystem", "Neuron", "Neuronen", "neuronales Netzwerk",
@@ -185,12 +188,14 @@ CORPUS: dict[str, list[str]] = {
         "Kryptographie", "binär", "Byte", "Bytes", "Quellcode",
         "Informationsverarbeitung", "Parameter", "Simulation",
         "Mikrochip", "Halbleiter", "Transistor", "Algorithmik",
+        "Prozessoren", "Quelltext", "Quelltexte", "Quellcodes", "Datenstrukturen", "Datenspeicher", "neuronale Netzwerke",
     ],
     "R_Philosophie_Geisteswissenschaften": [
         "Metaphysik", "Ontologie", "Epistemologie", "Erkenntnistheorie",
         "Existenz", "Realität", "Wirklichkeit", "Determinismus",
         "Kausalität", "Ethik", "Moral", "Rationalismus", "Empirismus",
         "Materialismus", "Idealismus", "Nihilismus", "Stoizismus",
+        "metaphysisch", "ontologisch", "erkenntnistheoretisch", "Vektorräume",
     ],
     "S_Flexionen_Komposita": [
         "Atomen", "atomar", "atomare", "atomaren", "Protonenstrahlung",

@@ -57,6 +57,27 @@ CHECKS = [
      "Bewusstsein ist ein Prozess", "be-WUSST-sein"),
     ("Die Neurowissenschaft und die Psychologie arbeiten zusammen.",
      "Neurowissenschaft und die Psychologie", None),
+    # --- Batch 2 (User-Hoerbefunde 2026-09 #2, Identity) ---
+    ("Die Daten werden vom Prozessor verarbeitet.",
+     "Die Daten werden vom Prozessor verarbeitet", "DA-ten"),
+    ("Eine Matrix ordnet Zahlen, ein Vektor hat Richtung.",
+     "Eine Matrix ordnet Zahlen, ein Vektor hat Richtung",
+     "MA-trix VEK-tor"),
+    ("Jede Gleichung nutzt den Logarithmus.",
+     "Jede Gleichung nutzt den Logarithmus",
+     "GLEI-chung Lo-ga-RITH-mus"),
+    ("Der Quellcode liegt in der Datenbank.",
+     "Der Quellcode liegt in der Datenbank",
+     "KWELL-kod DA-ten-bank"),
+    ("Metaphysik und Ontologie sind Philosophie.",
+     "Metaphysik und Ontologie sind", "Me-ta-FY-sik On-to-LO-gie"),
+    ("Die Erkenntnistheorie untersucht Wissen.",
+     "Die Erkenntnistheorie untersucht Wissen",
+     "teo-RIE"),
+    # Philosoph: bewusst UNVERAENDERT (unsicherer Hörbefund, Host-A/B
+    # steht aus) - Respell FI-lo-sof bleibt Erwartung.
+    ("Der Philosoph fragt nach Erkenntnis.",
+     "FI-lo-sof", None),
 ]
 
 
