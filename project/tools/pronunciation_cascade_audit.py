@@ -301,6 +301,90 @@ def find_duplicate_keys() -> list[DuplicateKeyFinding]:
     return findings
 
 
+# ---------------------------------------------------------------------------
+# Textbefunde fuer die Priorisierung des Qwen-Hostlaufs
+# ---------------------------------------------------------------------------
+# WICHTIG: Dieser Abschnitt faellt KEIN akustisches Urteil und aendert NICHTS.
+# Per Uebergabe Sec.33 ist "laut Theorie muesste das anders sein" ausdruecklich
+# kein Beleg fuer eine Produktionsaenderung. Gelistet werden nur textlich
+# ueberpruefbare Widersprueche, die dafuer sprechen, einen Kandidaten im
+# A/B-Lauf (tools/test_pronunciation_ab.py) FRUEH zu hoeren.
+#
+# Bewusst KEINE Heuristiken. Drei Ansaetze wurden gebaut und wieder
+# verworfen, weil sie irrefuehrende Treffer liefern:
+#   - "unerklarliche Buchstabenfragmente": 42 Treffer, davon die meisten
+#     legitime Laut-Substitutionen und Dehnungs-h (Hardware -> HARD-wär,
+#     Kernphysik -> Kern-fy-SIK, Molekül -> Mo-le-KÜHL).
+#   - "divergierende Betonungsposition in der Familie": 16 Treffer, dabei ist
+#     ein Betonungswechsel innerhalb einer Familie normal und korrekt
+#     (Algebra -> AL-ge-bra gegen algebraisch -> al-ge-BRA-isch).
+#   - "Kommentar dokumentiert nicht implementierte Form": 67 Treffer, fast nur
+#     deutsche Komposita in Fliesstext (Kaskaden-Guard, TTS-intern); zudem
+#     zitieren die Kommentare absichtlich HISTORISCHE, bereits entfernte Formen
+#     (A-TOM-kern, be-WUSST-sein, Pro-TO-nen) als Begruendung.
+# Eine Liste, die legitime Kuratierung als Defekt ausweist, waere
+# irrefuehrender als gar keine. Deshalb: nur manuell verifizierte Einzelfaelle.
+
+# Manuell verifizierte Textbefunde (Quelle + Widerspruch benannt).
+DOCUMENTED_TEXT_FINDINGS: list[dict] = [
+    {
+        "term": "Philosoph",
+        "rule": "FI-lo-sof",
+        "class": "comment_value_contradiction",
+        "detail": ("tech_terms.py dokumentiert die Absicht selbst als "
+                   "\"Phi-lo-SOF\" (Betonung auf der letzten Silbe); der "
+                   "Wert markiert die Betonung aber auf der ERSTEN Silbe. "
+                   "Zusaetzlich inkonsistent zum Geschwister "
+                   "\"Philosophen\" -> \"fi-lo-ZO-fen\" (3. Silbe)."),
+        "alternative_c": "fi-lo-ZOF",
+    },
+    {
+        "term": "Philosophinnen",
+        "rule": "fi-lo-zo-FIN-nen",
+        "class": "family_inconsistency",
+        "detail": ("Plural betont die 4. Silbe (FIN), Singular "
+                   "\"Philosophin\" -> \"fi-lo-ZO-fin\" betont die 3. (ZO). "
+                   "Die Endung -nen verschiebt im Deutschen die Betonung "
+                   "nicht; die beiden Regeln widersprechen sich."),
+        "alternative_c": "fi-lo-ZO-fin-nen",
+    },
+    {
+        "term": "Software",
+        "rule": "SORFT-wär",
+        "class": "malformed_respell",
+        "detail": ("Das R in \"SORFT\" kommt im Quellwort nicht vor und ist "
+                   "durch keine der kuratierten Laut-Substitutionen erklaert. "
+                   "Die Geschwister \"Hardware\" -> \"HARD-wär\", "
+                   "\"Firmware\" -> \"FIRM-wär\" und \"Middleware\" -> "
+                   "\"MID-del-wär\" behalten den Konsonantencluster korrekt bei."),
+        "alternative_c": "SOFT-wär",
+    },
+]
+
+
+def no_stress_marker() -> list[dict]:
+    """Respells ohne jede GROSS-Silbe: das System codiert Betonung ueber
+    Grossbuchstaben, diese Eintraege tragen also keine Betonungsangabe.
+    Reine Bestandsaufnahme, kein Defekt-Vorwurf."""
+    out = []
+    for term, value in sorted(TECH_TERMS_DE.items()):
+        if value == term:
+            continue
+        parts = [p for p in re.split(r"[-\s]", value) if p]
+        if not parts:
+            continue
+        has = any(all(c.isupper() for c in p if c.isalpha())
+                  and any(c.isalpha() for c in p) for p in parts)
+        if not has:
+            out.append({"term": term, "rule": value})
+    return out
+
+
+def objective_worklist() -> dict:
+    return {"documented_findings": DOCUMENTED_TEXT_FINDINGS,
+            "no_stress_marker": no_stress_marker()}
+
+
 def tech_layer_inert() -> dict:
     """Prueft, ob die Tech-Map im Dictionary-Durchlauf ueberhaupt wirkt.
 
@@ -511,6 +595,7 @@ def main() -> int:
     # "normalized-before-tech" sind erklaerte, ungefaehrliche Zustaende.
     real_cascades = [f for f in cascades if f.kind == "cascade"]
     drifts = [f for f in cascades if f.kind == "context-drift"]
+    worklist = objective_worklist()
     inert = tech_layer_inert()
     latent = latent_cascade_pairs()
     # Latente Paare werden erst zu harten Befunden, wenn der zweite
@@ -526,6 +611,7 @@ def main() -> int:
         "real_cascades": [asdict(f) for f in real_cascades],
         "latent_cascade_pairs": latent,
         "tech_layer_in_dictionary_pass": inert,
+        "objective_worklist": worklist,
         "duplicate_keys": [asdict(d) for d in dups],
         "conflicting_duplicate_keys": [asdict(d) for d in conflicts],
         "pass2_drift": drift,
@@ -588,6 +674,25 @@ def main() -> int:
         for b in en_bad:
             lines.append(f"- {b['sentence']!r} -> {b['final']!r} "
                          f"{b['de_tech_rules']}")
+        lines.append("")
+    wl = worklist
+    lines += ["## Textbefunde fuer die Host-Priorisierung", "",
+              "KEIN akustisches Urteil, keine Produktionsaenderung "
+              "(Sec.33: Theorie ist kein Beleg).", "",
+              f"- manuell verifizierte Befunde: "
+              f"**{len(wl['documented_findings'])}**",
+              f"- Respell ohne Betonungsmarkierung (Bestandsaufnahme): "
+              f"**{len(wl['no_stress_marker'])}**", ""]
+    if wl["documented_findings"]:
+        lines += ["### Manuell verifizierte Befunde", "",
+                  "| Begriff | aktuelle Regel | Klasse | Variante C |",
+                  "|---|---|---|---|"]
+        for d in wl["documented_findings"]:
+            lines.append(f"| {d['term']} | `{d['rule']}` | "
+                         f"{d['class']} | `{d['alternative_c']}` |")
+        lines.append("")
+        for d in wl["documented_findings"]:
+            lines.append(f"- **{d['term']}**: {d['detail']}")
         lines.append("")
     lines += ["## Coverage", "",
               f"- Begriffe im Katalog: {cov['totals']['terms']}",

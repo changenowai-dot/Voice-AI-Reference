@@ -28,10 +28,16 @@ def test_tech_terms_user_reported():
     out = eng.process("Die Quantentheorie und jede Theorie bleiben. Das "
                       "Kybalion auch.", "German").text
     assert "Quan-ten-teo-RIE" in out            # Nutzer-Nennung §20
-    assert "teo-RIE" in out
     assert "Kü-BA-li-on" in out
-    assert "Quantentheorie" not in out and "Theorie" not in out.replace(
-        "teo-RIE", "")
+    assert "Quantentheorie" not in out
+    # KORREKTUR 2026-09: Diese Assertion verlangte, dass auch das
+    # freistehende „Theorie" zu „teo-RIE" wird. Das widerspricht dem
+    # geschützten Anker aus §7/§34 – „Theorie" ist host-verifiziert gut und
+    # steht als Identity in TECH_TERMS_DE ("Theorie": "Theorie"). Der Test
+    # stammt aus der Zeit vor dieser Entscheidung und war seitdem rot
+    # (auch auf dem Ursprungs-Commit). Kontrakt heute: das Kompositum wird
+    # umgeschrieben, die Grundform bleibt Identity.
+    assert "jede Theorie" in out
 
 
 def test_tech_terms_do_not_touch_english_words():
@@ -49,17 +55,142 @@ def test_tech_suffix_rule_for_compounds():
     out, repls = apply_tech_germanization(
         "Die Feldtheorie und die Eichtheorie folgen.", "German")
     assert "teo-RIE" in out
-    assert any(r["rule"] == "tech_suffix" for r in repls)
+    # KORREKTUR 2026-09: Die Regel-IDs laufen seit der Namespace-Einfuehrung
+    # als "DE_TECH_*" (siehe tech_terms.py). Der Test erwartete noch den
+    # alten Kurznamen "tech_suffix" und war deshalb rot – auch auf dem
+    # Ursprungs-Commit. Er prueft jetzt den tatsaechlich emittierten Namen.
+    assert any(r["rule"] == "DE_TECH_suffix_theorie" for r in repls)
+
+
+def test_theorie_suffix_never_invents_fugen_s():
+    """Regression: Die generische …theorie-Regel darf kein Fugen-s erfinden.
+
+    Der Regex-Capture enthält ein echtes Fugen-s bereits
+    („Informationstheorie" -> „Informations"). Bis 2026-09 wurde trotzdem ein
+    zusätzliches „s" angehängt, wenn der Stamm nicht auf n/s/v/t/r endete.
+    Ergebnis waren Formen, deren Laut im Quellwort nicht vorkommt:
+
+        Feldtheorie      -> „Felds-teo-RIE"      (Quelle: „Feld")
+        Musiktheorie     -> „Musiks-teo-RIE"     (Quelle: „Musik")
+        Sprachtheorie    -> „Sprachs-teo-RIE"    (Quelle: „Sprach")
+        Netzwerktheorie  -> „Netzwerks-teo-RIE"  (Quelle: „Netzwerk")
+
+    Rein textlich beweisbar (Buchstaben-Inventar), keine Akustik nötig.
+    """
+    from app.pronunciation.tech_terms import apply_tech_germanization
+
+    # Stämme OHNE Fugen-s im Quellwort -> dürfen keines bekommen.
+    NO_S = {
+        "Feldtheorie": "Feld-teo-RIE",
+        "Musiktheorie": "Musik-teo-RIE",
+        "Farbtheorie": "Farb-teo-RIE",
+        "Bildtheorie": "Bild-teo-RIE",
+        "Netzwerktheorie": "Netzwerk-teo-RIE",
+        "Zelltheorie": "Zell-teo-RIE",
+        "Klimatheorie": "Klima-teo-RIE",
+        "Sprachtheorie": "Sprach-teo-RIE",
+        "Atomtheorie": "Atom-teo-RIE",
+        "Wärmetheorie": "Wärme-teo-RIE",
+    }
+    for word, expected in NO_S.items():
+        out, repls = apply_tech_germanization(word, "German")
+        assert out == expected, f"{word}: {out!r} != {expected!r}"
+        assert repls and repls[0]["rule"] == "DE_TECH_suffix_theorie"
+        # Buchstaben-Inventar: Output darf keinen Laut erfinden
+        src = word.lower().replace("theorie", "")
+        got = out.replace("-teo-RIE", "").lower()
+        assert got == src, f"{word}: Stamm {got!r} weicht von {src!r} ab"
+
+    # Stämme MIT echtem Fugen-s -> das s muss erhalten bleiben.
+    REAL_S = {
+        "Verschwörungstheorie": "Verschwörungs-teo-RIE",
+        "Kognitionstheorie": "Kognitions-teo-RIE",
+        "Bindungstheorie": "Bindungs-teo-RIE",
+        "Steuerungstheorie": "Steuerungs-teo-RIE",
+        "Regelungstheorie": "Regelungs-teo-RIE",
+        "Kategorientheorie": "Kategorien-teo-RIE",
+        "Graphentheorie": "Graphen-teo-RIE",
+    }
+    for word, expected in REAL_S.items():
+        out, _ = apply_tech_germanization(word, "German")
+        assert out == expected, f"{word}: {out!r} != {expected!r}"
+
+    # Kuratierte Einträge gewinnen weiterhin über den Kaskaden-Guard.
+    from app.pronunciation.tech_terms import TECH_TERMS_DE
+    for word in ("Quantentheorie", "Informationstheorie", "Spieltheorie",
+                 "Chaostheorie", "Stringtheorie", "Systemtheorie",
+                 "Evolutionstheorie", "Zahlentheorie", "Relativitätstheorie",
+                 "Wahrscheinlichkeitstheorie"):
+        assert word in TECH_TERMS_DE, f"{word} sollte kuratiert sein"
+        out, repls = apply_tech_germanization(word, "German")
+        assert repls[0]["rule"] == f"DE_TECH_{word}", (
+            f"{word}: kuratierte Regel wurde von der Suffixregel verdraengt "
+            f"({repls[0]['rule']})")
+        assert out == TECH_TERMS_DE[word]
 
 
 def test_tech_priority_user_over_tech():
+    """Benutzer-Wörterbuch gewinnt über die Fachwort-Ebene (§8/§14).
+
+    TEST-HYGIENE-FIX 2026-09: Dieser Test rief `clear_all()` und `add_entry()`
+    auf dem ECHTEN Benutzer-Wörterbuch (pronunciation/pronunciation.json) auf
+    und räumte danach nicht auf. Jeder Suite-Lauf löschte damit die echten
+    Benutzereinträge und hinterließ dauerhaft `{"Entropie": "en-tro-PIE-eh"}`.
+    Folge war eine REALE Produktions-Kaskade: der kuratierte Wert
+    `Entropie -> En-tro-PIE` wurde vom Benutzer-Layer zu `En-tro-PIE-eh`
+    überschrieben (nachweisbar über tools/pronunciation_cascade_audit.py,
+    Check `cascades`, Ergebnis dann FINDINGS statt PASS).
+
+    Der Test läuft jetzt gegen eine Temp-Datei und stellt den Originalpfad
+    wieder her; das Benutzer-Wörterbuch bleibt unberührt.
+    """
+    import os
+    import tempfile
+
+    from app import paths
     from app.pronunciation import PronunciationDictionary, PronunciationEngine
-    d = PronunciationDictionary()
-    d.clear_all()
-    d.add_entry("Entropie", "en-tro-PIE-eh")
-    eng = PronunciationEngine(d)
-    out = eng.process("Die Entropie wächst.", "German").text
-    assert "en-tro-PIE-eh" in out               # Benutzer gewinnt (§8/§14)
+
+    real_path = paths.PRONUNCIATION_FILE
+    original = real_path.read_text(encoding="utf-8") if os.path.exists(
+        real_path) else None
+    fd, tmp = tempfile.mkstemp(prefix="pron_dict_test_", suffix=".json")
+    os.close(fd)
+    try:
+        paths.PRONUNCIATION_FILE = type(real_path)(tmp)
+        d = PronunciationDictionary()
+        d.clear_all()
+        d.add_entry("Entropie", "en-tro-PIE-eh")
+        eng = PronunciationEngine(d)
+        out = eng.process("Die Entropie wächst.", "German").text
+        assert "en-tro-PIE-eh" in out               # Benutzer gewinnt (§8/§14)
+    finally:
+        paths.PRONUNCIATION_FILE = real_path
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        if original is not None:
+            real_path.write_text(original, encoding="utf-8")
+
+
+def test_suite_does_not_pollute_user_dictionary():
+    """Guard: Kein Test darf Test-Fixtures im echten Benutzer-Wörterbuch lassen.
+
+    Regression auf den Befund 2026-09: `test_tech_priority_user_over_tech`
+    schrieb `{"Entropie": "en-tro-PIE-eh"}` dauerhaft nach
+    pronunciation/pronunciation.json und überschrieb damit die kuratierte
+    Regel `Entropie -> En-tro-PIE` (echte Kaskade, Audit-Status FINDINGS).
+    """
+    from app import paths
+
+    data = {}
+    if paths.PRONUNCIATION_FILE.exists():
+        import json
+        data = json.loads(
+            paths.PRONUNCIATION_FILE.read_text(encoding="utf-8") or "{}")
+    assert isinstance(data, dict)
+    leaked = {k: v for k, v in data.items() if v == "en-tro-PIE-eh"}
+    assert not leaked, (
+        f"Test-Fixture im Benutzer-Woerterbuch gefunden: {leaked}. "
+        f"Ein Test schreibt ohne Aufraeumen nach {paths.PRONUNCIATION_FILE}.")
 
 
 def test_tech_uncovered_terms_reported_not_guessed():

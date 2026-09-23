@@ -422,3 +422,30 @@ Zwischenstufe wieder byte-identisch zum Original).
 4. `_effective_map._put()` / `set_tech_layer()` Format-Mismatch: **nur**
    anfassen, wenn der zweite Durchlauf gewollt ist — dann zwingend zusammen mit
    einem Kaskaden-Guard auch in `apply_to_text`. Der Wächter-Test schlägt sonst an.
+
+---
+
+## 11. Folgerunde (Batch 4, 2026-09-23)
+
+Nach dem echten Qwen-Hostlauf des Nutzers wurde die Prioritätenliste objektiv
+nachgemessen und ein echter Produktionsbug behoben. Eigenständiger Bericht:
+**`PRONUNCIATION_BATCH4_REPORT.md`**.
+
+Kurzfassung:
+
+- Von 37 geprüften Formen der Nutzer-Prioritätenliste sind **nur 6 aktiv
+  umgeschrieben — alle 6 in der Philosoph-Familie**. Für Daten, Prozessor,
+  Matrix, Erkenntnis, Logarithmus, Vektor, Gleichung, Quellcode, Metaphysik und
+  Ontologie war keine Änderung nötig; sie liefern bereits natürliche
+  Orthographie.
+- **Behoben:** die generische `…theorie`-Suffixregel erfand ein Fugen-s
+  (`Feldtheorie → Felds-teo-RIE`). 10 Komposita betroffen, 0/624 kuratierte
+  Messpunkte verändert.
+- **Behoben:** `test_tech_priority_user_over_tech` löschte bei jedem Suite-Lauf
+  das echte Benutzer-Wörterbuch und hinterließ `{"Entropie": "en-tro-PIE-eh"}` —
+  eine reale Kaskade gegen die kuratierte Regel `Entropie → En-tro-PIE`
+  (Audit-Status FINDINGS). Test läuft jetzt gegen eine Temp-Datei.
+- **Neu:** `tools/test_pronunciation_ab.py`, familienweiser A/B/C-Blindvergleich
+  (61 Begriffe → 14 Familien → 58 Clips; Voll-Sweep 262 → 213 → 818 Clips).
+- Suite: 79/133 → **83/135**, pronunciation-bezogene Fehler **0**. Anker 26/26,
+  Audit **PASS**, Golden Reference unverändert.

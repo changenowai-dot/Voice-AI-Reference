@@ -546,9 +546,26 @@ def apply_tech_germanization(text: str, language: str = "German",
 
     # generische Komposita auf „…theorie“ (nicht kuratiert, >= 8 Zeichen)
     def _comp(m: re.Match) -> str:
+        # KEIN ERFUNDENES FUGEN-S. Der Regex-Capture enthält ein echtes Fugen-s
+        # bereits („Informationstheorie" -> group(1) == „Informations",
+        # „Verschwörungstheorie" -> „Verschwörungs"). Früher wurde hier
+        # zusätzlich ein „s" angehängt, wenn der Stamm nicht auf n/s/v/t/r
+        # endete – entstanden sind Formen, die es im Deutschen nicht gibt und
+        # deren Laut im Quellwort schlicht nicht vorkommt:
+        #
+        #   „Feldtheorie"      -> „Felds-teo-RIE"       (Quelle: „Feld")
+        #   „Musiktheorie"     -> „Musiks-teo-RIE"      (Quelle: „Musik")
+        #   „Sprachtheorie"    -> „Sprachs-teo-RIE"     (Quelle: „Sprach")
+        #   „Netzwerktheorie"  -> „Netzwerks-teo-RIE"   (Quelle: „Netzwerk")
+        #   „Zelltheorie"      -> „Zells-teo-RIE"       (Quelle: „Zell")
+        #   „Klimatheorie"     -> „Klimas-teo-RIE"      (Quelle: „Klima")
+        #
+        # Das ist derselbe Befund-Typ wie die Kaskaden: rein textlich
+        # beweisbar, ohne Akustik. Der Stamm wird unverändert übernommen;
+        # ein vorhandenes Fugen-s bleibt erhalten, ein nicht vorhandenes
+        # wird nicht mehr ergänzt. Kuratierte Einträge gewinnen weiterhin
+        # über den Guard unten.
         stem = m.group(1)
-        if stem[-1] not in "nsvtsr":
-            stem = stem + "s" if stem[-1] not in "s" else stem
         repl = f"{stem}-teo-RIE"
         replacements.append({"from": m.group(0), "to": repl,
                              "rule": "DE_TECH_suffix_theorie"})

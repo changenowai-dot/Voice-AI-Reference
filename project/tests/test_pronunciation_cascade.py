@@ -34,6 +34,8 @@ from app.text.normalize import normalize_text
 
 _TECH_TERMS_PATH = (Path(__file__).resolve().parents[1] / "app"
                     / "pronunciation" / "tech_terms.py")
+DICT_PATH = (Path(__file__).resolve().parents[1] / "pronunciation"
+             / "pronunciation.json")
 
 # Neutraler Trägersatz, der selbst keine Regel auslöst.
 CARRIER = "Der Abschnitt nennt {term} und bleibt dabei kurz."
@@ -312,3 +314,165 @@ def test_placeholders_never_leak_into_output():
         out = _final(s)
         assert "\x00" not in out and "\x01" not in out, (
             f"Platzhalter-Leck in {out!r}")
+
+
+# ---------------------------------------------------------------------------
+# Phase 1 / Phase 12 (Uebergabe 2026-09-23): Die vom Nutzer gemeldeten
+# Problemfamilien muessen in ALLEN geprüften Formen (Grundform, Plural,
+# Flexion, Kompositum) und in mehreren Satzkontexten NATÜRLICHE deutsche
+# Orthografie an das TTS übergeben. Das ist der Stand nach den Identity-Fixes
+# und darf nicht wieder kippen.
+#
+# Ausgenommen ist die Philosoph-Familie: sie ist die EINZIGE Phase-1-Familie
+# mit noch aktiven Respell-Regeln und wartet auf den echten Qwen-A/B-Beleg
+# (tools/test_pronunciation_ab.py). Fuer sie wird hier deshalb nur der
+# IST-Zustand fixiert, nicht Natürlichkeit behauptet.
+# ---------------------------------------------------------------------------
+NATURAL_FAMILIES: dict[str, list[str]] = {
+    "Daten": ["Daten", "Datensatz", "Datensätze", "Datenbank", "Datenbanken",
+              "Datenstruktur", "Datenstrukturen", "Datenverarbeitung"],
+    "Prozessor": ["Prozessor", "Prozessoren", "Prozessorleistung",
+                  "Prozessorarchitektur", "Mikroprozessor"],
+    "Matrix": ["Matrix", "Matrizen", "Matrixrechnung"],
+    "Erkenntnis": ["Erkenntnistheorie", "erkenntnistheoretisch", "Erkenntnis",
+                   "Erkenntnisgewinn"],
+    "Logarithmus": ["Logarithmus", "Logarithmen", "logarithmisch",
+                    "logarithmische", "logarithmischen"],
+    "Vektor": ["Vektor", "Vektoren", "Vektorraum", "Vektorräume"],
+    "Gleichung": ["Gleichung", "Gleichungen", "Differentialgleichung",
+                  "Bewegungsgleichung", "Wellengleichung"],
+    "Quellcode": ["Quellcode", "Quellcodes", "Quelltext", "Quelltexte"],
+    "Metaphysik": ["Metaphysik", "metaphysisch", "metaphysische",
+                   "metaphysischen"],
+    "Ontologie": ["Ontologie", "ontologisch", "ontologische", "ontologischen"],
+}
+
+# Mehrere Satzkontexte pro Familie (Phase 1: "verschiedene Satzkontexte").
+NATURAL_CONTEXTS: dict[str, list[str]] = {
+    "Daten": ["Die Daten werden verarbeitet.",
+              "Jeder Datensatz besitzt eine Datenstruktur.",
+              "Große Datenbanken sortieren Datensätze mit Algorithmen."],
+    "Prozessor": ["Der Prozessor führt den Quellcode aus.",
+                  "Mehrere Prozessoren teilen sich die Prozessorleistung.",
+                  "Die Prozessorarchitektur bestimmt den Takt."],
+    "Matrix": ["Eine Matrix kann viele Zahlen darstellen.",
+               "Matrizen und Vektoren bilden die lineare Algebra."],
+    "Erkenntnis": ["Die Erkenntnistheorie untersucht Wissen.",
+                   "Erkenntnistheoretisch bleibt der Erkenntnisgewinn offen."],
+    "Logarithmus": ["Der Logarithmus kehrt die Exponentialfunktion um.",
+                    "Logarithmen und Exponentialfunktionen sind Umkehrfunktionen.",
+                    "Logarithmisch skalierte Achsen zeigen logarithmische Verläufe."],
+    "Vektor": ["Ein Vektor besitzt Richtung und Betrag.",
+               "Matrizen und Vektoren bilden die Grundlage.",
+               "Jeder Vektorraum enthält viele Vektorräume."],
+    "Gleichung": ["Eine Gleichung beschreibt einen Zusammenhang.",
+                  "Ohne Gleichung keine Beschreibung.",
+                  "Die Differentialgleichung ergänzt die Wellengleichung."],
+    "Quellcode": ["Der Quellcode eines Programms wird ausgeführt.",
+                  "Quellcodes und Quelltexte werden versioniert."],
+    "Metaphysik": ["Die Metaphysik fragt nach dem Sein.",
+                   "Metaphysische und metaphysischen Fragen bleiben offen."],
+    "Ontologie": ["Die Ontologie untersucht, was existiert.",
+                  "Ontologische und ontologischen Fragen sind grundlegend."],
+}
+
+# Frühere, bestätigte Fehlerformen (Handoff §9/§10/§19). Keine davon darf
+# jemals wieder an das TTS übergeben werden.
+FORBIDDEN_FORMS = [
+    "A-TOM", "A-TO-me", "A-TOM-kern", "TSEL-le", "TSEL-len",
+    "Pro-TO-nen", "Noi-tro-NEN", "PRO-ton", "NOI-tron",
+    "E-lek-TRON", "E-lek-tro-NEN", "be-WUSST-sein",
+    "DA-ten", "DA-ten-ban-ken", "Pro-TS-ess-sor", "KWELL-kod",
+    "MA-trix", "VEK-tor", "GLEI-chung", "Lo-ga-RITH-mus",
+    "Me-ta-FY-sik", "On-to-LO-gie", "Erkenntnis-teo-RIE",
+    "Ma-te-MA-tik",
+]
+
+
+def test_user_reported_families_are_natural():
+    """Phase 1/6: gemeldete Familien übergeben natürliche Orthografie."""
+    for fam, forms in NATURAL_FAMILIES.items():
+        for form in forms:
+            # isoliert: natürlich heißt hier „unverändert" ODER „nur am
+            # Satzanfang großgeschrieben". Letzteres passiert genau dann, wenn
+            # eine (Identity-)Regel feuert; Begriffe OHNE Regel werden gar
+            # nicht angefasst und bleiben kleingeschrieben, wie eingegeben.
+            got = _final(form)
+            allowed = {form, form[:1].upper() + form[1:]}
+            assert got in allowed, (
+                f"{fam}/{form}: isoliert nicht natürlich "
+                f"({got!r} statt einer von {sorted(allowed)!r})")
+            # im Satz: case-insensitiv, weil die Form im Quelltext am
+            # Satzanfang großgeschrieben sein kann. Ein Respell würde die
+            # Zeichenkette zerstören (z. B. „Datenbank" -> „DA-ten-ban-ken")
+            # und fällt hier zuverlässig auf.
+            for sent in NATURAL_CONTEXTS.get(fam, []):
+                if form.lower() not in sent.lower():
+                    continue
+                out = _final(sent)
+                assert form.lower() in out.lower(), (
+                    f"{fam}/{form}: im Satz künstlich verändert\n"
+                    f"  Satz: {sent!r}\n"
+                    f"  TTS : {out!r}")
+
+
+def test_no_confirmed_bad_form_ever_reaches_tts():
+    """§9/§10/§19: historisch bestätigte Fehlerformen in allen Kontexten."""
+    sentences = [s for ctx in NATURAL_CONTEXTS.values() for s in ctx]
+    sentences += [CARRIER.format(term=t)
+                  for forms in NATURAL_FAMILIES.values() for t in forms]
+    sentences += [
+        "Der Atomkern besteht aus Protonen und Neutronen.",
+        "Protonen und Neutronen befinden sich im Atomkern, Elektronen in der Hülle.",
+        "Die Zelle ist die kleinste Einheit, und Zellen bilden Gewebe.",
+        "Bewusstsein ist aus Sicht der Neurowissenschaft ein Prozess.",
+        "Mathematik ist die Sprache der Zahlen.",
+        "Ein mathematischer Algorithmus löst komplexe Probleme.",
+    ]
+    for sent in sentences:
+        out = _final(sent)
+        for bad in FORBIDDEN_FORMS:
+            assert bad not in out, (
+                f"bestätigte Fehlerform {bad!r} wieder aktiv\n"
+                f"  Satz: {sent!r}\n  TTS : {out!r}")
+
+
+def test_philosoph_family_state_is_pinned():
+    """Phase 8: Die Philosoph-Familie ist die einzige Phase-1-Familie mit
+    aktiven Respell-Regeln. Solange kein echter Qwen-A/B-Beleg vorliegt, wird
+    hier bewusst NICHTS geändert – dieser Test pinnt den IST-Zustand, damit
+    eine unbemerkte Änderung auffällt."""
+    expected = {
+        "Philosoph": "FI-lo-sof",
+        "Philosophen": "fi-lo-ZO-fen",
+        "Philosophin": "fi-lo-ZO-fin",
+        "Philosophinnen": "fi-lo-zo-FIN-nen",
+        "Philosophie": "fi-lo-zo-FIE",
+        "philosophisch": "fi-lo-ZO-fisch",
+        "philosophische": "fi-lo-ZO-fi-sche",
+        "philosophischen": "fi-lo-ZO-fi-schen",
+        "philosophischer": "fi-lo-ZO-fi-scher",
+        "philosophischem": "fi-lo-ZO-fi-schem",
+    }
+    for term, want in expected.items():
+        assert TECH_TERMS_DE.get(term) == want, (
+            f"Philosoph-Familie geändert ohne Qwen-Beleg: {term} "
+            f"{TECH_TERMS_DE.get(term)!r} statt {want!r} – siehe "
+            f"tools/test_pronunciation_ab.py und PRONUNCIATION_BATCH3_REPORT.md")
+
+
+def test_user_dictionary_file_untouched_by_ab_tooling():
+    """Das A/B-Tool darf die versionierte Benutzer-Wörterbuchdatei nie
+    verändern (Overrides leben nur im Speicher)."""
+    from app.pronunciation.dictionary import PronunciationDictionary
+    before = DICT_PATH.read_text(encoding="utf-8") if DICT_PATH.exists() else ""
+    d = PronunciationDictionary()
+    d._user = {"Philosoph": "Philosoph"}
+    d._compiled = None
+    eng = PronunciationEngine(d)
+    out = eng.process("Der Philosoph fragt.", "German",
+                      suggest_unknown=False).text
+    assert out == "Der Philosoph fragt."
+    after = DICT_PATH.read_text(encoding="utf-8") if DICT_PATH.exists() else ""
+    assert before == after, "pronunciation.json wurde verändert"
+    assert d.user_entries() == {"Philosoph": "Philosoph"}
