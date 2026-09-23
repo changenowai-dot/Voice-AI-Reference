@@ -27,7 +27,11 @@ from .. import paths
 from ..security.identity_lock import check_identity, load_production
 from ..voices.registry import VoiceRegistry
 from .backend import BackendLauncher, JobResult, parse_progress_event
-from .helpers import format_duration, format_eta, stage_label, text_stats
+from .helpers import (PLACEHOLDER, PRESET_PLACEHOLDER, apply_optional_settings,
+                      emotion_choices, format_duration, format_eta,
+                      intensity_choices, pause_strategy_choices,
+                      pause_style_choices, preset_choices, stage_label,
+                      text_stats)
 from .voice_view import default_voice, voice_groups
 
 try:                                    # Windows Drag & Drop (§28)
@@ -276,6 +280,60 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
             side=LEFT, fill=X, expand=True, padx=8)
         ttk.Button(row2, text="…", width=3,
                    command=self.pick_outdir).pack(side=LEFT)
+
+        # Preset-/Stil-Auswahl: bereits vorhandene Presets (Quelle:
+        # app.prosody.presets). Platzhalter = Backend-Standard; nur eine
+        # bewusste Auswahl schreibt "preset" in den Job (kein neues
+        # Default, keine neuen Presets).
+        row1c = ttk.Frame(opt_card)
+        row1c.pack(fill=X, padx=8, pady=(0, 6))
+        ttk.Label(row1c, text="Preset / Stil",
+                  style="Card.TLabel").pack(side=LEFT)
+        self._preset_choices = preset_choices()
+        self._preset_map = {txt: key for key, txt in self._preset_choices}
+        self.preset_var = tk.StringVar(value=PRESET_PLACEHOLDER)
+        ttk.Combobox(
+            row1c, textvariable=self.preset_var, width=54,
+            state="readonly",
+            values=[PRESET_PLACEHOLDER] + [txt for _, txt in
+                                           self._preset_choices]).pack(
+            side=LEFT, padx=8)
+
+        # Erweiterte Einstellungen: bereits vorhandene manuelle Parameter
+        # (Pausen-Stil/-Strategie, Emotion, Intensität). Platzhalter =
+        # nichts gewählt = Key bleibt ungesetzt = Backend-Standard.
+        adv_row = ttk.Frame(opt_card)
+        adv_row.pack(fill=X, padx=8, pady=(0, 6))
+        ttk.Label(adv_row, text="Erweitert: Pausen-Stil",
+                  style="Muted.TLabel").pack(side=LEFT)
+        self.adv_pause_style_var = tk.StringVar(value=PLACEHOLDER)
+        ttk.Combobox(adv_row, textvariable=self.adv_pause_style_var,
+                     width=10, state="readonly",
+                     values=[PLACEHOLDER] + pause_style_choices()).pack(
+            side=LEFT, padx=(4, 14))
+        ttk.Label(adv_row, text="Pausen-Strategie",
+                  style="Muted.TLabel").pack(side=LEFT)
+        self.adv_pause_strategy_var = tk.StringVar(value=PLACEHOLDER)
+        ttk.Combobox(adv_row, textvariable=self.adv_pause_strategy_var,
+                     width=11, state="readonly",
+                     values=[PLACEHOLDER] + pause_strategy_choices()).pack(
+            side=LEFT, padx=4)
+        adv_row2 = ttk.Frame(opt_card)
+        adv_row2.pack(fill=X, padx=8, pady=(0, 8))
+        ttk.Label(adv_row2, text="Erweitert: Emotion",
+                  style="Muted.TLabel").pack(side=LEFT)
+        self.adv_emotion_var = tk.StringVar(value=PLACEHOLDER)
+        ttk.Combobox(adv_row2, textvariable=self.adv_emotion_var,
+                     width=11, state="readonly",
+                     values=[PLACEHOLDER] + emotion_choices()).pack(
+            side=LEFT, padx=(4, 14))
+        ttk.Label(adv_row2, text="Intensität",
+                  style="Muted.TLabel").pack(side=LEFT)
+        self.adv_intensity_var = tk.StringVar(value=PLACEHOLDER)
+        ttk.Combobox(adv_row2, textvariable=self.adv_intensity_var,
+                     width=10, state="readonly",
+                     values=[PLACEHOLDER] + intensity_choices()).pack(
+            side=LEFT, padx=4)
 
         # START + Abbrechen (Abbrechen nur sichtbar, wenn Job läuft)
         btn_row = ttk.Frame(container)
@@ -722,6 +780,16 @@ class VoiceOverApp(tk.Tk if tk else object):        # noqa: D101
                 "splitting_enabled": bool(self.split_var.get()),
                 "output_mode": mode_map.get(self.outmode_var.get(),
                                             "full")}
+        # Nur ausdrücklich gewählte VORHANDENE Einstellungen durchreichen
+        # (Platzhalter = nicht gewählt = Key bleibt ungesetzt -> exakt
+        # bisheriges Backend-Verhalten inkl. deep_documentary-Default).
+        spec = apply_optional_settings(
+            spec,
+            preset_key=self._preset_map.get(self.preset_var.get()),
+            emotion=self.adv_emotion_var.get(),
+            intensity=self.adv_intensity_var.get(),
+            pause_style=self.adv_pause_style_var.get(),
+            pause_strategy=self.adv_pause_strategy_var.get())
         # Neuen Launcher pro Job – jede Instanz hat eine eindeutige job_id
         self.launcher = BackendLauncher(on_event=self._on_event,
                                         on_state=lambda s: self._post(self._on_state_msg, msg=s),

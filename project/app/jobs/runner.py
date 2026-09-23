@@ -55,6 +55,14 @@ class JobSpec:
     # v2 (§8/§10): optionales Marker-Splitting + Ausgabemodus
     splitting_enabled: bool = False    # aus = exakt bisheriges Verhalten
     output_mode: str = "full"          # full | parts | parts_plus_full
+    # GUI-Freilegung bereits vorhandener Parameter (KEINE neue Logik):
+    # None = in der GUI NICHT gewählt = cfg bleibt unberührt = exakt
+    # bisheriges Backend-Verhalten (Defaults/Preset-Auflösung unangetastet).
+    preset: str | None = None
+    emotion: str | None = None
+    intensity: str | None = None
+    pause_style: str | None = None
+    pause_strategy: str | None = None
 
     @staticmethod
     def from_json_file(path) -> "JobSpec":
@@ -426,6 +434,20 @@ def run_job(spec: JobSpec) -> int:
         cfg["language"] = tts_language
         cfg["speed"] = spec.speed
         cfg["volume_db"] = spec.volume_db
+
+        # GUI-Freilegung: nur ausdrücklich gesetzte VORHANDENE Parameter
+        # durchreichen (None = in der GUI nicht gewählt = cfg/Default
+        # unverändert – Preset- und Pause-Auflösung bleiben unangetastet).
+        if spec.preset:
+            cfg["preset"] = spec.preset
+        if spec.emotion:
+            cfg["emotion"] = spec.emotion
+        if spec.intensity:
+            cfg["intensity"] = spec.intensity
+        if spec.pause_style:
+            cfg["pause_style"] = spec.pause_style
+        if spec.pause_strategy:
+            cfg["pause_strategy"] = spec.pause_strategy
 
         # Ausgabeformat konsolidieren (String "wav_mp3"/"wav"/"mp3")
         cfg["output_format"] = normalize_output_format(

@@ -276,9 +276,13 @@ class Pipeline:
         # keine Zeitdehnung, keine Pitch-/Formant-Aenderung. Das fertige
         # WAV bleibt bei speed=1.0 unangetastet (kein atempo).
         pacing = pacing_hint(language) if preset.get("pacing_hint") else ""
+        # GUI-Freilegung: vorhandene cfg-Parameter durchreichen
+        # (ohne GUI-Wahl = "AUTO" = exakt bisheriges Verhalten).
         instructs = self._build_all_instructs(
             segments, base_style, language, speed, german_variant,
-            de_modifier, short_run_idx, run_bounds, pacing=pacing)
+            de_modifier, short_run_idx, run_bounds, pacing=pacing,
+            emotion=self.cfg.get("emotion", "AUTO") or "AUTO",
+            intensity=self.cfg.get("intensity", "AUTO"))
         for pos, seg in enumerate(segments):
             instruct = instructs[pos]
             key = segment_cache_key(
@@ -746,9 +750,15 @@ class Pipeline:
     def _build_all_instructs(segments, base_style: str, language: str,
                              speed: float, german_variant: str | None,
                              de_modifier: str, short_run_idx: set,
-                             run_bounds: dict, pacing: str = "") -> list[str]:
+                             run_bounds: dict, pacing: str = "",
+                             emotion: str = "AUTO",
+                             intensity: str | int = "AUTO") -> list[str]:
         """Baut alle Segment-Instructs mit Budget-Tracking (§7) und
-        Short-Run-Positionen (§12) – deterministisch, einmal pro Lauf."""
+        Short-Run-Positionen (§12) – deterministisch, einmal pro Lauf.
+
+        emotion/intensity: Durchreichung der bereits vorhandenen cfg-
+        Parameter (GUI-Freilegung). Default "AUTO" = exakt bisheriges
+        Verhalten (Aufloesung erfolgt in build_instruct je Segment)."""
         instructs = []
         last_high_idx = None
         for seg in segments:
@@ -765,8 +775,8 @@ class Pipeline:
             emph = emphasis_targets(seg.text) if language.lower().                startswith("ger") else []
             instr = build_instruct(
                 base_style, seg.text, language,
-                emotion="AUTO",
-                intensity="AUTO",
+                emotion=emotion,
+                intensity=intensity,
                 heading=(seg.block_kind == "heading"),
                 profile_modifier=de_modifier,
                 german_variant=german_variant if language.lower().startswith(
