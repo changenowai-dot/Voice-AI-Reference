@@ -68,9 +68,24 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "batch_size": "auto",             # auto | 1..4
         "max_workers": 1,                 # TTS-Aufrufe standardmäßig sequenziell
         # Segmentierung
-        "segment_target_chars": 420,      # vom System-Benchmark optimierbar
-        "segment_max_chars": 700,
-        "segment_min_chars": 120,
+        # PACING-FIX: Ziel ist Ruhe und Stabilität bis zum Satzende. Die alten
+        # Werte (420/120/700, hard_start 200) erzeugten auf Fließtext ohne
+        # Absatzgrenzen Segmente von 33–51 s Sprechdauer – ein einziger
+        # Synthese-Aufruf ohne innere Atempause. Genau dort bricht die Prosodie
+        # zum Ende hin weg (Tempo-Anstieg, Instabilität), und die in
+        # PAUSE_STRATEGIES["narrative"] hinterlegten Klausel-Pausen
+        # (after_comma/after_semicolon/…) konnten nie feuern, weil
+        # _group_sentences ausschließlich an .!?… flushed.
+        # Neu: ~130 Zeichen Ziel ≈ 9–10 s, hartes Limit 200 ≈ 14–15 s
+        # (bei ~13,8 Zeichen/s Deutsch bzw. ~15,0 Zeichen/s Englisch).
+        # Kurze Segmente sind ausdrücklich gewollt („Qualität vor
+        # Segmentlänge"); geteilt wird nur an Satz- bzw. Klauselgrenzen,
+        # niemals mitten im Wort, ohne Textverlust.
+        "segment_target_chars": 130,      # ≈ 9–10 s Sprechdauer
+        "segment_max_chars": 200,         # ≈ 14–15 s hartes Limit
+        "segment_min_chars": 35,          # Tiny-Tails darunter werden verschmolzen
+        "segment_close_slack": 0.45,      # Schließen ab target × 1.45 an Satzgrenze
+        "segment_hard_start_min_chars": 45,
         # Attention-Implementierung: sdpa = stabil (Default).
         # flash_attention_2 optional experimentell (§33: nicht automatisch
         # installiert – Windows-Build-Risiko dokumentiert)

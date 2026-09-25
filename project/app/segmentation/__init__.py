@@ -122,6 +122,13 @@ def preset_by_target_seconds(label: str,
 # ---------------------------------------------------------------------------
 _CLAUSE_SPLIT_STRONG = re.compile(r"(?<=[;:…—–])\s+")
 _CLAUSE_SPLIT_COMMA = re.compile(r"(?<=,)\s+")
+# Nebensatz-/Koordinationsgrenzen fuer Saetze OHNE Kommas/Strichpunkte.
+# Zero-Width-Split vor dem Konnektor: der Konnektor bleibt am Anfang des
+# Nachfolge-Chunks, der Text bleibt byte-identisch (nur Whitespace kollabiert
+# zu einem Leerzeichen). Nur die letzte Rettung vor dem Wortfallback.
+_CLAUSE_SPLIT_COORD = re.compile(
+    r"(?<=[a-zäöüß])\s+(?=(?:und|oder|aber|sondern|sowie|beziehungsweise|"
+    r"bzw|and|but|or|yet)\s)", re.IGNORECASE)
 _WORD_SPLIT = re.compile(r"\s+")
 
 
@@ -146,8 +153,46 @@ def _split_oversize_sentence(sentence: str, max_chars: int) -> list[str]:
         chunks = _greedy_accumulate(parts, max_chars, sep=" ")
         chunks = _merge_tiny_tails(chunks, max_chars, min_len=60)
         return chunks
+    # Koordinationsgrenzen ("... Jung | und in die Quantenwelten ..."):
+    # Fuer kommalose Saetze deutlich besser als ein Schnitt an beliebiger
+    # Wortgrenze. Stresstext-Fall: 203-Zeichen-Satz ohne ein Komma endete
+    # vorher mit 1-Wort-Orphan ("gereist." als 8-Zeichen-Einzelsegment) und
+    # einem Phrase-mitten-Schnitt vor dem letzten Wort.
+    parts = _CLAUSE_SPLIT_COORD.split(sentence)
+    if len(parts) > 1:
+        chunks = _greedy_accumulate(parts, max_chars, sep=" ")
+        chunks = _merge_tiny_tails(chunks, max_chars, min_len=60)
+        if len(chunks) > 1 and all(len(c) <= max_chars for c in chunks):
+            return chunks
     words = _WORD_SPLIT.split(sentence)
-    return _greedy_accumulate(words, max_chars, sep=" ")
+    chunks = _greedy_accumulate(words, max_chars, sep=" ")
+    chunks = _merge_tiny_tails(chunks, max_chars, min_len=60)
+    return _rebalance_tiny_tail(chunks, max_chars)
+
+
+def _rebalance_tiny_tail(chunks: list[str], max_chars: int,
+                         min_words: int = 2) -> list[str]:
+    """Verschiebt Schlusswoerter vom vorletzten in den letzten Chunk, bis der
+    letzte Chunk mindestens ``min_words`` Woerter hat (der vorletzte wird nur
+    kuerzer, bleibt also innerhalb ``max_chars``).
+
+    Verhindert 1-Wort-Orphan-Segmente, wenn selbst der Koordinations-Split
+    nicht greift (Satz ohne Kommas UND ohne Konnektoren) und
+    ``_merge_tiny_tails`` wegen ``max_chars`` nicht mehr zusammenfuehren kann.
+    """
+    if len(chunks) < 2:
+        return chunks
+    merged = list(chunks)
+    tail = merged[-1]
+    while len(tail.split()) < min_words:
+        prev_words = merged[-2].split()
+        if len(prev_words) <= min_words:
+            break
+        moved = prev_words.pop()
+        merged[-2] = " ".join(prev_words)
+        tail = f"{moved} {tail}".strip()
+    merged[-1] = tail
+    return merged
 
 
 def _greedy_accumulate(parts: Iterable[str], max_chars: int, sep: str = " ") -> list[str]:
@@ -171,7 +216,17 @@ def _greedy_accumulate(parts: Iterable[str], max_chars: int, sep: str = " ") -> 
 def _merge_tiny_tails(chunks: list[str], max_chars: int,
                       min_len: int = 80) -> list[str]:
     """Merge chunks shorter than ``min_len`` into their neighbour when
-    the result fits within ``max_chars`` to avoid staccato tail pieces."""
+    the result fits within ``max_chars`` to avoid staccato tail pieces.
+
+    BEHOBENER BUG: Beide Merge-Pfade endeten auf ``.rstrip(",;:")``. Das
+    loeschte das Klauselzeichen am Ende des zusammengefuehrten Chunks –
+    nachweisbar Satzzeichenverlust (Direkttest: 3 Kommata rein, 1 Komma
+    raus). Seit Klausel-Trennung im Produktionspfad tatsaechlich greift
+    (siehe ``_group_items``) ist das relevant: ein Chunk, der auf ``,``
+    endet, ist genau der Fall, fuer den die ``narrative``-Strategie
+    ``after_comma`` vorsieht. Das Satzzeichen muss erhalten bleiben –
+    entfernt wird nur Leerraum.
+    """
     if len(chunks) <= 1:
         return chunks
     merged: list[str] = list(chunks)
@@ -179,7 +234,7 @@ def _merge_tiny_tails(chunks: list[str], max_chars: int,
     i = 0
     while i < len(merged) - 1:
         if len(merged[i]) < min_len and len(merged[i]) + 1 + len(merged[i+1]) <= max_chars:
-            merged[i] = (merged[i] + " " + merged[i+1]).rstrip(",;:")
+            merged[i] = (merged[i] + " " + merged[i+1]).strip()
             del merged[i+1]
         else:
             i += 1
@@ -187,7 +242,7 @@ def _merge_tiny_tails(chunks: list[str], max_chars: int,
     i = len(merged) - 1
     while i > 0:
         if len(merged[i]) < min_len and len(merged[i-1]) + 1 + len(merged[i]) <= max_chars:
-            merged[i-1] = (merged[i-1] + " " + merged[i]).rstrip(",;:")
+            merged[i-1] = (merged[i-1] + " " + merged[i]).strip()
             del merged[i]
         i -= 1
     return merged
@@ -267,6 +322,103 @@ def _group_sentences(sentences: list[str], cfg: SegmentationConfig) -> list[list
     return groups
 
 
+def _group_items(items: list[tuple[str, int, object]],
+                 cfg: SegmentationConfig) -> list[list[tuple[str, int, object]]]:
+    """Greedy grouping of ``(sentence, block_index, block)`` ITEMS.
+
+    Exakt dieselbe Strategie wie :func:`_group_sentences`, aber die
+    Block-Metadaten reisen mit jedem Satz mit. Das ist noetig, weil
+    :func:`_split_oversize_sentence` aus EINEM Quellssatz mehrere Gruppen
+    machen kann.
+
+    BEHOBENER BUG: ``segment_text`` bildete Gruppen bisher positionell auf
+    die Quell-Items ab::
+
+        item_groups.append(block_items[pos:pos + len(g)])
+        pos += len(g)
+
+    Das setzt voraus, dass ein Gruppen-Element genau einem Quell-Satz
+    entspricht. Sobald ein ueberslanger Satz geteilt wurde, entstanden mehr
+    Gruppen-Elemente als Quell-Items – die Abbildung driftete. Messbare
+    Folgen bei einem 349-Zeichen-Satz mit ``max_chars=330``:
+
+      * die Split-Teile wurden verworfen, der UNGETEILTE Originalsatz
+        landete im Segment (349 > 330: ``max_chars`` verletzt),
+      * ``_split_oversize_sentence`` war damit im Produktionspfad
+        wirkungslos, und die Klausel-Pausen der ``narrative``-Strategie
+        (``after_comma``/``after_semicolon``/``after_colon``/``after_dash``/
+        ``after_ellipsis``) waren unerreichbar,
+      * die ueberzaehligen Gruppen griffen hinter das Listenende und
+        erzeugten LEERE Segmente (0 Zeichen, 0 Saetze), die die Pipeline
+        ungefiltert zur Synthese geschickt haette.
+
+    Geteilte Teile erben hier die Metadaten ihres Ursprungs-Items, damit
+    Block-/Absatz-Information und Pausentyp korrekt bleiben.
+    """
+    groups: list[list[tuple[str, int, object]]] = []
+    buf: list[tuple[str, int, object]] = []
+
+    def _len(b: list[tuple[str, int, object]]) -> int:
+        return sum(len(x[0]) + 1 for x in b) - 1 if b else 0
+
+    def flush() -> None:
+        nonlocal buf
+        if buf:
+            groups.append(buf)
+            buf = []
+
+    def _is_closer(sent: str) -> bool:
+        s = sent.rstrip().rstrip("\"'\u201d\u00bb")
+        return bool(s) and s[-1] in ".!?\u2026"
+
+    close_threshold = int(cfg.target_chars * (1.0 + cfg.close_slack))
+
+    for sent, bi, block in items:
+        s = sent.strip()
+        if not s:
+            continue
+        slen = len(s)
+        if slen > cfg.max_chars:
+            flush()
+            # Jedes Split-Stueck wird eine EIGENE Gruppe und erbt (bi, block).
+            for piece in _split_oversize_sentence(s, cfg.max_chars):
+                piece = piece.strip()
+                if piece:
+                    groups.append([(piece, bi, block)])
+            continue
+        cur = _len(buf)
+        new_len = cur + (1 if cur else 0) + slen
+        if buf and new_len > cfg.max_chars:
+            flush()
+        buf.append((s, bi, block))
+        after = _len(buf)
+        if (after >= cfg.target_chars
+                and after >= cfg.hard_start_min_chars
+                and after <= close_threshold
+                and _is_closer(s)):
+            flush()
+    flush()
+
+    if cfg.allow_tail_merge:
+        # Rueckwaerts: winzige Tails in den Vorgaenger ziehen
+        i = len(groups) - 1
+        while i > 0:
+            pl = _len(groups[i - 1])
+            cl = _len(groups[i])
+            if cl < cfg.min_chars and pl + 1 + cl <= cfg.max_chars:
+                groups[i - 1] = groups[i - 1] + groups[i]
+                groups.pop(i)
+            i -= 1
+        # Vorwaerts: winzigen Kopf in den Nachfolger ziehen
+        if len(groups) >= 2:
+            fl = _len(groups[0])
+            nl = _len(groups[1])
+            if fl < cfg.min_chars and fl + 1 + nl <= cfg.max_chars:
+                groups[1] = groups[0] + groups[1]
+                groups.pop(0)
+    return groups
+
+
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
@@ -279,6 +431,13 @@ def segment_text(blocks: list[Block], tts_text_provider,
     splitting is done on that text so every segment is a complete
     sentence (or sequence of complete sentences). The structural block
     metadata is preserved for pause assignment downstream.
+
+    Die Gruppierung laeuft ueber :func:`_group_items`, d. h. Saetze UND
+    ihre Block-Metadaten werden gemeinsam gruppiert. Beide Zweige
+    (mit und ohne Absatzgrenze) nutzen denselben Pfad; eine positionelle
+    Rueckabbildung ``block_items[pos:pos+len(g)]`` gibt es nicht mehr,
+    weil sie driftete, sobald ein Satz geteilt wurde (Split-Teile
+    verworfen, ``max_chars`` verletzt, leere Segmente).
     """
     cfg = cfg or SegmentationConfig()
     segments: list[Segment] = []
@@ -303,80 +462,68 @@ def segment_text(blocks: list[Block], tts_text_provider,
                 if s:
                     all_items.append((s, bi, block))
 
-    def _build_segments_from_groups(groups, block_idx_for_group):
+    def _emit_group(group, is_first: bool, is_last: bool, next_kind) -> None:
+        """Erzeugt ein Segment aus einer Item-Gruppe.
+
+        Die Metadaten stammen aus den Items selbst und nicht aus einer
+        positionellen Rueckabbildung. Dadurch bleiben Block-Zugehoerigkeit,
+        ``heading_level`` und Pausentyp auch fuer geteilte Saetze korrekt.
+        Leere Gruppen/Texte werden defensiv verworfen, damit nie ein
+        0-Zeichen-Segment in die Synthese geht.
+        """
         nonlocal idx
-        for gi, group in enumerate(groups):
-            text = " ".join(s for s, _, _ in group)
-            bis = {bi for _, bi, _ in group}
-            blocks_in_group = [b for _, _, b in group]
-            first_bi = min(bis)
-            last_bi = max(bis)
-            first_block = blocks[first_bi]
-            last_block = blocks[last_bi]
-            next_block = blocks[last_bi + 1].kind if last_bi + 1 < len(blocks) else None
-            segments.append(Segment(
-                index=idx, text=text, sentence_count=len(group),
-                block_kind=first_block.kind, block_index=first_bi,
-                heading_level=(first_block.level if first_block.kind == "heading" else 3),
-                is_first_in_block=(first_bi == block_idx_for_group(group, 0)),
-                is_last_in_block=(last_bi == block_idx_for_group(group, -1)),
-                next_block_kind=next_block if gi == len(groups) - 1 or last_bi == block_idx_for_group(group,-1) else last_block.kind,
-                source_preview=text[:80],
-            ))
-            idx += 1
+        if not group:
+            return
+        text = " ".join(s for s, _, _ in group).strip()
+        if not text:
+            return
+        first_bi = group[0][1]
+        first_block = blocks[first_bi]
+        segments.append(Segment(
+            index=idx, text=text, sentence_count=len(group),
+            block_kind=first_block.kind, block_index=first_bi,
+            heading_level=(first_block.level
+                           if first_block.kind == "heading" else 3),
+            is_first_in_block=is_first,
+            is_last_in_block=is_last,
+            next_block_kind=(next_kind if next_kind is not None
+                             else first_block.kind),
+            source_preview=text[:80],
+        ))
+        idx += 1
 
     if cfg.respect_paragraph_boundary:
-        # Group per-block
+        # Pro Block gruppieren – die Absatzgrenze bleibt immer erhalten.
         for bi, block in enumerate(blocks):
             block_items = [it for it in all_items if it[1] == bi]
             if not block_items:
                 continue
-            sents = [s for s, _, _ in block_items]
-            groups = _group_sentences(sents, cfg)
-            # Map group indices back to items for block metadata
-            pos = 0
-            item_groups: list[list] = []
-            for g in groups:
-                item_groups.append(block_items[pos:pos+len(g)])
-                pos += len(g)
-            next_block = blocks[bi+1].kind if bi+1 < len(blocks) else None
-            for gi, group in enumerate(item_groups):
-                text = " ".join(s for s,_,_ in group)
-                segments.append(Segment(
-                    index=idx, text=text, sentence_count=len(group),
-                    block_kind=block.kind, block_index=bi,
-                    heading_level=(block.level if block.kind == "heading" else 3),
-                    is_first_in_block=(gi == 0),
-                    is_last_in_block=(gi == len(item_groups) - 1),
-                    next_block_kind=next_block if gi == len(item_groups) - 1 else block.kind,
-                    source_preview=text[:80],
-                ))
-                idx += 1
+            groups = [g for g in _group_items(block_items, cfg) if g]
+            if not groups:
+                continue
+            next_block = blocks[bi + 1].kind if bi + 1 < len(blocks) else None
+            for gi, group in enumerate(groups):
+                is_last = (gi == len(groups) - 1)
+                _emit_group(group, is_first=(gi == 0), is_last=is_last,
+                            next_kind=next_block if is_last else block.kind)
     else:
-        # Cross-paragraph grouping
-        sents = [s for s,_,_ in all_items]
-        groups = _group_sentences(sents, cfg)
-        pos = 0
-        item_groups = []
-        for g in groups:
-            item_groups.append(all_items[pos:pos+len(g)])
-            pos += len(g)
-        for gi, group in enumerate(item_groups):
-            text = " ".join(s for s,_,_ in group)
-            bis = [bi for _,bi,_ in group]
-            first_bi, last_bi = min(bis), max(bis)
-            first_block = blocks[first_bi]; last_block = blocks[last_bi]
-            next_block = blocks[last_bi+1].kind if last_bi+1 < len(blocks) else None
-            segments.append(Segment(
-                index=idx, text=text, sentence_count=len(group),
-                block_kind=first_block.kind, block_index=first_bi,
-                heading_level=(first_block.level if first_block.kind == "heading" else 3),
-                is_first_in_block=(bis[0] == first_bi and group[0][2].kind == "paragraph"),
-                is_last_in_block=(bis[-1] == last_bi),
-                next_block_kind=next_block if gi == len(item_groups) - 1 else blocks[bis[-1]].kind,
-                source_preview=text[:80],
-            ))
-            idx += 1
+        # Absatzuebergreifend: EIN Satzstrom, target/max entscheiden die
+        # Grenzen. is_first/is_last ergeben sich aus dem Blockwechsel
+        # zwischen benachbarten Gruppen (semantisch korrekt statt
+        # pauschal ueber block.kind).
+        groups = [g for g in _group_items(all_items, cfg) if g]
+        for gi, group in enumerate(groups):
+            first_bi = group[0][1]
+            last_bi = group[-1][1]
+            prev_last_bi = groups[gi - 1][-1][1] if gi > 0 else None
+            next_first_bi = (groups[gi + 1][0][1]
+                             if gi + 1 < len(groups) else None)
+            next_block = (blocks[last_bi + 1].kind
+                          if last_bi + 1 < len(blocks) else None)
+            _emit_group(group,
+                        is_first=(first_bi != prev_last_bi),
+                        is_last=(last_bi != next_first_bi),
+                        next_kind=next_block)
     return segments
 
 

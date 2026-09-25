@@ -38,6 +38,11 @@ caches/
 tmp/
 temp/
 *.tmp
+
+# Benchmark-Ausgaben (generierte A/B-Artefakte der Testläufe, niemals committen).
+project/benchmark/baseline/
+project/benchmark/phase2/
+project/benchmark/phase3/
 *.temp
 !project/app/voices/bundles/
 !project/app/voices/bundles/**

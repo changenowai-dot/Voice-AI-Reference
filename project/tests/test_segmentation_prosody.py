@@ -70,16 +70,25 @@ def test_heading_blocks_preserved():
 
 def test_pauses_context_dependent_and_varied():
     text = LONG_PARA + "\n\n" + LONG_PARA
-    segs = _segments_from(text)
+    # Produktionsnahe Granularität (siehe DEFAULT_CONFIG["advanced"]):
+    # Nur so entstehen mehrere Segmente pro Absatz, und der Vergleich
+    # "Absatzgrenze > Satzgrenze" ist überhaupt auswertbar. Mit den
+    # Dataclass-Defaults (900/350/1500) lieferte der Text genau 2 Segmente,
+    # damit wurde mid=0 und segs[mid-1] griff per Index-Wraparound auf
+    # segs[-1] zu – der Test verglich das ERSTE mit dem LETZTEN Segment.
+    cfg = SegmentationConfig(target_chars=130, min_chars=35, max_chars=200)
+    segs = _segments_from(text, cfg)
+    assert len(segs) >= 4, f"zu wenige Segmente für den Vergleich: {len(segs)}"
     assign_pauses(segs, style="auto")
     values = [s.pause_after_s for s in segs]
     assert all(0.15 <= v <= 2.5 for v in values)
     # Keine identischen Pausen überall (Anforderung 23/43)
     assert len(set(round(v, 2) for v in values)) > len(values) // 2
-    # Absatzgrenze > Satzgrenze
+    # Absatzgrenze > Satzgrenze. i > 0 zwingend: für das erste Segment gibt
+    # es kein vorheriges, das als Satzgrenzen-Referenz dienen könnte.
     mid = None
     for i, s in enumerate(segs):
-        if s.is_last_in_block and i + 1 < len(segs):
+        if s.is_last_in_block and 0 < i and i + 1 < len(segs):
             mid = i
             break
     if mid is not None:

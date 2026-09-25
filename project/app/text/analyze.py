@@ -73,6 +73,27 @@ class AnalysisResult:
     language_scores: dict
 
 
+def _is_separator_line(stripped: str) -> bool:
+    """True für reine Abschnitts-Separatoren wie ``+++++``, ``---``, ``***``.
+
+    Kriterien: mindestens 3 Zeichen, keinerlei Buchstaben/Ziffern, und höchstens
+    zwei verschiedene Symbolarten (damit ``+++++`` und ``~*~*~`` erfasst werden,
+    ein Satz wie ``... und dann?`` aber nicht – der enthält Buchstaben).
+
+    Solche Zeilen sind Struktur, kein Sprechtext. Würden sie als Block
+    durchgehen, expandiert die Normalisierung die Symbole zu Wörtern
+    (``+`` -> ``plus``) und die Stimme liest die Trennzeile laut vor.
+    """
+    if len(stripped) < 3:
+        return False
+    compact = stripped.replace(" ", "")
+    if not compact or len(compact) < 3:
+        return False
+    if any(ch.isalnum() for ch in compact):
+        return False
+    return len(set(compact)) <= 2
+
+
 def split_blocks(text: str) -> list[Block]:
     """Zerlegt Text in Absätze/Überschriften/Listen/ Zitate (Struktur)."""
     blocks: list[Block] = []
@@ -86,6 +107,19 @@ def split_blocks(text: str) -> list[Block]:
             if not stripped:
                 continue
             # Zuerst eindeutige Strukturen (Listen, Zitate), dann Überschriften
+            # PACING/QA-FIX (Langform-Stresstext "Stein der Weisen"):
+            # Reine Trenn-Zeilen ("+++++", "---", "***", "===") sind
+            # Abschnitts-Separatoren und KEIN Sprechtext. Vor dem Fix liefen
+            # sie in die Heading-Heuristik unten (kurz, kein Satzzeichen,
+            # "+".islower() ist False) und wurden als heading level=3
+            # klassifiziert; die Normalisierung expandierte "+" zu "plus",
+            # also sprach die Stimme 17x "plus plus plus plus plus" – mit
+            # Überschriften-Pause. Jetzt: als strukturelle Grenze behandeln.
+            # Die umgebenden Absätze bleiben getrennte Blöcke, dadurch wirkt
+            # die normale Absatz-Pause (narrative/relaxed: ~1,76 s) als
+            # hörbarer Abschnitts-Atem – kein gesprochenes Artefakt.
+            if _is_separator_line(stripped):
+                continue
             if re.match(r"^[-*•·]\s+", stripped):
                 blocks.append(Block("list_item",
                                     re.sub(r"^[-*•·]\s+", "", stripped)))
@@ -110,10 +144,15 @@ def split_blocks(text: str) -> list[Block]:
             if _HEADING_KNOWN.match(stripped) and len(stripped) < 80:
                 blocks.append(Block("heading", stripped, level=2))
                 continue
-            # Überschrift ohne Satzzeichen: kurze Zeile ohne Verb-Endung
+            # Überschrift ohne Satzzeichen: kurze Zeile ohne Verb-Endung.
+            # Zusatz (PACING/QA-FIX): eine Überschrift muss mindestens einen
+            # Buchstaben enthalten. Ohne diese Bedingung wurde jede kurze
+            # Symbol-/Ziffernzeile zur Überschrift ("+++++" -> heading, weil
+            # "+".islower() False ist) und damit zum gesprochenen Text.
             if (len(stripped) < 70 and not stripped.endswith((".", "!", "?", ",",
                     ":", ";"))
-                    and stripped.count(" ") <= 8 and not stripped[0].islower()):
+                    and stripped.count(" ") <= 8 and not stripped[0].islower()
+                    and any(ch.isalpha() for ch in stripped)):
                 blocks.append(Block("heading", stripped, level=3))
                 continue
             blocks.append(Block("paragraph", stripped))

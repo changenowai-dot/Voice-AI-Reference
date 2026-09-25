@@ -130,6 +130,14 @@ PRESETS = {
         "emotion": "AUTO",
         "intensity": "AUTO",
         "speed": 0.97,
+        # PACING-FIX: Für Deutsch liefert build_instruct() NICHT base_style,
+        # sondern variant_text(german_variant) – dieses englischsprachige
+        # base_style erreicht die deutsche Synthese also gar nicht. Der
+        # generationsseitige Atem-/Lande-Hinweis (PACING_HINT_DE: "Atme
+        # natürlich … lass Gedanken landen … ohne langsamer zu werden") wird
+        # dagegen angehängt und ist für DE der wirksame Hebel. deep_documentary
+        # und de_documentary hatten ihn bereits, psychological nicht.
+        "pacing_hint": True,
         "description": "Psychologische und emotionale Themen."
     },
     "cinematic": {

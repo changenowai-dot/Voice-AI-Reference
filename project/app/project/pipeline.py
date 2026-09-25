@@ -40,7 +40,7 @@ from ..quality.regeneration import AttemptResult
 from ..segmentation import SegmentationConfig, segment_text
 from ..tts.engine_base import EngineOOMError, SynthesisRequest, TTSError
 from ..tts.sampler import PARAM_SET_VERSION, max_new_tokens_for, params_for_set
-from ..text.analyze import analyze_text
+from ..text.analyze import analyze_text, split_sentences
 from ..text.normalize import NormalizationReport, normalize_text
 from ..text.langdetect import check_language_plausibility
 from ..voices.profiles import get_profile, profile_for_language
@@ -48,6 +48,20 @@ from .state import ProjectState, project_id_for
 
 VOICE_CFG_DEFAULTS = {"id": None, "speaker": None,
                        "production_seed": None}
+
+
+# PACING-FIX: Schwelle fuer den "langen Satz"-Instruct-Hint, bewertet pro
+# EINZELSatz (nicht pro Segment). 25 Woerter ~ ein echter Schachtelsatz, der
+# ohne explizite Struktur-Anweisung zum Satzende hin hektisch wird.
+LONG_SENTENCE_WORDS = 25
+
+# Deutsche Sprechrate in Zeichen/Sekunde – dieselbe Groesse, die die Pipeline
+# fuer max_seconds_hint benutzt (siehe process_file und _split_fallback).
+DE_CHARS_PER_SECOND = 13.8
+
+# Pacing-Ziel: hoechstens ~15 s Sprechdauer pro Segment. Darueber bleibt die
+# Prosodie zum Satzende hin nicht stabil und es gibt keine innere Atempause.
+SEGMENT_PACING_MAX_CHARS = int(15.0 * DE_CHARS_PER_SECOND)   # 207
 
 
 def _voice_cfg(cfg: dict) -> dict:
@@ -105,6 +119,139 @@ def _resolve_pause_settings(cfg: dict, adv: dict, preset: dict) -> tuple[str, st
                       or (cfg_strategy if strategy_explicit else None)
                       or preset.get("pause_strategy", "classic"))
     return pause_style, pause_strategy
+
+
+def _resolve_speed(cfg: dict, adv: dict, preset: dict) -> float:
+    """Präzedenz für `speed` – analog zu _resolve_pause_settings.
+
+    Reihenfolge: advanced > explizite cfg > Preset > 1.0.
+
+    WICHTIG (PACING-FIX): DEFAULT_CONFIG["speed"] == 1.0 zählt NICHT als
+    explizite Nutzerwahl. Vor dem Fix las die Pipeline
+
+        cfg.get("speed", preset.get("speed", 1.0))
+
+    Da `cfg` durch den DEFAULT_CONFIG-Merge den Key "speed" IMMER enthält,
+    war der Preset-Fallback unerreichbar – exakt die Shadowing-Klasse, die
+    _resolve_pause_settings für style/strategy bereits behebt. Folge:
+    psychological (0.97), cinematic (0.95) und calm_storytelling (0.95)
+    liefen faktisch mit 1.0 und wurden zudem pro Segment nicht zeitgedehnt
+    (apply_speed-Schwelle |speed-1| >= 0.02 nie erreicht).
+
+    Unverändert bleiben alle Presets, die selbst speed=1.0 dokumentieren
+    (u. a. deep_documentary/de_documentary/en_documentary) – der
+    Default-Lauf ändert sein Verhalten durch diesen Fix also nicht.
+    """
+    from ..config import DEFAULT_CONFIG
+    cfg_speed = cfg.get("speed")
+    default_speed = _as_float(DEFAULT_CONFIG.get("speed", 1.0))
+    if default_speed is None:
+        default_speed = 1.0
+    explicit = (_as_float(cfg_speed) is not None
+                and _as_float(cfg_speed) != default_speed)
+    adv_speed = _as_float(adv.get("speed"))
+    if adv_speed is not None:
+        chosen, source = adv_speed, "advanced"
+    elif explicit:
+        chosen, source = _as_float(cfg_speed), "cfg"
+    else:
+        chosen, source = _as_float(preset.get("speed", 1.0)), "preset"
+    if chosen is None:
+        chosen, source = 1.0, "default"
+    # Anforderung 24: gültiger Bereich 0.80 – 1.20.
+    speed = max(0.80, min(1.20, chosen))
+    log.info("SPEED_RESOLUTION value=%.2f quelle=%s", speed, source)
+    if speed > 1.02:
+        # Transparenz statt stiller Korrektur (kein hartes Gate): ein
+        # expliziter Wert bleibt gültig, wird aber als Pacing-Risiko gemeldet.
+        log.warning(
+            "SPEED_ZU_SCHNELL speed=%.2f (quelle=%s) – beschleunigt jedes "
+            "Segment um %.0f %% (apply_speed, pitch-erhaltend) und loest "
+            "zusaetzlich den generationsseitigen 'schneller sprechen'-Hinweis "
+            "aus (Deadband 0.03). Das widerspricht dem ruhigen Pacing-Ziel. "
+            "Haeufige Ursache: tests/test_system.py ruft "
+            "update_config({'speed': 1.1}) auf, was den Wert per save_config() "
+            "DAUERHAFT in config/config.json persistiert. Abhilfe: "
+            "cfg['speed'] auf 1.0 setzen – dann gilt wieder der Preset-Wert.",
+            speed, source, (speed - 1.0) * 100.0)
+    return speed
+
+
+def _as_float(value) -> float | None:
+    """Robuste Float-Konversion (None bei fehlend/ungültig)."""
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+# PACING-FIX: Legacy-Defaults der Segmentierung (Stand VOR dem Pacing-Fix).
+# Ein persistierter Wert, der EXAKT einem dieser alten Defaults entspricht,
+# gilt – analog zu _resolve_pause_settings ("die DEFAULT_CONFIG-Werte zählen
+# NICHT als explizite Nutzerwahl") – nicht als bewusste Nutzereinstellung,
+# sondern als mitgeschleppter Default. Nur so erreicht die neue, ruhigere
+# Segmentierung auch Installationen, deren config/config.json die alten Werte
+# (420/120/700) noch trägt: load_config() merged die Datei ÜBER DEFAULT_CONFIG,
+# ein bloßes Ändern der Defaults wäre dort wirkungslos.
+# Explizit abweichende Nutzereingaben (z. B. bewusst 300) bleiben unangetastet.
+_LEGACY_SEG_DEFAULTS = {
+    "segment_target_chars": 420,
+    "segment_min_chars": 120,
+    "segment_max_chars": 700,
+    "segment_hard_start_min_chars": 200,
+    "segment_close_slack": 0.45,
+}
+
+
+def _resolve_segment_config(adv: dict) -> SegmentationConfig:
+    """Segmentierungs-Config: neuer Default, Legacy-Defaults migriert."""
+    from ..config import DEFAULT_CONFIG
+    defaults = DEFAULT_CONFIG.get("advanced") or {}
+    resolved: dict = {}
+    kept_explicit: list[str] = []
+    for key, legacy in _LEGACY_SEG_DEFAULTS.items():
+        num = _as_float(adv.get(key))
+        new_default = _as_float(defaults.get(key))
+        if new_default is None:
+            new_default = float(legacy)
+        if num is None or num == float(legacy) or num == new_default:
+            # fehlend, alter Default (aus persistierter config.json) oder
+            # neuer Default -> neuer Default gilt.
+            resolved[key] = new_default
+        else:
+            # Bewusst abweichende Nutzereingabe bleibt unangetastet.
+            resolved[key] = num
+            kept_explicit.append(f"{key}={num:g}")
+    cfg = SegmentationConfig(
+        target_chars=int(resolved["segment_target_chars"]),
+        min_chars=int(resolved["segment_min_chars"]),
+        max_chars=int(resolved["segment_max_chars"]),
+        close_slack=float(resolved["segment_close_slack"]),
+        hard_start_min_chars=int(resolved["segment_hard_start_min_chars"]),
+        respect_paragraph_boundary=not bool(adv.get(
+            "segment_cross_paragraph", False)),
+    )
+    log.info("SEGMENT_CONFIG target=%d min=%d max=%d hard_start=%d slack=%.2f "
+             "cross_paragraph=%s%s", cfg.target_chars, cfg.min_chars,
+             cfg.max_chars, cfg.hard_start_min_chars, cfg.close_slack,
+             not cfg.respect_paragraph_boundary,
+             f" (Nutzerwerte behalten: {', '.join(kept_explicit)})"
+             if kept_explicit else "")
+    if cfg.target_chars > SEGMENT_PACING_MAX_CHARS:
+        log.warning(
+            "SEGMENT_CONFIG_ZU_GROB target_chars=%d (~%.0f s Sprechdauer pro "
+            "Segment; Pacing-Ziel <= %d Zeichen ~ 15 s). Ueber so lange "
+            "Segmente bleibt die Prosodie zum Satzende hin nicht stabil und "
+            "innere Atempausen fehlen. Haeufige Ursache: ein Benchmark- oder "
+            "Testlauf hat den Wert per save_config() in config/config.json "
+            "persistiert (tests/test_system.py -> update_config, "
+            "benchmark/german_ab.py -> Benchmark-'Winner'; beobachtet: 420 "
+            "und 500). Abhilfe: advanced.segment_target_chars auf %s setzen.",
+            cfg.target_chars, cfg.target_chars / DE_CHARS_PER_SECOND,
+            SEGMENT_PACING_MAX_CHARS, defaults.get("segment_target_chars"))
+    return cfg
 
 
 class Pipeline:
@@ -182,18 +329,14 @@ class Pipeline:
             u["term"] for u in pron_result.unknown_problem_words[:15]]
 
         # 6) Segmentierung ------------------------------------------------------
-        # Defaults aus app.config.DEFAULT_CONFIG (420/120/700) – kurze
-        # Segmente = mehr natürliche Satzenden im Audiostrom, was wiederum
-        # hörbare Pausen und bessere Langform-Konsistenz erzeugt.
-        seg_cfg = SegmentationConfig(
-            target_chars=int(adv.get("segment_target_chars", 420)),
-            min_chars=int(adv.get("segment_min_chars", 120)),
-            max_chars=int(adv.get("segment_max_chars", 700)),
-            close_slack=float(adv.get("segment_close_slack", 0.45)),
-            hard_start_min_chars=int(adv.get("segment_hard_start_min_chars", 200)),
-            respect_paragraph_boundary=not bool(adv.get(
-                "segment_cross_paragraph", False)),
-        )
+        # Werte aus app.config.DEFAULT_CONFIG (PACING-FIX: 130/35/200,
+        # hard_start 45 ≈ 9–15 s Sprechdauer) über _resolve_segment_config(),
+        # das persistierte Legacy-Defaults (420/120/700) migriert und
+        # explizite Nutzerwerte behält. Kurze Segmente = mehr natürliche
+        # Satz- und Klauselgrenzen im Audiostrom, was hörbare Pausen, eine
+        # stabilere Prosodie bis zum Satzende und bessere
+        # Langform-Konsistenz erzeugt.
+        seg_cfg = _resolve_segment_config(adv)
         segments = segment_text(analysis.blocks, tts_text_provider, seg_cfg)
         if not segments:
             report["error"] = "Keine Segmente erzeugt."
@@ -225,7 +368,7 @@ class Pipeline:
         pause_style, pause_strategy = _resolve_pause_settings(
             self.cfg, adv, preset)
         de_modifier = getattr(profile, "de_modifier", "")
-        speed = float(self.cfg.get("speed", preset.get("speed", 1.0)) or 1.0)
+        speed = _resolve_speed(self.cfg, adv, preset)
         # Fallback-Basis (wenn weder Preset noch cfg/advanced setzen):
         # auto/classic; deep_documentary selbst gibt relaxed/narrative vor.
         log.info("Pausen: preset=%s lang=%s style=%s strategy=%s speed=%.2f "
@@ -763,6 +906,15 @@ class Pipeline:
         last_high_idx = None
         for seg in segments:
             words = len(seg.text.split())
+            # PACING-FIX: long_sentence wurde ueber ALLE Woerter des Segments
+            # bewertet (words > 25). Ein Segment aus mehreren kurzen Saetzen
+            # erhielt dadurch denselben "Structure this long sentence"-Hint
+            # wie ein echter Schachtelsatz – der Hinweis verwaesserte das
+            # Hinweis-Budget (S7) und echte Langsaeetze trafen ihn nur
+            # zufaellig. Korrekt ist der laengste EINZELSatz im Segment.
+            longest_words = max(
+                (len(x.split()) for x in split_sentences(seg.text)),
+                default=words)
             pos = None
             if seg.index in short_run_idx:
                 first, last = run_bounds.get(seg.index, (None, None))
@@ -784,7 +936,7 @@ class Pipeline:
                 seg_index=seg.index,
                 last_high_idx=last_high_idx,
                 short_run_pos=pos,
-                long_sentence=(words > 25),
+                long_sentence=(longest_words > LONG_SENTENCE_WORDS),
                 emphasis_words=emph,
             )
             # Budget-Tracking: hochdramatische Rolle gemeldet?
