@@ -16,6 +16,7 @@ welche Begriffe erkannt und welche Ersetzungen vorgenommen wurden.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from ..logging_setup import get_logger, text_fingerprint as _fingerprint
@@ -41,6 +42,12 @@ class PronunciationResult:
     text: str
     replacements: list = field(default_factory=list)
     unknown_problem_words: list = field(default_factory=list)
+    # Anzahl Woerter mit ä/ö/ü/ß im FINALEN TTS-Text (Observability,
+    # UMLAUT-FIX 2026-09-24): beweist im Log, dass deutsche Sonderzeichen
+    # den Preprocess codepoint-erhalten durchlaufen haben. Die Schicht
+    # AENDERT keinen Text - sie macht die Umlaut-Kette pruefbar und
+    # bricht bei kuenftigen Encoding-Regressionen sichtbar (Count 0).
+    umlaut_words: int = 0
     # Phase-1-Metadaten
     name_mentions: list = field(default_factory=list)      # NameMention
     risky_uncovered_names: list = field(default_factory=list)
@@ -113,6 +120,11 @@ class PronunciationEngine:
             {lr["from"].lower() for lr in pre}]
 
         result = PronunciationResult(text=text, replacements=repls)
+        # UMLAUT-Observability (kein Texteingriff): Woerter mit ä/ö/ü/ß
+        # im finalen TTS-Text zaehlen und im PREPROCESS_END-Log ausweisen.
+        result.umlaut_words = sum(
+            1 for w in re.findall(r"[A-Za-zÄÖÜäöüß]+", text)
+            if re.search(r"[äöüßÄÖÜ]", w))
 
         if suggest_unknown or collect_meta:
             # 3) Eigennamen scannen (mit aktueller Ersetzungsliste)
@@ -150,7 +162,8 @@ class PronunciationEngine:
                      if u["term"] not in known])
         log.info(
             "PRONUNCIATION_PREPROCESS_END replacements=%d "
-            "unknown_problem_terms=%d chars_in=%d chars_out=%d",
+            "unknown_problem_terms=%d chars_in=%d chars_out=%d "
+            "umlaut_words=%d",
             len(repls), len(result.unknown_problem_words),
-            len(text), len(result.text))
+            len(text), len(result.text), result.umlaut_words)
         return result

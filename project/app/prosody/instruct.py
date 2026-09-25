@@ -443,13 +443,23 @@ def build_instruct(base_style: str, text: str, language: str, *,
 # und Gedankenraeumen - ohne dass Pitch/Formanten/Artikulation
 # veraendert werden. Formulierung bewusst "without slowing down",
 # damit das Modell NICHT in eine gedehnte Sprechweise faellt.
+#
+# UMLAUT-FIX (Regression-Analyse 2026-09-24): PACING_HINT_DE war
+# ASCII-entstellt ("natuerlich/Saetzen/gleichmaessigen") - ein
+# deutscher Steuersatz mit anglo-Orthografie im TTS-Prompt. Diese
+# Datei ist UTF-8 (german.py enthaelt ebenfalls Umlaute); die
+# ASCII-only-Anforderung gilt nur fuer Installer/START-Skripte
+# (PowerShell 5.1), nicht fuer App-Module. Deutscher Prompt-Text
+# bekommt echte deutsche Orthografie - eine Verfalschung der
+# Umlaute im Prompt selbst kann die deutsche Aussprache-Steuerung
+# konterkarieren.
 PACING_HINT_EN = (
     "Breathe naturally between sentences and phrases; let ideas land; "
     "keep an unhurried, steady storytelling rhythm without slowing down."
 )
 PACING_HINT_DE = (
-    "Atme natuerlich zwischen Saetzen und Gedanken; lass Gedanken landen; "
-    "halte einen ruhigen, gleichmaessigen Erzaehlrhythmus, ohne langsamer "
+    "Atme natürlich zwischen Sätzen und Gedanken; lass Gedanken landen; "
+    "halte einen ruhigen, gleichmäßigen Erzählrhythmus, ohne langsamer "
     "zu werden."
 )
 

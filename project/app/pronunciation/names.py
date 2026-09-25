@@ -301,6 +301,17 @@ def scan_names(text: str, dictionary_terms: set[str] | None = None,
         s, e = m.start(), m.end()
         if any(s < te and ts < e for ts, te in taken_spans):
             continue
+        # Satzanfang-Ausschluss (implementiert die dokumentierte Absicht;
+        # UMLAUT-FIX 2026-09-24: vor dem Fix fehlte die Umsetzung, und
+        # satzinitiale Hauptwoerter ("Über ihnen...", "Bitte sprich...",
+        # "Früher hörte...") wurden als Unbekannt-Namen geflaggt). Ein
+        # Großbuchstabe direkt nach Satzende/Textanfang ist kein
+        # Eigennamen-Signal. Gazetteer-Namen (Schritt 1) bleiben unberuehrt.
+        j = s - 1
+        while j >= 0 and text[j] in " \t\r\n":
+            j -= 1
+        if j < 0 or text[j] in ".!?…:":
+            continue
         # Mehrfachvorkommen zählen -> wahrscheinlich Eigenname
         occurrences = len(re.findall(r"(?<![\wÄÖÜäöüß])" + re.escape(w) +
                                      r"(?![\wÄÖÜäöüß])", text))
@@ -322,6 +333,15 @@ def _short_context(text: str, s: int, e: int, pad: int = 18) -> str:
 def _looks_german(word: str) -> bool:
     """Heuristik: wirkt das Wort deutsch ausgesprochen?"""
     w = word.lower()
+    # UMLAUT-FIX (Regression-Analyse 2026-09-24): Wörter mit ä/ö/ü/ß sind
+    # nach Konstruktion deutsche Orthografie. Vor dem Fix hatte die
+    # Musterliste kein einzelnes "ä" (nur äu/ü/ö/ß) und keine gängigen
+    # Nominalendungen - völlig normale deutsche Wörter (Äpfel, Umlaute)
+    # wurden als "nicht deutsch wirkend" eingestuft und landeten als
+    # riskante Unbekannt-Namen in unknown_problem_terms. Das verwässerte
+    # genau das Signal, das Umlaut-Risiken sichtbar machen soll.
+    if re.search(r"[äöüß]", w):
+        return True
     if len(w) >= 5:
         common = re.search(r"(sch|tz|tzs|chs|ei|ie|eu|äu|ü|ö|ß|ck|ling|"
                            r"ung|keit|heit|schaft|tum|nis|lich|isch)", w)

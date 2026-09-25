@@ -417,15 +417,24 @@ def test_phase3_api_end2end():
     import os
     import subprocess
     import sys
+    import tempfile
     import time
     import urllib.request
     port = 8803
+    # HANG-FIX (2026-09-25): Der Server-stdout ging zuvor in eine nie
+    # gelesene PIPE. Das phase3-Logvolumen liegt (~62-65 KB) direkt an
+    # der 64-KB-Puffergrenze von Pipes: sobald die Kante erreicht wird,
+    # blockiert ein Logging-Schreiben, und der Server friert mitten in
+    # phase3_benchmark ein (nachweisbar reproduziert). Temp-Datei statt
+    # PIPE: identische Diagnostik, kein Blockieren. Alle Assertions
+    # unveraendert.
+    server_log = tempfile.TemporaryFile()
     proc = subprocess.Popen(
         [sys.executable, str(Path(__file__).resolve().parent.parent /
                              "app" / "main.py"),
          "--webserver", "--engine", "test_double", "--no-browser",
          "--port", str(port)],
-        env=dict(os.environ), stdout=subprocess.PIPE,
+        env=dict(os.environ), stdout=server_log,
         stderr=subprocess.STDOUT)
     try:
         base = f"http://127.0.0.1:{port}"
@@ -468,3 +477,4 @@ def test_phase3_api_end2end():
             proc.wait(timeout=10)
         except subprocess.TimeoutExpired:
             proc.kill()
+        server_log.close()
